@@ -15,7 +15,7 @@ export default function AppGate({ children }: { children: React.ReactNode }) {
   const [busy, setBusy] = useState(false);
 
   if (mode === 'demo') return <>{children}</>;
-  if (loading) return <div className="auth-page"><div className="auth-loading">Carregando Pagamente…</div></div>;
+  if (loading) return <div className="auth-page"><div className="auth-loading">Carregando Sistema de Cobrança…</div></div>;
   if (user) return <>{children}</>;
 
   async function submit(e: React.FormEvent) {
@@ -35,12 +35,12 @@ export default function AppGate({ children }: { children: React.ReactNode }) {
   return <div className="auth-page">
     <div className="auth-brand">
       <div className="brand-mark"><WalletCards size={26}/></div>
-      <div><strong>pagamente</strong><span>Financeiro simples e seguro</span></div>
+      <div><strong>Sistema de Cobrança</strong><span>Gestão de cobranças simples e segura</span></div>
     </div>
     <form className="auth-card" onSubmit={submit}>
       <div className="auth-icon"><LockKeyhole size={22}/></div>
       <h1>{tab === 'login' ? 'Acesse sua conta' : 'Crie sua conta'}</h1>
-      <p>{tab === 'login' ? 'Entre para gerenciar cobranças e transferências.' : 'Você começa com 14 dias de teste.'}</p>
+      <p>{tab === 'login' ? 'Entre para gerenciar cobranças, clientes e recebimentos.' : 'Você começa com 14 dias de teste.'}</p>
       {tab === 'signup' && <>
         <label>Seu nome<input value={name} onChange={e=>setName(e.target.value)} required /></label>
         <label>Empresa<input value={company} onChange={e=>setCompany(e.target.value)} required /></label>
