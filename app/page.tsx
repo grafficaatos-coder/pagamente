@@ -909,12 +909,33 @@ export default function Home(){
           </div>
         </section>}
 
+        {paymentPending&&<section className="operational-blocked-card">
+          <div className="operational-blocked-icon"><CircleDollarSign size={26}/></div>
+          <span className="eyebrow">PAGAMENTO PENDENTE</span>
+          <h1>Seu plano foi escolhido e aguarda liberação</h1>
+          <p>A assinatura será liberada assim que o pagamento da fatura da plataforma for confirmado pelo administrador.</p>
+          <div className="blocked-invoice-box">
+            <div><span>Plano</span><strong>{planName??'—'}</strong></div>
+            <div><span>Valor da fatura</span><strong>{platformInvoice?brl(Number(platformInvoice.total_cents)):typeof planPrice==='number'?brl(planPrice):'—'}</strong></div>
+            <div><span>Vencimento</span><strong>{platformInvoice?.due_date?dateBR(platformInvoice.due_date):'—'}</strong></div>
+            <div><span>Status</span><span className="status past_due">Aguardando pagamento</span></div>
+          </div>
+          <p className="blocked-help">Se você já realizou o pagamento, entre em contato com o suporte para a confirmação manual enquanto a integração automática de pagamentos não estiver ativa.</p>
+        </section>}
+
+        {accountSuspended&&<section className="operational-blocked-card">
+          <div className="operational-blocked-icon warning"><TriangleAlert size={26}/></div>
+          <span className="eyebrow">ACESSO RESTRITO</span>
+          <h1>{subscription?.status==='cancelled'?'Assinatura cancelada':'Conta temporariamente suspensa'}</h1>
+          <p>Os dados da empresa permanecem armazenados, mas novas operações estão bloqueadas. Entre em contato com o administrador da plataforma para regularizar o acesso.</p>
+        </section>}
+
         {!needsPlanChoice&&subscription?.status==='trialing'&&!trialExpired&&<div className="trial-banner">
           <div><strong>Teste grátis por 4 dias</strong><span>{trialDaysLeft>1?trialDaysLeft+' dias restantes':trialDaysLeft===1?'1 dia restante':'Último dia do teste'}</span></div>
           <div>Termina em <strong>{trialEnd?dateBR(trialEnd.toISOString()):'—'}</strong>. Depois você poderá escolher o plano.</div>
         </div>}
 
-        {!needsPlanChoice&&tenantTab==='inicio'&&<>
+        {!tenantAccessBlocked&&tenantTab==='inicio'&&<>
           <div className="tenant-heading dashboard-heading">
             <div><span className="eyebrow">VISÃO FINANCEIRA</span><h1>Olá, {profile?.display_name?.split(' ')?.[0]??'bem-vindo'}!</h1><p>Acompanhe o que entrou, o que está para receber e o que precisa de atenção.</p></div>
             <div className="dashboard-heading-actions">
@@ -992,7 +1013,7 @@ export default function Home(){
           </section>
         </>}
 
-        {!needsPlanChoice&&tenantTab==='clientes'&&<>
+        {!tenantAccessBlocked&&tenantTab==='clientes'&&<>
           <div className="tenant-heading"><div><span className="eyebrow">CADASTROS</span><h1>Clientes</h1><p>Cadastre e acompanhe os clientes da sua empresa.</p></div></div>
           <div className="grid">
             <section className="card"><h2>Novo cliente</h2><form onSubmit={addClient}><label>Nome / Razão social<input required value={clientForm.name} onChange={e=>setClientForm({...clientForm,name:e.target.value})}/></label><label>CPF / CNPJ<input value={clientForm.document} onChange={e=>setClientForm({...clientForm,document:e.target.value})}/></label><div className="cols"><label>E-mail<input type="email" value={clientForm.email} onChange={e=>setClientForm({...clientForm,email:e.target.value})}/></label><label>WhatsApp<input value={clientForm.whatsapp} onChange={e=>setClientForm({...clientForm,whatsapp:e.target.value})}/></label></div><button className="primaryBtn" disabled={busy}><Plus size={16}/> Cadastrar cliente</button></form></section>
@@ -1003,7 +1024,7 @@ export default function Home(){
           </tbody></table></div></section>
         </>}
 
-        {!needsPlanChoice&&tenantTab==='cobrancas'&&<>
+        {!tenantAccessBlocked&&tenantTab==='cobrancas'&&<>
           <div className="tenant-heading"><div><span className="eyebrow">FINANCEIRO</span><h1>Cobranças</h1><p>Crie e acompanhe as cobranças da sua empresa.</p></div></div>
           <div className="grid">
             <section className="card"><h2>Nova cobrança</h2><form onSubmit={addCharge}><label>Cliente<select required value={chargeForm.clientId} onChange={e=>setChargeForm({...chargeForm,clientId:e.target.value})}><option value="">Selecione</option>{clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label><label>Descrição<input required value={chargeForm.description} onChange={e=>setChargeForm({...chargeForm,description:e.target.value})}/></label><div className="cols"><label>Valor<input required placeholder="0,00" value={chargeForm.amount} onChange={e=>setChargeForm({...chargeForm,amount:e.target.value})}/></label><label>Vencimento<input type="date" required value={chargeForm.dueDate} onChange={e=>setChargeForm({...chargeForm,dueDate:e.target.value})}/></label></div><button className="primaryBtn" disabled={busy||!clients.length}><Plus size={16}/> Criar cobrança</button></form></section>
@@ -1014,7 +1035,7 @@ export default function Home(){
           </tbody></table></div></section>
         </>}
 
-        {!needsPlanChoice&&tenantTab==='recorrencias'&&<>
+        {!tenantAccessBlocked&&tenantTab==='recorrencias'&&<>
           <div className="tenant-heading"><div><span className="eyebrow">AUTOMAÇÃO</span><h1>Recorrências</h1><p>Cadastre cobranças que se repetem automaticamente.</p></div></div>
           <div className="grid">
             <section className="card"><h2>Nova recorrência</h2><form onSubmit={addRecurring}><label>Cliente<select required value={recurringForm.clientId} onChange={e=>setRecurringForm({...recurringForm,clientId:e.target.value})}><option value="">Selecione</option>{clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label><label>Descrição<input required value={recurringForm.description} onChange={e=>setRecurringForm({...recurringForm,description:e.target.value})}/></label><div className="cols"><label>Valor<input required placeholder="0,00" value={recurringForm.amount} onChange={e=>setRecurringForm({...recurringForm,amount:e.target.value})}/></label><label>Frequência<select value={recurringForm.frequency} onChange={e=>setRecurringForm({...recurringForm,frequency:e.target.value})}><option value="monthly">Mensal</option><option value="biweekly">Quinzenal</option><option value="quarterly">Trimestral</option><option value="annual">Anual</option></select></label></div><div className="cols"><label>Dia de geração<input type="number" min="1" max="28" value={recurringForm.generationDay} onChange={e=>setRecurringForm({...recurringForm,generationDay:e.target.value})}/></label><label>Dia do vencimento<input type="number" min="1" max="28" value={recurringForm.dueDay} onChange={e=>setRecurringForm({...recurringForm,dueDay:e.target.value})}/></label></div><button className="primaryBtn" disabled={busy||!clients.length}><Plus size={16}/> Criar recorrência</button></form></section>
@@ -1025,20 +1046,20 @@ export default function Home(){
           </tbody></table></div></section>
         </>}
 
-        {!needsPlanChoice&&tenantTab==='relatorios'&&<>
+        {!tenantAccessBlocked&&tenantTab==='relatorios'&&<>
           <div className="tenant-heading"><div><span className="eyebrow">ANÁLISE</span><h1>Relatórios</h1><p>Resumo dos principais números da sua empresa.</p></div></div>
           <section className="metrics"><div className="metric"><span>Total recebido</span><strong>{brl(paid)}</strong><small>cobranças pagas</small></div><div className="metric"><span>Em aberto</span><strong>{brl(open)}</strong><small>aguardando pagamento</small></div><div className="metric"><span>Em atraso</span><strong>{brl(overdue)}</strong><small>requer atenção</small></div></section>
           <section className="card report-placeholder"><BarChart3 size={34}/><h2>Relatório financeiro</h2><p>Os indicadores acima são calculados com os dados reais da sua empresa.</p></section>
         </>}
 
-        {!needsPlanChoice&&tenantTab==='assinatura'&&<>
+        {!tenantAccessBlocked&&tenantTab==='assinatura'&&<>
           <div className="tenant-heading"><div><span className="eyebrow">PLANO</span><h1>Assinatura</h1><p>Acompanhe seu plano e período de teste.</p></div></div>
           <div className="subscription-card"><div><span className="eyebrow">{subscription?.status==='trialing'?'TESTE GRÁTIS':'PLANO ATUAL'}</span><h2>{subscription?.status==='trialing'?'4 dias grátis':(planName??'Plano')}</h2><p>{subscription?.status==='trialing'?'Depois do teste você escolhe o plano.':(billingLabel[planBillingModel]||'Mensal')}</p></div><div className="subscription-price">{subscription?.status==='trialing'?(trialDaysLeft+' dia'+(trialDaysLeft===1?'':'s')):<>{planBillingModel!=='per_boleto'&&typeof planPrice==='number'?brl(planPrice):''}{planBillingModel==='hybrid'?' + ':''}{planBillingModel!=='monthly'&&typeof planBoletoFee==='number'?brl(planBoletoFee)+'/boleto':''}</>}</div></div>
           <div className="grid"><section className="card"><h2>Status da assinatura</h2><div className="summary-row"><span>Status</span><span className={'status '+(subscription?.status??'trialing')}>{statusLabel[subscription?.status??'trialing']||subscription?.status}</span></div><div className="summary-row"><span>Teste até</span><strong>{subscription?.trial_ends_at?dateBR(subscription.trial_ends_at):'—'}</strong></div><div className="summary-row"><span>Próximo período</span><strong>{subscription?.current_period_end?dateBR(subscription.current_period_end):'—'}</strong></div></section><section className="card plan-benefits"><h2>Incluído no seu acesso</h2><p>✓ Cadastro de clientes</p><p>✓ Cobranças e recorrências</p><p>✓ Relatórios financeiros</p><p>✓ Separação segura dos dados</p></section></div>
           {subscription?.status==='trialing'&&<section className="card available-plans"><div className="cardHead"><div><h2>Planos disponíveis após o teste</h2><p>Ao terminar os 4 dias grátis, você escolhe uma destas opções.</p></div></div><div className="mini-plan-grid">{plans.filter(p=>p.active).map(p=><div className="mini-plan" key={p.id}><strong>{p.name}</strong><span>{billingLabel[p.billing_model]}</span><b>{p.billing_model!=='per_boleto'?brl(Number(p.monthly_price_cents))+'/mês':''}{p.billing_model==='hybrid'?' + ':''}{p.billing_model!=='monthly'?brl(Number(p.boleto_fee_cents))+'/boleto':''}</b></div>)}</div></section>}
         </>}
 
-        {!needsPlanChoice&&tenantTab==='conta'&&<>
+        {!tenantAccessBlocked&&tenantTab==='conta'&&<>
           <div className="tenant-heading"><div><span className="eyebrow">CONTA</span><h1>Minha conta</h1><p>Informações da empresa e do seu acesso.</p></div></div>
           <div className="grid"><section className="card account-card"><Settings size={24}/><h2>{org?.name}</h2><div className="summary-row"><span>E-mail</span><strong>{user?.email}</strong></div><div className="summary-row"><span>Perfil</span><strong>{membership?.role==='owner'?'Administrador da empresa':membership?.role==='admin'?'Gestor':'Usuário'}</strong></div><div className="summary-row"><span>Plano</span><strong>{planName??'—'}</strong></div><div className="summary-row"><span>Status</span><span className={'status '+(subscription?.status??org?.status??'active')}>{statusLabel[subscription?.status??org?.status??'active']||'Ativo'}</span></div></section><section className="card account-card"><WalletCards size={24}/><h2>Conta digital</h2><div className="summary-row"><span>Número da conta</span><strong>{wallet?.account_number??'—'}</strong></div><div className="summary-row"><span>Chave interna</span><strong>{wallet?.pix_key??'—'}</strong></div><div className="summary-row"><span>Saldo</span><strong>{brl(Number(wallet?.balance_cents??0))}</strong></div></section></div>
         </>}
