@@ -479,3 +479,63 @@ input:focus,select:focus{border-color:#0e9878!important;box-shadow:0 0 0 3px rgb
 .owner-company-detail{display:grid;gap:14px;margin-top:16px}.detail-loading{padding:25px;text-align:center;color:#778397}.company-detail-heading{margin:0}.compact-admin-metrics{margin-bottom:0}.owner-detail-grid{grid-template-columns:1fr 1fr}
 @media(max-width:900px){.blocked-invoice-box{grid-template-columns:1fr 1fr}.owner-detail-grid{grid-template-columns:1fr}}
 @media(max-width:700px){.usage-pill{width:100%;text-align:left}.table-filters,.table-search{width:100%}.table-search{min-width:0}.table-filters select{width:100%}.blocked-invoice-box{grid-template-columns:1fr}.operational-blocked-card{padding:24px 16px;margin:20px auto}.form-actions>*{width:100%}}
+
+
+
+/* JP brand logo */
+.jp-brand{
+  display:flex!important;
+  flex-direction:column;
+  align-items:flex-start!important;
+  gap:3px!important;
+  padding-top:2px;
+}
+.jp-brand-logo{
+  width:218px;
+  max-width:100%;
+  height:auto;
+  display:block;
+  object-fit:contain;
+}
+.jp-brand-subtitle{
+  display:block;
+  margin-left:4px;
+  font-size:8px!important;
+  line-height:1.2;
+  color:#8390a2!important;
+}
+.jp-auth-logo{
+  display:flex!important;
+  flex-direction:column;
+  align-items:flex-start!important;
+  gap:6px!important;
+  width:max-content;
+  max-width:100%;
+  padding:9px 11px;
+  border-radius:13px;
+  background:rgba(255,255,255,.96);
+  box-shadow:0 7px 22px rgba(10,31,52,.08);
+}
+.jp-auth-logo img{
+  width:220px;
+  max-width:100%;
+  height:auto;
+  display:block;
+}
+.jp-auth-logo>span{
+  margin-left:4px;
+  font-size:9px!important;
+  color:#6f7f91!important;
+}
+.jp-mobile-logo{
+  padding:5px 0;
+}
+.jp-mobile-logo img{
+  width:195px;
+  max-width:82vw;
+  height:auto;
+  display:block;
+}
+@media(max-width:900px){
+  .jp-brand-logo{width:190px}
+}
