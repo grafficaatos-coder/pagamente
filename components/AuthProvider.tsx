@@ -4,7 +4,7 @@ import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import type { User } from '@supabase/supabase-js';
 import { getSupabaseBrowserClient, supabaseConfigured } from '@/lib/supabase';
 
-const DEMO_USER = { id: 'demo-user', email: 'admin@pagamente.demo' } as User;
+const DEMO_USER = { id: 'demo-user', email: 'admin@sistema-cobranca.demo' } as User;
 
 type AuthContextValue = {
   mode: 'supabase' | 'demo';
@@ -60,7 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
       return data.session
         ? 'Conta criada e sessão iniciada.'
-        : 'Conta criada. Confirme o e-mail para entrar, caso a confirmação esteja habilitada no Supabase.';
+        : 'Conta criada. Confirme o e-mail para entrar, caso a confirmação esteja habilitada.';
     },
     async signOut() {
       if (supabase) await supabase.auth.signOut();
