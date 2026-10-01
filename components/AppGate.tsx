@@ -92,9 +92,9 @@ export default function AppGate({ children }: { children: React.ReactNode }) {
   if (recoveryMode) return <div className="auth-page auth-v2">
     <section className="auth-showcase">
       <div className="auth-showcase-inner">
-        <div className="auth-logo">
-          <div className="brand-mark"><WalletCards size={24}/></div>
-          <div><strong>Sistema de Cobrança</strong><span>Recuperação segura de acesso</span></div>
+        <div className="auth-logo jp-auth-logo">
+          <img src="/jp-sistema-cobranca.jpg" alt="JP Sistema de Cobrança"/>
+          <span>Recuperação segura de acesso</span>
         </div>
         <div className="auth-pitch">
           <span className="auth-kicker">SEGURANÇA DA CONTA</span>
@@ -221,9 +221,9 @@ export default function AppGate({ children }: { children: React.ReactNode }) {
   return <div className="auth-page auth-v2">
     <section className="auth-showcase">
       <div className="auth-showcase-inner">
-        <div className="auth-logo">
-          <div className="brand-mark"><WalletCards size={24}/></div>
-          <div><strong>Sistema de Cobrança</strong><span>Gestão financeira para empresas</span></div>
+        <div className="auth-logo jp-auth-logo">
+          <img src="/jp-sistema-cobranca.jpg" alt="JP Sistema de Cobrança"/>
+          <span>Gestão financeira para empresas</span>
         </div>
 
         <div className="auth-pitch">
@@ -243,9 +243,8 @@ export default function AppGate({ children }: { children: React.ReactNode }) {
     </section>
 
     <section className="auth-form-side">
-      <div className="auth-mobile-logo">
-        <div className="brand-mark"><WalletCards size={21}/></div>
-        <strong>Sistema de Cobrança</strong>
+      <div className="auth-mobile-logo jp-mobile-logo">
+        <img src="/jp-sistema-cobranca.jpg" alt="JP Sistema de Cobrança"/>
       </div>
 
       {screen === 'login' ? <form className="auth-card auth-card-v2" onSubmit={handleLogin}>
