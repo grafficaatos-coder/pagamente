@@ -51,7 +51,7 @@ function formatDocument(value: string, type: 'cnpj' | 'cpf') {
 }
 
 export default function AppGate({ children }: { children: React.ReactNode }) {
-  const { mode, user, loading, signIn, signUp, resendConfirmation, resetPassword } = useAuth();
+  const { mode, user, loading, recoveryMode, signIn, signUp, resendConfirmation, resetPassword, updatePassword } = useAuth();
   const [screen, setScreen] = useState<'login' | 'signup'>('login');
   const [step, setStep] = useState<SignupStep>(1);
   const [loginEmail, setLoginEmail] = useState('');
@@ -60,9 +60,71 @@ export default function AppGate({ children }: { children: React.ReactNode }) {
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
   if (mode === 'demo') return <>{children}</>;
   if (loading) return <div className="auth-page auth-loading-page"><div className="auth-loading">Carregando Sistema de Cobrança…</div></div>;
+
+  async function finishRecovery(e: React.FormEvent) {
+    e.preventDefault();
+    if (newPassword.length < 8) {
+      setMessage('Use uma senha com pelo menos 8 caracteres.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setMessage('As senhas não coincidem.');
+      return;
+    }
+    setBusy(true);
+    setMessage('');
+    try {
+      setMessage(await updatePassword(newPassword));
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Não foi possível atualizar a senha.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  if (recoveryMode) return <div className="auth-page auth-v2">
+    <section className="auth-showcase">
+      <div className="auth-showcase-inner">
+        <div className="auth-logo">
+          <div className="brand-mark"><WalletCards size={24}/></div>
+          <div><strong>Sistema de Cobrança</strong><span>Recuperação segura de acesso</span></div>
+        </div>
+        <div className="auth-pitch">
+          <span className="auth-kicker">SEGURANÇA DA CONTA</span>
+          <h2>Crie uma nova senha para continuar.</h2>
+          <p>Use uma senha exclusiva, com pelo menos 8 caracteres, e evite reutilizar senhas de outros serviços.</p>
+        </div>
+        <div className="auth-trust"><ShieldCheck size={18}/><span>O link de recuperação é temporário e protegido pelo Supabase Auth.</span></div>
+      </div>
+    </section>
+    <section className="auth-form-side">
+      <form className="auth-card auth-card-v2" onSubmit={finishRecovery}>
+        <div className="auth-heading">
+          <div className="auth-icon"><LockKeyhole size={21}/></div>
+          <div><h1>Defina sua nova senha</h1><p>Depois da alteração, seu acesso será liberado novamente.</p></div>
+        </div>
+        <label>Nova senha
+          <div className="password-field">
+            <input type={showPassword?'text':'password'} value={newPassword} onChange={e=>setNewPassword(e.target.value)} minLength={8} required/>
+            <button type="button" onClick={()=>setShowPassword(!showPassword)}>{showPassword?<EyeOff size={18}/>:<Eye size={18}/>}</button>
+          </div>
+        </label>
+        <label>Confirmar nova senha
+          <input type={showPassword?'text':'password'} value={confirmPassword} onChange={e=>setConfirmPassword(e.target.value)} minLength={8} required/>
+        </label>
+        {message&&<div className="auth-message">{message}</div>}
+        <button className="auth-primary" disabled={busy}>{busy?'Atualizando...':'Salvar nova senha'}</button>
+      </form>
+    </section>
+  </div>;
+
   if (user) return <>{children}</>;
 
   function setField<K extends keyof SignUpPayload>(key: K, value: SignUpPayload[K]) {
