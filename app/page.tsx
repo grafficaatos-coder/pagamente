@@ -657,10 +657,10 @@ export default function Home(){
           </>}
 
           {ownerTab==='empresas'&&<>
-            <div className="tenant-heading"><div><span className="eyebrow">CLIENTES DA PLATAFORMA</span><h1>Empresas</h1><p>Altere plano e status de cada empresa.</p></div></div>
+            <div className="tenant-heading"><div><span className="eyebrow">CLIENTES DA PLATAFORMA</span><h1>Empresas</h1><p>Altere plano e status e abra a ficha operacional completa de cada empresa.</p></div></div>
             <section className="card tableCard">
               <div className="cardHead"><div><h2>Empresas cadastradas</h2><p>{platformOrgs.length} contas na plataforma</p></div></div>
-              <div className="tableWrap"><table className="admin-table"><thead><tr><th>Empresa</th><th>Plano</th><th>Status</th><th>Boletos no mês</th><th>Teste até</th></tr></thead><tbody>
+              <div className="tableWrap"><table className="admin-table"><thead><tr><th>Empresa</th><th>Plano</th><th>Status</th><th>Boletos no mês</th><th>Teste até</th><th>Ações</th></tr></thead><tbody>
                 {platformOrgs.map(o=><tr key={o.id}>
                   <td><strong>{o.name}</strong><small className="cell-sub">{dateBR(o.created_at)}</small></td>
                   <td><select value={o.planId||''} onChange={e=>assignPlan(o.id,e.target.value)} disabled={busy}>
@@ -671,9 +671,71 @@ export default function Home(){
                   </select></td>
                   <td>{chargeCounts[o.id]??0}</td>
                   <td>{o.trialEndsAt?dateBR(o.trialEndsAt):'—'}</td>
+                  <td><div className="row-actions"><button onClick={()=>loadOwnerSnapshotAction(o.id)} disabled={snapshotBusy&&selectedOrgId===o.id}>Detalhes</button></div></td>
                 </tr>)}
               </tbody></table></div>
             </section>
+
+            {(snapshotBusy||ownerSnapshot)&&<section className="owner-company-detail">
+              {snapshotBusy?<div className="card detail-loading">Carregando detalhes da empresa...</div>:ownerSnapshot&&<>
+                <div className="tenant-heading company-detail-heading">
+                  <div><span className="eyebrow">FICHA DA EMPRESA</span><h2>{ownerSnapshot.organization?.name}</h2><p>{ownerSnapshot.organization?.document||'Documento não informado'} · {ownerSnapshot.organization?.city||'Cidade não informada'}{ownerSnapshot.organization?.state?' / '+ownerSnapshot.organization.state:''}</p></div>
+                  <span className={'status '+ownerSnapshot.organization?.status}>{statusLabel[ownerSnapshot.organization?.status]||ownerSnapshot.organization?.status}</span>
+                </div>
+
+                <section className="admin-metrics compact-admin-metrics">
+                  <div className="admin-kpi"><span>Clientes</span><strong>{ownerSnapshot.counts?.clients??0}</strong><small>cadastrados</small></div>
+                  <div className="admin-kpi"><span>Cobranças</span><strong>{ownerSnapshot.counts?.charges??0}</strong><small>emitidas</small></div>
+                  <div className="admin-kpi"><span>Pagas</span><strong>{ownerSnapshot.counts?.paid_charges??0}</strong><small>confirmadas</small></div>
+                  <div className="admin-kpi"><span>Usuários</span><strong>{ownerSnapshot.counts?.members??0}</strong><small>acessos</small></div>
+                </section>
+
+                <div className="grid owner-detail-grid">
+                  <section className="card">
+                    <h2>Assinatura</h2>
+                    <div className="summary-row"><span>Plano</span><strong>{ownerSnapshot.subscription?.plan_name||'—'}</strong></div>
+                    <div className="summary-row"><span>Status</span><strong>{statusLabel[ownerSnapshot.subscription?.status]||ownerSnapshot.subscription?.status||'—'}</strong></div>
+                    <div className="summary-row"><span>Modelo</span><strong>{billingLabel[ownerSnapshot.subscription?.billing_model]||'—'}</strong></div>
+                    <div className="summary-row"><span>Limite clientes</span><strong>{ownerSnapshot.subscription?.max_clients??'Ilimitado'}</strong></div>
+                    <div className="summary-row"><span>Limite usuários</span><strong>{ownerSnapshot.subscription?.max_users??'Ilimitado'}</strong></div>
+                  </section>
+
+                  <section className="card">
+                    <h2>Dados cadastrais</h2>
+                    <div className="summary-row"><span>Razão social</span><strong>{ownerSnapshot.organization?.legal_name||'—'}</strong></div>
+                    <div className="summary-row"><span>Telefone</span><strong>{ownerSnapshot.organization?.phone||'—'}</strong></div>
+                    <div className="summary-row"><span>Segmento</span><strong>{ownerSnapshot.organization?.segment||'—'}</strong></div>
+                    <div className="summary-row"><span>Cadastro</span><strong>{ownerSnapshot.organization?.created_at?dateBR(ownerSnapshot.organization.created_at):'—'}</strong></div>
+                  </section>
+                </div>
+
+                <div className="grid owner-detail-grid">
+                  <section className="card tableCard">
+                    <div className="cardHead"><div><h2>Equipe</h2><p>Usuários vinculados à empresa</p></div></div>
+                    <div className="tableWrap"><table><thead><tr><th>Nome</th><th>E-mail</th><th>Perfil</th></tr></thead><tbody>
+                      {(ownerSnapshot.members||[]).map((m:any)=><tr key={m.user_id}><td>{m.display_name||'Usuário'}</td><td>{m.email||'—'}</td><td>{roleLabel(m.role)}</td></tr>)}
+                      {!ownerSnapshot.members?.length&&<tr><td colSpan={3} className="empty">Nenhum usuário.</td></tr>}
+                    </tbody></table></div>
+                  </section>
+
+                  <section className="card tableCard">
+                    <div className="cardHead"><div><h2>Faturas recentes</h2><p>Cobrança da assinatura da plataforma</p></div></div>
+                    <div className="tableWrap"><table><thead><tr><th>Referência</th><th>Valor</th><th>Status</th></tr></thead><tbody>
+                      {(ownerSnapshot.recent_invoices||[]).map((i:any)=><tr key={i.id}><td>{dateBR(i.reference_month)}</td><td>{brl(Number(i.total_cents))}</td><td><span className={'status '+i.status}>{statusLabel[i.status]||i.status}</span></td></tr>)}
+                      {!ownerSnapshot.recent_invoices?.length&&<tr><td colSpan={3} className="empty">Nenhuma fatura.</td></tr>}
+                    </tbody></table></div>
+                  </section>
+                </div>
+
+                <section className="card tableCard">
+                  <div className="cardHead"><div><h2>Atividade recente</h2><p>Últimos eventos registrados para esta empresa</p></div></div>
+                  <div className="tableWrap"><table><thead><tr><th>Quando</th><th>Ação</th><th>Item</th></tr></thead><tbody>
+                    {(ownerSnapshot.recent_audit||[]).map((a:any)=><tr key={a.id}><td>{new Date(a.created_at).toLocaleString('pt-BR')}</td><td>{auditActionLabel(a.action)}</td><td>{entityLabel(a.entity_type)}{a.entity_id?' · '+String(a.entity_id).slice(0,8):''}</td></tr>)}
+                    {!ownerSnapshot.recent_audit?.length&&<tr><td colSpan={3} className="empty">Nenhuma atividade registrada.</td></tr>}
+                  </tbody></table></div>
+                </section>
+              </>}
+            </section>}
           </>}
 
           {ownerTab==='planos'&&<>
@@ -733,6 +795,19 @@ export default function Home(){
                   <td><div className="row-actions">{i.status!=='paid'&&<button onClick={()=>setInvoiceStatus(i.id,'paid')}>Marcar paga</button>}{i.status!=='cancelled'&&<button onClick={()=>setInvoiceStatus(i.id,'cancelled')}>Cancelar</button>}</div></td>
                 </tr>)}
                 {!platformInvoices.length&&<tr><td colSpan={7} className="empty">Nenhuma fatura gerada ainda.</td></tr>}
+              </tbody></table></div>
+            </section>
+          </>}
+
+          {ownerTab==='auditoria'&&<>
+            <div className="tenant-heading"><div><span className="eyebrow">AUDITORIA GLOBAL</span><h1>Atividade da plataforma</h1><p>Acompanhe alterações feitas nas empresas e nas operações do sistema.</p></div></div>
+            <section className="card tableCard">
+              <div className="cardHead"><div><h2>Eventos recentes</h2><p>Até 120 eventos mais recentes carregados</p></div></div>
+              <div className="tableWrap"><table><thead><tr><th>Quando</th><th>Empresa</th><th>Usuário</th><th>Ação</th><th>Item</th></tr></thead><tbody>
+                {platformAudit.map(item=><tr key={item.id}>
+                  <td>{new Date(item.created_at).toLocaleString('pt-BR')}</td><td>{item.organization_name||'Plataforma'}</td><td>{item.actor_name||item.actor_email||'Sistema'}</td><td>{auditActionLabel(item.action)}</td><td>{entityLabel(item.entity_type)}{item.entity_id?' · '+item.entity_id.slice(0,8):''}</td>
+                </tr>)}
+                {!platformAudit.length&&<tr><td colSpan={5} className="empty">Ainda não há atividades registradas.</td></tr>}
               </tbody></table></div>
             </section>
           </>}
