@@ -6,12 +6,26 @@ import { getSupabaseBrowserClient, supabaseConfigured } from '@/lib/supabase';
 
 const DEMO_USER = { id: 'demo-user', email: 'admin@sistema-cobranca.demo' } as User;
 
+export type SignUpPayload = {
+  contactName: string;
+  companyName: string;
+  legalName: string;
+  documentType: 'cnpj' | 'cpf';
+  document: string;
+  phone: string;
+  email: string;
+  password: string;
+  city: string;
+  state: string;
+  segment: string;
+};
+
 type AuthContextValue = {
   mode: 'supabase' | 'demo';
   user: User | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (name: string, company: string, email: string, password: string) => Promise<string>;
+  signUp: (payload: SignUpPayload) => Promise<string>;
   resendConfirmation: (email: string) => Promise<string>;
   resetPassword: (email: string) => Promise<string>;
   signOut: () => Promise<void>;
@@ -57,20 +71,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
     },
-    async signUp(name, company, email, password) {
+    async signUp(payload) {
       if (!supabase) return 'Modo demonstração ativo.';
       const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
+        email: payload.email,
+        password: payload.password,
         options: {
-          data: { display_name: name, company_name: company },
           emailRedirectTo: appOrigin(),
+          data: {
+            display_name: payload.contactName,
+            contact_name: payload.contactName,
+            company_name: payload.companyName,
+            legal_name: payload.legalName,
+            document_type: payload.documentType,
+            document: payload.document,
+            phone: payload.phone,
+            city: payload.city,
+            state: payload.state,
+            segment: payload.segment,
+          },
         },
       });
       if (error) throw error;
       return data.session
         ? 'Conta criada e sessão iniciada.'
-        : 'Conta criada. Confirme o e-mail para entrar.';
+        : 'Cadastro realizado. Confirme seu e-mail para entrar.';
     },
     async resendConfirmation(email) {
       if (!supabase) return 'Modo demonstração ativo.';
