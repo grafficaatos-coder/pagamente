@@ -168,16 +168,18 @@ export default function Home(){
           {data:planRows,error:ple},
           {data:settingsRows,error:sete},
           {data:invoiceRows,error:ie},
-          {data:monthCharges,error:mce}
+          {data:monthCharges,error:mce},
+          {data:auditRows,error:ae}
         ]=await Promise.all([
           supabase.from('organizations').select('id,name,status,created_at').order('created_at',{ascending:false}).limit(250),
           supabase.from('subscriptions').select('organization_id,plan_id,status,trial_ends_at,plans(id,name)').limit(250),
           supabase.from('plans').select('id,code,name,billing_model,monthly_price_cents,boleto_fee_cents,max_clients,max_users,active').order('monthly_price_cents',{ascending:true}),
           supabase.from('platform_settings').select('platform_name,trial_days,signup_enabled,default_plan_id,support_email').eq('id',true).maybeSingle(),
           supabase.from('platform_invoices').select('id,organization_id,reference_month,total_cents,status,due_date,boleto_count,monthly_fee_cents,boleto_fee_cents,organizations(name),plans(name)').order('reference_month',{ascending:false}).limit(200),
-          supabase.from('charges').select('organization_id,created_at').gte('created_at',monthStartISO()).neq('status','cancelled')
+          supabase.from('charges').select('organization_id,created_at').gte('created_at',monthStartISO()).neq('status','cancelled'),
+          supabase.rpc('platform_audit_feed',{p_limit:120})
         ]);
-        if(oe||se||ple||sete||ie||mce)throw oe||se||ple||sete||ie||mce;
+        if(oe||se||ple||sete||ie||mce||ae)throw oe||se||ple||sete||ie||mce||ae;
 
         const subByOrg=new Map((subs??[]).map((s:any)=>[s.organization_id,s]));
         setPlatformOrgs((orgs??[]).map((item:any)=>{
@@ -194,6 +196,7 @@ export default function Home(){
         setPlans((planRows??[]) as any);
         if(settingsRows)setPlatformSettings(settingsRows);
         setPlatformInvoices((invoiceRows??[]) as any);
+        setPlatformAudit((auditRows??[]) as any);
 
         const counts:Record<string,number>={};
         (monthCharges??[]).forEach((c:any)=>{counts[c.organization_id]=(counts[c.organization_id]??0)+1});
@@ -220,19 +223,39 @@ export default function Home(){
         {data:c,error:ce},
         {data:ch,error:che},
         {data:rr,error:rre},
-        {data:sub,error:se}
+        {data:sub,error:se},
+        {data:invoice,error:ine},
+        {data:members,error:tme},
+        {data:auditRows,error:tae}
       ]=await Promise.all([
         supabase.from('organizations').select('id,name,status').eq('id',orgId).single(),
         supabase.from('wallet_accounts').select('id,account_number,pix_key,balance_cents').eq('organization_id',orgId).single(),
-        supabase.from('clients').select('id,name,document,email,whatsapp').eq('organization_id',orgId).order('created_at',{ascending:false}),
-        supabase.from('charges').select('id,description,amount_cents,due_date,status,clients(name)').eq('organization_id',orgId).order('created_at',{ascending:false}).limit(100),
+        supabase.from('clients').select('id,name,document,email,whatsapp,status').eq('organization_id',orgId).order('created_at',{ascending:false}),
+        supabase.from('charges').select('id,description,amount_cents,due_date,status,provider,created_at,boleto_url,digitable_line,clients(name)').eq('organization_id',orgId).order('created_at',{ascending:false}).limit(250),
         supabase.from('recurring_rules').select('id,description,amount_cents,frequency,generation_day,due_day,status,clients(name)').eq('organization_id',orgId).order('created_at',{ascending:false}),
-        supabase.from('subscriptions').select('status,trial_ends_at,current_period_end,chosen_plan_at,plans(name,billing_model,monthly_price_cents,boleto_fee_cents)').eq('organization_id',orgId).maybeSingle()
+        supabase.from('subscriptions').select('status,trial_ends_at,current_period_end,chosen_plan_at,plans(name,billing_model,monthly_price_cents,boleto_fee_cents,max_clients,max_users)').eq('organization_id',orgId).maybeSingle(),
+        supabase.from('platform_invoices').select('id,status,total_cents,due_date,reference_month').eq('organization_id',orgId).order('created_at',{ascending:false}).limit(1).maybeSingle(),
+        supabase.rpc('tenant_list_members'),
+        supabase.rpc('tenant_audit_feed',{p_limit:80})
       ]);
-      if(oe||we||ce||che||rre||se)throw oe||we||ce||che||rre||se;
+      if(oe||we||ce||che||rre||se||ine||tme||tae)throw oe||we||ce||che||rre||se||ine||tme||tae;
 
-      setOrg(o);setWallet(w);setClients(c??[]);setCharges((ch??[]) as any);
-      setRecurring((rr??[]) as any);setSubscription(sub);
+      setOrg(o);setWallet(w);setClients((c??[]) as any);setCharges((ch??[]) as any);
+      setRecurring((rr??[]) as any);setSubscription(sub);setPlatformInvoice(invoice);
+      setTeamMembers((members??[]) as any);setTenantAudit((auditRows??[]) as any);
+
+      if(member.role==='owner'||member.role==='admin'){
+        const {data:inviteRows,error:ive}=await supabase.from('organization_invites')
+          .select('id,email,role,status,created_at')
+          .eq('organization_id',orgId)
+          .eq('status','pending')
+          .order('created_at',{ascending:false});
+        if(ive)throw ive;
+        setOrgInvites((inviteRows??[]) as any);
+      }else{
+        setOrgInvites([]);
+      }
+
       const {data:tenantPlans,error:tpe}=await supabase.from('plans').select('id,code,name,billing_model,monthly_price_cents,boleto_fee_cents,max_clients,max_users,active').eq('active',true).order('monthly_price_cents',{ascending:true});
       if(tpe)throw tpe;
       setPlans((tenantPlans??[]) as any);
