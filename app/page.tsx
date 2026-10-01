@@ -442,6 +442,123 @@ export default function Home(){
     setBusy(false);
   }
 
+  async function saveClientEdit(e:React.FormEvent){
+    e.preventDefault();
+    if(!supabase||!clientEdit)return;
+    setBusy(true);setMsg('');
+    const {error}=await supabase.from('clients').update({
+      name:clientEdit.name,
+      document:clientEdit.document||null,
+      email:clientEdit.email||null,
+      whatsapp:clientEdit.whatsapp||null,
+      updated_at:new Date().toISOString()
+    }).eq('id',clientEdit.id);
+    if(error)setMsg(error.message);
+    else{setMsg('Cliente atualizado com sucesso.');setClientEdit(null);await load()}
+    setBusy(false);
+  }
+
+  async function toggleClientStatus(client:Client){
+    if(!supabase)return;
+    const next=client.status==='active'?'inactive':'active';
+    setBusy(true);setMsg('');
+    const {error}=await supabase.from('clients').update({status:next,updated_at:new Date().toISOString()}).eq('id',client.id);
+    if(error)setMsg(error.message);
+    else{setMsg(next==='active'?'Cliente reativado.':'Cliente inativado.');await load()}
+    setBusy(false);
+  }
+
+  async function saveChargeEdit(e:React.FormEvent){
+    e.preventDefault();
+    if(!supabase||!chargeEdit)return;
+    setBusy(true);setMsg('');
+    const {error}=await supabase.from('charges').update({
+      description:chargeEdit.description,
+      due_date:chargeEdit.due_date,
+      updated_at:new Date().toISOString()
+    }).eq('id',chargeEdit.id);
+    if(error)setMsg(error.message);
+    else{setMsg('Cobrança atualizada.');setChargeEdit(null);await load()}
+    setBusy(false);
+  }
+
+  async function cancelChargeAction(charge:Charge){
+    if(!supabase)return;
+    if(!window.confirm('Cancelar a cobrança "'+charge.description+'"?'))return;
+    setBusy(true);setMsg('');
+    const {error}=await supabase.rpc('cancel_charge',{p_charge_id:charge.id});
+    if(error)setMsg(error.message);
+    else{setMsg('Cobrança cancelada.');await load()}
+    setBusy(false);
+  }
+
+  async function setRecurringStatusAction(id:string,status:string){
+    if(!supabase)return;
+    setBusy(true);setMsg('');
+    const {error}=await supabase.from('recurring_rules').update({status,updated_at:new Date().toISOString()}).eq('id',id);
+    if(error)setMsg(error.message);
+    else{setMsg(status==='active'?'Recorrência ativada.':status==='paused'?'Recorrência pausada.':'Recorrência cancelada.');await load()}
+    setBusy(false);
+  }
+
+  async function inviteMember(e:React.FormEvent){
+    e.preventDefault();
+    if(!supabase)return;
+    setBusy(true);setMsg('');
+    const {data,error}=await supabase.rpc('tenant_invite_member',{
+      p_email:inviteForm.email,
+      p_role:inviteForm.role
+    });
+    if(error)setMsg(error.message);
+    else{
+      setMsg(data==='added'
+        ?'Usuário existente adicionado à empresa.'
+        :'Convite registrado. A pessoa deve criar a conta usando exatamente este e-mail.');
+      setInviteForm({email:'',role:'viewer'});
+      await load();
+    }
+    setBusy(false);
+  }
+
+  async function setMemberRoleAction(userId:string,role:string){
+    if(!supabase)return;
+    setBusy(true);setMsg('');
+    const {error}=await supabase.rpc('tenant_set_member_role',{p_user_id:userId,p_role:role});
+    if(error)setMsg(error.message);
+    else{setMsg('Perfil do usuário atualizado.');await load()}
+    setBusy(false);
+  }
+
+  async function removeMemberAction(member:TeamMember){
+    if(!supabase)return;
+    if(!window.confirm('Remover '+(member.display_name||member.email||'este usuário')+' da empresa?'))return;
+    setBusy(true);setMsg('');
+    const {error}=await supabase.rpc('tenant_remove_member',{p_user_id:member.user_id});
+    if(error)setMsg(error.message);
+    else{setMsg('Usuário removido da empresa.');await load()}
+    setBusy(false);
+  }
+
+  async function cancelInviteAction(invite:OrgInvite){
+    if(!supabase)return;
+    setBusy(true);setMsg('');
+    const {error}=await supabase.rpc('tenant_cancel_invite',{p_invite_id:invite.id});
+    if(error)setMsg(error.message);
+    else{setMsg('Convite cancelado.');await load()}
+    setBusy(false);
+  }
+
+  async function loadOwnerSnapshotAction(orgId:string){
+    if(!supabase)return;
+    setSelectedOrgId(orgId);
+    setSnapshotBusy(true);
+    setOwnerSnapshot(null);
+    const {data,error}=await supabase.rpc('platform_organization_snapshot',{p_organization_id:orgId});
+    if(error)setMsg(error.message);
+    else setOwnerSnapshot(data as any);
+    setSnapshotBusy(false);
+  }
+
   const planMap=new Map(plans.map(p=>[p.id,p]));
   const activeOrgs=platformOrgs.filter(o=>['active','trialing'].includes(o.status)).length;
   const currentMonthBoletos=Object.values(chargeCounts).reduce((a,b)=>a+b,0);
