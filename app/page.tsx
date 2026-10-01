@@ -96,6 +96,30 @@ function clientName(value:any){
   return Array.isArray(value) ? value[0]?.name : value?.name;
 }
 
+function roleLabel(role?:string){
+  if(role==='owner')return 'Proprietário';
+  if(role==='admin')return 'Administrador';
+  if(role==='finance')return 'Financeiro';
+  if(role==='viewer'||role==='member')return 'Consulta';
+  return 'Usuário';
+}
+
+function auditActionLabel(action:string){
+  if(action==='insert')return 'Criou';
+  if(action==='update')return 'Alterou';
+  if(action==='delete')return 'Removeu';
+  return action;
+}
+
+function entityLabel(entity:string){
+  const labels:Record<string,string>={
+    clients:'cliente',charges:'cobrança',recurring_rules:'recorrência',
+    organization_members:'usuário',organizations:'empresa',subscriptions:'assinatura',
+    platform_invoices:'fatura'
+  };
+  return labels[entity]||entity;
+}
+
 export default function Home(){
   const {user,signOut}=useAuth();
   const supabase=useMemo(()=>getSupabaseBrowserClient(),[]);
@@ -577,6 +601,7 @@ export default function Home(){
       ['empresas','Empresas',Building2],
       ['planos','Planos',CreditCard],
       ['faturamento','Faturamento',CircleDollarSign],
+      ['auditoria','Auditoria',History],
       ['configuracoes','Configurações',Settings]
     ] as const;
 
@@ -790,12 +815,35 @@ export default function Home(){
   const trialEnd=subscription?.trial_ends_at?new Date(subscription.trial_ends_at):null;
   const trialExpired=Boolean(subscription?.status==='trialing'&&trialEnd&&trialEnd.getTime()<=Date.now());
   const needsPlanChoice=Boolean(trialExpired&&!subscription?.chosen_plan_at);
+  const paymentPending=Boolean(subscription?.status==='past_due'&&subscription?.chosen_plan_at);
+  const accountSuspended=Boolean(subscription?.status==='suspended'||subscription?.status==='cancelled');
+  const tenantAccessBlocked=needsPlanChoice||paymentPending||accountSuspended;
   const trialDaysLeft=trialEnd?Math.max(0,Math.ceil((trialEnd.getTime()-Date.now())/86400000)):0;
+  const canManageFinance=['owner','admin','finance'].includes(membership?.role);
+  const canManageTeam=['owner','admin'].includes(membership?.role);
+  const planMaxClients=planObj?.max_clients??null;
+  const planMaxUsers=planObj?.max_users??null;
+  const filteredClients=clients.filter(client=>{
+    const q=clientSearch.trim().toLowerCase();
+    return !q
+      || client.name.toLowerCase().includes(q)
+      || (client.document||'').toLowerCase().includes(q)
+      || (client.email||'').toLowerCase().includes(q);
+  });
+  const filteredCharges=charges.filter(charge=>{
+    const q=chargeSearch.trim().toLowerCase();
+    const computedStatus=isComputedOverdue(charge)?'overdue':charge.status;
+    const matchesText=!q
+      || charge.description.toLowerCase().includes(q)
+      || (clientName(charge.clients)||'').toLowerCase().includes(q);
+    const matchesStatus=chargeStatusFilter==='all'||computedStatus===chargeStatusFilter;
+    return matchesText&&matchesStatus;
+  });
 
   const tenantNav=[
     ['inicio','Início',LayoutDashboard],['clientes','Clientes',UsersRound],['cobrancas','Cobranças',ReceiptText],
-    ['recorrencias','Recorrências',CalendarClock],['relatorios','Relatórios',BarChart3],
-    ['assinatura','Assinatura',WalletCards],['conta','Minha conta',UserCircle2]
+    ['recorrencias','Recorrências',CalendarClock],['equipe','Equipe',UserCog],['atividade','Atividade',History],
+    ['relatorios','Relatórios',BarChart3],['assinatura','Assinatura',WalletCards],['conta','Minha conta',UserCircle2]
   ] as const;
 
   return <div className="tenant-shell">
@@ -803,7 +851,7 @@ export default function Home(){
       <div className="tenant-brand"><div className="brand-mark"><WalletCards size={21}/></div><div><strong>Sistema de Cobrança</strong><span>Área do cliente</span></div></div>
       <div className="company-card"><Building2 size={18}/><div><strong>{org?.name??'Sua empresa'}</strong><span>{planName?'Plano '+planName:'Conta empresarial'}</span></div></div>
       <nav className="tenant-nav">{tenantNav.map(([id,label,Icon])=><button key={id} className={tenantTab===id?'active':''} onClick={()=>setTenantTab(id)}><Icon size={18}/><span>{label}</span></button>)}</nav>
-      <div className="tenant-side-bottom"><div className="tenant-user"><div className="avatar">{(profile?.display_name?.[0]??user?.email?.[0]??'U').toUpperCase()}</div><div><strong>{profile?.display_name??'Usuário'}</strong><span>{membership?.role==='owner'?'Administrador da empresa':membership?.role==='admin'?'Gestor':'Usuário'}</span></div></div><button className="tenant-logout" onClick={()=>signOut()}><LogOut size={17}/> Sair</button></div>
+      <div className="tenant-side-bottom"><div className="tenant-user"><div className="avatar">{(profile?.display_name?.[0]??user?.email?.[0]??'U').toUpperCase()}</div><div><strong>{profile?.display_name??'Usuário'}</strong><span>{roleLabel(membership?.role)}</span></div></div><button className="tenant-logout" onClick={()=>signOut()}><LogOut size={17}/> Sair</button></div>
     </aside>
 
     <section className="tenant-main">
