@@ -202,3 +202,21 @@
 .fin-signup-actions{display:grid;grid-template-columns:auto 1fr;gap:10px;margin-top:4px}.fin-back{height:52px;border:1px solid #d6deea;border-radius:999px;background:#fff;color:#49566c;padding:0 17px;display:flex;align-items:center;justify-content:center;gap:6px;font-weight:800;cursor:pointer}
 @media(max-width:1000px){.fin-auth-page{grid-template-columns:1fr}.fin-auth-showcase{display:none}.fin-auth-main{min-height:100vh;padding:30px 20px}.fin-brand{justify-content:flex-start}}
 @media(max-width:600px){.fin-auth-main{padding:24px 16px}.fin-two-cols{grid-template-columns:1fr}.fin-stepper{grid-template-columns:1fr}.fin-signup-actions{grid-template-columns:1fr}.fin-showcase-copy h2{font-size:34px}}
+
+
+
+/* Green fintech theme override */
+.fin-auth-loading{color:#0d6f5c}
+.fin-showcase-card{background:linear-gradient(145deg,#edf9f5,#d9f1e9);color:#123d35}
+.fin-showcase-title small{color:#64877e}
+.fin-showcase-copy h2{color:#123d35}.fin-showcase-copy p{color:#557a70}
+.fin-orb{background:radial-gradient(circle at 28% 26%,#72e7c8 0%,#22c49a 24%,#0b9677 49%,#075e50 68%,#05342e 100%);box-shadow:0 30px 60px rgba(10,111,89,.22)}
+.fin-float,.fin-message{box-shadow:0 14px 32px rgba(18,117,96,.12);color:#2f6157}
+.fin-brand{color:#0d8a70}
+.fin-form-head h1{color:#112f2a}
+.fin-form input:focus,.fin-form select:focus{border-color:#0e8a70;box-shadow:0 0 0 3px rgba(14,138,112,.1)}
+.fin-link{color:#0e8a70}
+.fin-primary{background:#0e9878;box-shadow:0 12px 25px rgba(14,152,120,.20)}.fin-primary:hover:not(:disabled){background:#0b8067}
+.fin-account-switch button{color:#0e8a70}
+.fin-step.active{border-color:#a9dfd1;background:#edf9f5}.fin-step.active span{background:#0e9878;color:#fff}.fin-step.done span{background:#0b8067;color:#fff}
+.fin-signup-benefits{border-color:#cdebe2;background:#eef9f5}.fin-signup-benefits>div{color:#376a5f}.fin-signup-benefits svg{color:#0e9878}
