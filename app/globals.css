@@ -106,3 +106,8 @@
   .admin-main{margin-left:0;width:100%}.admin-metrics{grid-template-columns:1fr 1fr}
   .admin-form-grid{grid-template-columns:1fr}.invoice-action{width:100%;flex-direction:column;align-items:stretch}.invoice-action input{width:100%}
 }
+
+.plan-card-actions{display:grid;grid-template-columns:1fr auto;gap:8px}
+.dangerBtn{border:1px solid #efb6bd;border-radius:9px;padding:11px 13px;background:#fff4f5;color:#b53a49;font-weight:800;display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer}
+.dangerBtn:hover{background:#fdebed;border-color:#e69aa5}.dangerBtn:disabled{opacity:.55;cursor:not-allowed}
+@media(max-width:700px){.plan-card-actions{grid-template-columns:1fr}.dangerBtn{width:100%}}
