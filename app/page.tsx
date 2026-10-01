@@ -1061,14 +1061,51 @@ export default function Home(){
         </>}
 
         {!tenantAccessBlocked&&tenantTab==='cobrancas'&&<>
-          <div className="tenant-heading"><div><span className="eyebrow">FINANCEIRO</span><h1>Cobranças</h1><p>Crie e acompanhe as cobranças da sua empresa.</p></div></div>
+          <div className="tenant-heading"><div><span className="eyebrow">FINANCEIRO</span><h1>Cobranças</h1><p>Crie, edite, filtre e cancele cobranças da sua empresa.</p></div></div>
           <div className="grid">
-            <section className="card"><h2>Nova cobrança</h2><form onSubmit={addCharge}><label>Cliente<select required value={chargeForm.clientId} onChange={e=>setChargeForm({...chargeForm,clientId:e.target.value})}><option value="">Selecione</option>{clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label><label>Descrição<input required value={chargeForm.description} onChange={e=>setChargeForm({...chargeForm,description:e.target.value})}/></label><div className="cols"><label>Valor<input required placeholder="0,00" value={chargeForm.amount} onChange={e=>setChargeForm({...chargeForm,amount:e.target.value})}/></label><label>Vencimento<input type="date" required value={chargeForm.dueDate} onChange={e=>setChargeForm({...chargeForm,dueDate:e.target.value})}/></label></div><button className="primaryBtn" disabled={busy||!clients.length}><Plus size={16}/> Criar cobrança</button></form></section>
-            <section className="card info-card"><ReceiptText size={26}/><h2>{openCharges.length} cobranças em aberto</h2><p>Total previsto para recebimento: <strong>{brl(open)}</strong>.</p></section>
+            <section className="card">
+              <h2>{chargeEdit?'Editar cobrança':'Nova cobrança'}</h2>
+              {chargeEdit?<form onSubmit={saveChargeEdit}>
+                <label>Descrição<input required value={chargeEdit.description} onChange={e=>setChargeEdit({...chargeEdit,description:e.target.value})}/></label>
+                <label>Vencimento<input type="date" required value={chargeEdit.due_date} onChange={e=>setChargeEdit({...chargeEdit,due_date:e.target.value})}/></label>
+                <div className="form-actions"><button className="primaryBtn" disabled={busy}><Save size={16}/> Salvar cobrança</button><button type="button" className="secondaryBtn" onClick={()=>setChargeEdit(null)}>Cancelar</button></div>
+              </form>:<form onSubmit={addCharge}>
+                <label>Cliente<select required value={chargeForm.clientId} onChange={e=>setChargeForm({...chargeForm,clientId:e.target.value})}><option value="">Selecione</option>{clients.filter(c=>c.status==='active').map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+                <label>Descrição<input required value={chargeForm.description} onChange={e=>setChargeForm({...chargeForm,description:e.target.value})}/></label>
+                <div className="cols"><label>Valor<input required placeholder="0,00" value={chargeForm.amount} onChange={e=>setChargeForm({...chargeForm,amount:e.target.value})}/></label><label>Vencimento<input type="date" required value={chargeForm.dueDate} onChange={e=>setChargeForm({...chargeForm,dueDate:e.target.value})}/></label></div>
+                <button className="primaryBtn" disabled={busy||!clients.some(c=>c.status==='active')||!canManageFinance}><Plus size={16}/> Criar cobrança</button>
+                {!canManageFinance&&<p className="permission-note">Seu perfil é somente leitura para operações financeiras.</p>}
+              </form>}
+            </section>
+            <section className="card info-card"><ReceiptText size={26}/><h2>{openCharges.length} cobranças em aberto</h2><p>Total previsto para recebimento: <strong>{brl(open)}</strong>. Cobranças vencidas são atualizadas automaticamente todos os dias.</p></section>
           </div>
-          <section className="card tableCard"><div className="cardHead"><div><h2>Todas as cobranças</h2><p>Histórico financeiro da empresa</p></div></div><div className="tableWrap"><table><thead><tr><th>Cliente</th><th>Descrição</th><th>Vencimento</th><th>Status</th><th>Valor</th></tr></thead><tbody>
-            {charges.map(c=><tr key={c.id}><td>{clientName(c.clients)||'Cliente'}</td><td>{c.description}</td><td>{dateBR(c.due_date)}</td><td><span className={'status '+c.status}>{statusLabel[c.status]||c.status}</span></td><td>{brl(Number(c.amount_cents))}</td></tr>)}{!charges.length&&<tr><td colSpan={5} className="empty">Nenhuma cobrança cadastrada.</td></tr>}
-          </tbody></table></div></section>
+
+          <section className="card tableCard">
+            <div className="cardHead operational-table-head">
+              <div><h2>Todas as cobranças</h2><p>{filteredCharges.length} cobranças encontradas</p></div>
+              <div className="table-filters">
+                <div className="table-search"><Search size={15}/><input value={chargeSearch} onChange={e=>setChargeSearch(e.target.value)} placeholder="Buscar cobrança..."/></div>
+                <select value={chargeStatusFilter} onChange={e=>setChargeStatusFilter(e.target.value)}>
+                  <option value="all">Todos os status</option><option value="pending">Pendentes</option><option value="paid">Pagas</option><option value="overdue">Vencidas</option><option value="cancelled">Canceladas</option><option value="draft">Rascunhos</option>
+                </select>
+              </div>
+            </div>
+            <div className="tableWrap"><table><thead><tr><th>Cliente</th><th>Descrição</th><th>Vencimento</th><th>Status</th><th>Valor</th><th>Ações</th></tr></thead><tbody>
+              {filteredCharges.map(charge=>{
+                const computedStatus=isComputedOverdue(charge)?'overdue':charge.status;
+                return <tr key={charge.id}>
+                  <td>{clientName(charge.clients)||'Cliente'}</td><td>{charge.description}</td><td>{dateBR(charge.due_date)}</td>
+                  <td><span className={'status '+computedStatus}>{statusLabel[computedStatus]||computedStatus}</span></td><td><strong>{brl(Number(charge.amount_cents))}</strong></td>
+                  <td><div className="row-actions">
+                    {['pending','draft','overdue'].includes(computedStatus)&&<button disabled={!canManageFinance||busy} onClick={()=>setChargeEdit({id:charge.id,description:charge.description,due_date:charge.due_date})}><Pencil size={13}/> Editar</button>}
+                    {['pending','draft','overdue'].includes(computedStatus)&&<button disabled={!canManageFinance||busy} onClick={()=>cancelChargeAction(charge)}><XCircle size={13}/> Cancelar</button>}
+                    {charge.boleto_url&&<a className="table-link" href={charge.boleto_url} target="_blank" rel="noreferrer">Boleto</a>}
+                  </div></td>
+                </tr>
+              })}
+              {!filteredCharges.length&&<tr><td colSpan={6} className="empty">Nenhuma cobrança encontrada.</td></tr>}
+            </tbody></table></div>
+          </section>
         </>}
 
         {!tenantAccessBlocked&&tenantTab==='recorrencias'&&<>
