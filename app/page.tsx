@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   BarChart3, Building2, CalendarClock, CircleDollarSign, CreditCard, Crown,
   LayoutDashboard, LogOut, Plus, ReceiptText, RefreshCw, Save, Settings,
-  ShieldCheck, UserCircle2, UsersRound, WalletCards
+  ShieldCheck, Trash2, UserCircle2, UsersRound, WalletCards
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
@@ -247,6 +247,16 @@ export default function Home(){
     },'Plano atualizado com sucesso.');
   }
 
+  async function deletePlan(plan:Plan){
+    if(!supabase)return;
+    const ok=window.confirm('Excluir o plano "'+plan.name+'"? Esta ação só será permitida se ele não estiver vinculado a empresas, não for o plano padrão e não tiver histórico de faturamento.');
+    if(!ok)return;
+    await runOwnerAction(async()=>{
+      const {error}=await supabase.rpc('platform_delete_plan',{p_plan_id:plan.id});
+      if(error)throw error;
+    },'Plano excluído com sucesso.');
+  }
+
   async function createPlan(e:React.FormEvent){
     e.preventDefault();
     if(!supabase)return;
@@ -487,7 +497,7 @@ export default function Home(){
                   <strong>{billingLabel[p.billing_model]}</strong>
                   <span>{p.billing_model!=='per_boleto'?brl(Number(p.monthly_price_cents))+'/mês':''}{p.billing_model==='hybrid'?' + ':''}{p.billing_model!=='monthly'?brl(Number(p.boleto_fee_cents))+'/boleto':''}</span>
                 </div>
-                <button className="primaryBtn" onClick={()=>savePlan(p)} disabled={busy}><Save size={16}/> Salvar alterações</button>
+                <div className="plan-card-actions"><button className="primaryBtn" onClick={()=>savePlan(p)} disabled={busy}><Save size={16}/> Salvar alterações</button><button className="dangerBtn" onClick={()=>deletePlan(p)} disabled={busy}><Trash2 size={16}/> Excluir plano</button></div>
               </section>)}
             </div>
           </>}
