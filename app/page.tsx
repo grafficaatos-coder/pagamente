@@ -1014,14 +1014,50 @@ export default function Home(){
         </>}
 
         {!tenantAccessBlocked&&tenantTab==='clientes'&&<>
-          <div className="tenant-heading"><div><span className="eyebrow">CADASTROS</span><h1>Clientes</h1><p>Cadastre e acompanhe os clientes da sua empresa.</p></div></div>
-          <div className="grid">
-            <section className="card"><h2>Novo cliente</h2><form onSubmit={addClient}><label>Nome / Razão social<input required value={clientForm.name} onChange={e=>setClientForm({...clientForm,name:e.target.value})}/></label><label>CPF / CNPJ<input value={clientForm.document} onChange={e=>setClientForm({...clientForm,document:e.target.value})}/></label><div className="cols"><label>E-mail<input type="email" value={clientForm.email} onChange={e=>setClientForm({...clientForm,email:e.target.value})}/></label><label>WhatsApp<input value={clientForm.whatsapp} onChange={e=>setClientForm({...clientForm,whatsapp:e.target.value})}/></label></div><button className="primaryBtn" disabled={busy}><Plus size={16}/> Cadastrar cliente</button></form></section>
-            <section className="card info-card"><UsersRound size={26}/><h2>{clients.length} clientes cadastrados</h2><p>Os dados ficam separados por empresa e protegidos pelas regras de acesso.</p></section>
+          <div className="tenant-heading">
+            <div><span className="eyebrow">CADASTROS</span><h1>Clientes</h1><p>Cadastre, edite e inative clientes da sua empresa.</p></div>
+            <div className="usage-pill"><span>Uso do plano</span><strong>{clients.filter(c=>c.status==='active').length}{planMaxClients?'/'+planMaxClients:''}</strong></div>
           </div>
-          <section className="card tableCard"><div className="cardHead"><div><h2>Lista de clientes</h2><p>Contatos cadastrados</p></div></div><div className="tableWrap"><table><thead><tr><th>Nome</th><th>Documento</th><th>E-mail</th><th>WhatsApp</th></tr></thead><tbody>
-            {clients.map(c=><tr key={c.id}><td><strong>{c.name}</strong></td><td>{c.document||'—'}</td><td>{c.email||'—'}</td><td>{c.whatsapp||'—'}</td></tr>)}{!clients.length&&<tr><td colSpan={4} className="empty">Nenhum cliente cadastrado.</td></tr>}
-          </tbody></table></div></section>
+
+          <div className="grid">
+            <section className="card">
+              <h2>{clientEdit?'Editar cliente':'Novo cliente'}</h2>
+              {clientEdit?<form onSubmit={saveClientEdit}>
+                <label>Nome / Razão social<input required value={clientEdit.name} onChange={e=>setClientEdit({...clientEdit,name:e.target.value})}/></label>
+                <label>CPF / CNPJ<input value={clientEdit.document??''} onChange={e=>setClientEdit({...clientEdit,document:e.target.value})}/></label>
+                <div className="cols">
+                  <label>E-mail<input type="email" value={clientEdit.email??''} onChange={e=>setClientEdit({...clientEdit,email:e.target.value})}/></label>
+                  <label>WhatsApp<input value={clientEdit.whatsapp??''} onChange={e=>setClientEdit({...clientEdit,whatsapp:e.target.value})}/></label>
+                </div>
+                <div className="form-actions"><button className="primaryBtn" disabled={busy}><Save size={16}/> Salvar cliente</button><button type="button" className="secondaryBtn" onClick={()=>setClientEdit(null)}>Cancelar</button></div>
+              </form>:<form onSubmit={addClient}>
+                <label>Nome / Razão social<input required value={clientForm.name} onChange={e=>setClientForm({...clientForm,name:e.target.value})}/></label>
+                <label>CPF / CNPJ<input value={clientForm.document} onChange={e=>setClientForm({...clientForm,document:e.target.value})}/></label>
+                <div className="cols"><label>E-mail<input type="email" value={clientForm.email} onChange={e=>setClientForm({...clientForm,email:e.target.value})}/></label><label>WhatsApp<input value={clientForm.whatsapp} onChange={e=>setClientForm({...clientForm,whatsapp:e.target.value})}/></label></div>
+                <button className="primaryBtn" disabled={busy||!canManageFinance}><Plus size={16}/> Cadastrar cliente</button>
+                {!canManageFinance&&<p className="permission-note">Seu perfil é somente leitura. Solicite acesso Financeiro ou Administrador para alterar clientes.</p>}
+              </form>}
+            </section>
+            <section className="card info-card"><UsersRound size={26}/><h2>{clients.filter(c=>c.status==='active').length} clientes ativos</h2><p>{planMaxClients?'Seu plano permite até '+planMaxClients+' clientes ativos.':'Seu plano não possui limite definido de clientes.'}</p></section>
+          </div>
+
+          <section className="card tableCard">
+            <div className="cardHead operational-table-head">
+              <div><h2>Lista de clientes</h2><p>{filteredClients.length} registros encontrados</p></div>
+              <div className="table-search"><Search size={15}/><input value={clientSearch} onChange={e=>setClientSearch(e.target.value)} placeholder="Buscar cliente..."/></div>
+            </div>
+            <div className="tableWrap"><table><thead><tr><th>Nome</th><th>Documento</th><th>E-mail</th><th>WhatsApp</th><th>Status</th><th>Ações</th></tr></thead><tbody>
+              {filteredClients.map(client=><tr key={client.id}>
+                <td><strong>{client.name}</strong></td><td>{client.document||'—'}</td><td>{client.email||'—'}</td><td>{client.whatsapp||'—'}</td>
+                <td><span className={'status '+client.status}>{client.status==='active'?'Ativo':'Inativo'}</span></td>
+                <td><div className="row-actions">
+                  <button disabled={!canManageFinance||busy} onClick={()=>setClientEdit(client)}><Pencil size={13}/> Editar</button>
+                  <button disabled={!canManageFinance||busy} onClick={()=>toggleClientStatus(client)}>{client.status==='active'?<XCircle size={13}/>:<CheckCircle2 size={13}/>} {client.status==='active'?'Inativar':'Ativar'}</button>
+                </div></td>
+              </tr>)}
+              {!filteredClients.length&&<tr><td colSpan={6} className="empty">Nenhum cliente encontrado.</td></tr>}
+            </tbody></table></div>
+          </section>
         </>}
 
         {!tenantAccessBlocked&&tenantTab==='cobrancas'&&<>
