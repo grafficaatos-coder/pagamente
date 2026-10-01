@@ -12,10 +12,16 @@ type AuthContextValue = {
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (name: string, company: string, email: string, password: string) => Promise<string>;
+  resendConfirmation: (email: string) => Promise<string>;
   signOut: () => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+function appOrigin() {
+  if (typeof window !== 'undefined') return window.location.origin;
+  return 'https://pagamente.vercel.app';
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(supabaseConfigured ? null : DEMO_USER);
@@ -55,12 +61,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
-        options: { data: { display_name: name, company_name: company } },
+        options: {
+          data: { display_name: name, company_name: company },
+          emailRedirectTo: appOrigin(),
+        },
       });
       if (error) throw error;
       return data.session
         ? 'Conta criada e sessão iniciada.'
-        : 'Conta criada. Confirme o e-mail para entrar, caso a confirmação esteja habilitada.';
+        : 'Conta criada. Confirme o e-mail para entrar.';
+    },
+    async resendConfirmation(email) {
+      if (!supabase) return 'Modo demonstração ativo.';
+      if (!email) throw new Error('Informe o e-mail da conta.');
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email,
+        options: { emailRedirectTo: appOrigin() },
+      });
+      if (error) throw error;
+      return 'Novo e-mail de confirmação enviado. Use o link mais recente.';
     },
     async signOut() {
       if (supabase) await supabase.auth.signOut();
