@@ -5,7 +5,7 @@ import { LockKeyhole, WalletCards } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 
 export default function AppGate({ children }: { children: React.ReactNode }) {
-  const { mode, user, loading, signIn, signUp } = useAuth();
+  const { mode, user, loading, signIn, signUp, resendConfirmation } = useAuth();
   const [tab, setTab] = useState<'login' | 'signup'>('login');
   const [name, setName] = useState('');
   const [company, setCompany] = useState('');
@@ -32,6 +32,18 @@ export default function AppGate({ children }: { children: React.ReactNode }) {
     }
   }
 
+  async function resend() {
+    setBusy(true);
+    setMessage('');
+    try {
+      setMessage(await resendConfirmation(email));
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Não foi possível reenviar a confirmação.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return <div className="auth-page">
     <div className="auth-brand">
       <div className="brand-mark"><WalletCards size={26}/></div>
@@ -51,6 +63,9 @@ export default function AppGate({ children }: { children: React.ReactNode }) {
       <button className="btn btn-primary btn-wide" disabled={busy}>{busy ? 'Processando…' : tab === 'login' ? 'Entrar' : 'Criar conta'}</button>
       <button type="button" className="auth-switch" onClick={()=>{setTab(tab === 'login' ? 'signup' : 'login');setMessage('')}}>
         {tab === 'login' ? 'Ainda não tenho conta' : 'Já tenho uma conta'}
+      </button>
+      <button type="button" className="auth-switch" onClick={resend} disabled={busy || !email}>
+        Reenviar e-mail de confirmação
       </button>
     </form>
   </div>;
