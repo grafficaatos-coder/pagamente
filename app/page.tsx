@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import {
-  BarChart3, Building2, CalendarClock, CircleDollarSign, CreditCard, Crown,
-  LayoutDashboard, LogOut, Plus, ReceiptText, RefreshCw, Save, Settings,
+  BarChart3, Building2, CalendarClock, CheckCircle2, CircleDollarSign, CreditCard, Crown,
+  LayoutDashboard, LogOut, Plus, ReceiptText, RefreshCw, Save, Settings, Sparkles,
   ShieldCheck, Trash2, UserCircle2, UsersRound, WalletCards
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
@@ -103,7 +103,7 @@ export default function Home(){
   const [chargeCounts,setChargeCounts]=useState<Record<string,number>>({});
   const [platformSettings,setPlatformSettings]=useState<any>({
     platform_name:'Sistema de Cobrança',
-    trial_days:14,
+    trial_days:4,
     signup_enabled:true,
     default_plan_id:'',
     support_email:''
@@ -605,24 +605,53 @@ export default function Home(){
       <main className="tenant-content">
         {msg&&<div className="notice">{msg}</div>}
 
-        {needsPlanChoice&&<section className="trial-choice">
-          <div className="trial-choice-head">
-            <span className="eyebrow">TESTE GRÁTIS ENCERRADO</span>
-            <h1>Escolha seu plano para continuar</h1>
-            <p>Seus dados continuam salvos. Selecione o plano que deseja usar para liberar novamente o painel da empresa.</p>
+        {needsPlanChoice&&<section className="plan-selection-page">
+          <div className="plan-selection-hero">
+            <div className="plan-selection-icon"><Sparkles size={24}/></div>
+            <span className="eyebrow">SEU TESTE GRÁTIS TERMINOU</span>
+            <h1>Escolha o plano ideal para sua empresa</h1>
+            <p>Os seus dados continuam salvos. Selecione uma opção abaixo para liberar novamente o acesso completo ao Sistema de Cobrança.</p>
+            <div className="plan-selection-safe"><CheckCircle2 size={16}/> Nenhum cliente, cobrança ou configuração será perdido.</div>
           </div>
-          <div className="plan-choice-grid">
-            {plans.filter(p=>p.active).map(p=><div className="choose-plan-card" key={p.id}>
-              <span className="eyebrow">{p.code}</span>
-              <h2>{p.name}</h2>
-              <div className="choose-plan-price">
-                {p.billing_model!=='per_boleto'&&<strong>{brl(Number(p.monthly_price_cents))}<small>/mês</small></strong>}
-                {p.billing_model==='hybrid'&&<span>+</span>}
-                {p.billing_model!=='monthly'&&<strong>{brl(Number(p.boleto_fee_cents))}<small>/boleto</small></strong>}
-              </div>
-              <p>{billingLabel[p.billing_model]}</p>
-              <button className="primaryBtn" onClick={()=>chooseTenantPlan(p)} disabled={busy}>Escolher {p.name}</button>
-            </div>)}
+
+          {plans.filter(p=>p.active).length>0?<div className="plan-selection-grid">
+            {plans.filter(p=>p.active).map((p,index)=>{
+              const activePlans=plans.filter(x=>x.active);
+              const recommended=p.code==='profissional'||(activePlans.length===3&&index===1);
+              return <article className={'plan-selection-card '+(recommended?'recommended':'')} key={p.id}>
+                {recommended&&<div className="recommended-badge">Mais escolhido</div>}
+                <div className="plan-selection-card-head">
+                  <span className="plan-code">{p.code}</span>
+                  <h2>{p.name}</h2>
+                  <p>{billingLabel[p.billing_model]}</p>
+                </div>
+
+                <div className="plan-selection-price">
+                  {p.billing_model!=='per_boleto'&&<div><strong>{brl(Number(p.monthly_price_cents))}</strong><span>/mês</span></div>}
+                  {p.billing_model==='hybrid'&&<b>+</b>}
+                  {p.billing_model!=='monthly'&&<div><strong>{brl(Number(p.boleto_fee_cents))}</strong><span>/boleto emitido</span></div>}
+                </div>
+
+                <div className="plan-selection-features">
+                  <div><CheckCircle2 size={16}/><span>{p.max_clients?'Até '+p.max_clients+' clientes':'Clientes ilimitados'}</span></div>
+                  <div><CheckCircle2 size={16}/><span>{p.max_users?'Até '+p.max_users+' usuários':'Usuários ilimitados'}</span></div>
+                  <div><CheckCircle2 size={16}/><span>Cobranças e recorrências</span></div>
+                  <div><CheckCircle2 size={16}/><span>Relatórios financeiros</span></div>
+                </div>
+
+                <button className={recommended?'plan-select-button primary':'plan-select-button'} onClick={()=>chooseTenantPlan(p)} disabled={busy}>
+                  {busy?'Processando...':'Escolher '+p.name}
+                </button>
+              </article>
+            })}
+          </div>:<div className="plan-selection-empty">
+            <h2>Nenhum plano disponível no momento</h2>
+            <p>Entre em contato com o administrador da plataforma para liberar um plano.</p>
+          </div>}
+
+          <div className="plan-selection-footer">
+            <ShieldCheck size={18}/>
+            <span>O acesso é liberado assim que o plano é escolhido. O plano poderá ser administrado posteriormente na área de assinatura.</span>
           </div>
         </section>}
 
