@@ -1,0 +1,3 @@
+export type ChargeRequest={externalId:string;amountCents:number;dueDate:string;payer:{name:string;document:string;email?:string};description:string};
+export type ChargeResult={providerId:string;status:'pending'|'paid'|'cancelled';boletoUrl?:string;barcode?:string;pixCode?:string;pixQrBase64?:string};
+export interface PaymentProvider{createCharge(req:ChargeRequest):Promise<ChargeResult>;cancelCharge(providerId:string):Promise<void>;getChargeStatus(providerId:string):Promise<ChargeResult['status']>;processWebhook(payload:unknown,headers:Headers):Promise<{providerId?:string;status?:ChargeResult['status']}>}
