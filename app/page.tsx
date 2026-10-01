@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   BarChart3, Building2, CalendarClock, CheckCircle2, CircleDollarSign, Clock3, CreditCard, Crown,
-  History, LayoutDashboard, LogOut, PauseCircle, Pencil, PlayCircle, Plus, ReceiptText, RefreshCw,
+  History, Landmark, LayoutDashboard, LogOut, PauseCircle, Pencil, PlayCircle, Plus, ReceiptText, RefreshCw,
   Save, Search, Settings, Sparkles, ShieldCheck, TrendingUp, TriangleAlert, Trash2,
   UserCircle2, UserCog, UsersRound, WalletCards, XCircle
 } from 'lucide-react';
@@ -11,10 +11,15 @@ import { useAuth } from '@/components/AuthProvider';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { brl, dateBR, parseBRL } from '@/lib/format';
 
-type Client = { id:string; name:string; document:string|null; email:string|null; whatsapp:string|null; status:string };
+type Client = {
+  id:string; name:string; document:string|null; email:string|null; whatsapp:string|null; status:string;
+  address?:{
+    zip_code?:string; street_name?:string; street_number?:string; neighborhood?:string; city?:string; state?:string
+  }|null
+};
 type Charge = {
   id:string; description:string; amount_cents:number; due_date:string; status:string;
-  provider:string; created_at:string; boleto_url?:string|null; digitable_line?:string|null;
+  provider:string; provider_charge_id?:string|null; created_at:string; boleto_url?:string|null; digitable_line?:string|null;
   clients?:{name?:string}|null
 };
 type RecurringRule = { id:string; description:string; amount_cents:number; frequency:string; generation_day:number; due_day:number; status:string; clients?:{name?:string}|null };
@@ -65,7 +70,7 @@ type PlatformInvoice = {
   plans?:{name?:string}|null;
 };
 
-type TenantTab = 'inicio'|'clientes'|'cobrancas'|'recorrencias'|'equipe'|'atividade'|'relatorios'|'assinatura'|'conta';
+type TenantTab = 'inicio'|'clientes'|'cobrancas'|'recorrencias'|'integracoes'|'equipe'|'atividade'|'relatorios'|'assinatura'|'conta';
 type OwnerTab = 'visao'|'empresas'|'planos'|'faturamento'|'auditoria'|'configuracoes';
 
 const statusLabel:Record<string,string> = {
@@ -133,6 +138,7 @@ export default function Home(){
   const [membership,setMembership]=useState<any>(null);
   const [subscription,setSubscription]=useState<any>(null);
   const [platformInvoice,setPlatformInvoice]=useState<any>(null);
+  const [mercadoPago,setMercadoPago]=useState<any>(null);
   const [teamMembers,setTeamMembers]=useState<TeamMember[]>([]);
   const [orgInvites,setOrgInvites]=useState<OrgInvite[]>([]);
   const [tenantAudit,setTenantAudit]=useState<AuditItem[]>([]);
@@ -158,8 +164,13 @@ export default function Home(){
   const [busy,setBusy]=useState(false);
   const [msg,setMsg]=useState('');
 
-  const [clientForm,setClientForm]=useState({name:'',document:'',email:'',whatsapp:''});
-  const [chargeForm,setChargeForm]=useState({clientId:'',description:'',amount:'',dueDate:''});
+  const [clientForm,setClientForm]=useState({
+    name:'',document:'',email:'',whatsapp:'',
+    zip_code:'',street_name:'',street_number:'',neighborhood:'',city:'',state:''
+  });
+  const [chargeForm,setChargeForm]=useState({
+    clientId:'',description:'',amount:'',dueDate:'',paymentMethod:'internal'
+  });
   const [recurringForm,setRecurringForm]=useState({
     clientId:'',description:'',amount:'',frequency:'monthly',generationDay:'1',dueDay:'10'
   });
@@ -250,23 +261,29 @@ export default function Home(){
         {data:sub,error:se},
         {data:invoice,error:ine},
         {data:members,error:tme},
-        {data:auditRows,error:tae}
+        {data:auditRows,error:tae},
+        {data:provider,error:pre}
       ]=await Promise.all([
         supabase.from('organizations').select('id,name,status').eq('id',orgId).single(),
         supabase.from('wallet_accounts').select('id,account_number,pix_key,balance_cents').eq('organization_id',orgId).single(),
-        supabase.from('clients').select('id,name,document,email,whatsapp,status').eq('organization_id',orgId).order('created_at',{ascending:false}),
-        supabase.from('charges').select('id,description,amount_cents,due_date,status,provider,created_at,boleto_url,digitable_line,clients(name)').eq('organization_id',orgId).order('created_at',{ascending:false}).limit(250),
+        supabase.from('clients').select('id,name,document,email,whatsapp,address,status').eq('organization_id',orgId).order('created_at',{ascending:false}),
+        supabase.from('charges').select('id,description,amount_cents,due_date,status,provider,provider_charge_id,created_at,boleto_url,digitable_line,clients(name)').eq('organization_id',orgId).order('created_at',{ascending:false}).limit(250),
         supabase.from('recurring_rules').select('id,description,amount_cents,frequency,generation_day,due_day,status,clients(name)').eq('organization_id',orgId).order('created_at',{ascending:false}),
         supabase.from('subscriptions').select('status,trial_ends_at,current_period_end,chosen_plan_at,plans(name,billing_model,monthly_price_cents,boleto_fee_cents,max_clients,max_users)').eq('organization_id',orgId).maybeSingle(),
         supabase.from('platform_invoices').select('id,status,total_cents,due_date,reference_month').eq('organization_id',orgId).order('created_at',{ascending:false}).limit(1).maybeSingle(),
         supabase.rpc('tenant_list_members'),
-        supabase.rpc('tenant_audit_feed',{p_limit:80})
+        supabase.rpc('tenant_audit_feed',{p_limit:80}),
+        supabase.from('provider_connections')
+          .select('provider,status,external_account_id,connected_at,metadata')
+          .eq('organization_id',orgId)
+          .eq('provider','mercadopago')
+          .maybeSingle()
       ]);
-      if(oe||we||ce||che||rre||se||ine||tme||tae)throw oe||we||ce||che||rre||se||ine||tme||tae;
+      if(oe||we||ce||che||rre||se||ine||tme||tae||pre)throw oe||we||ce||che||rre||se||ine||tme||tae||pre;
 
       setOrg(o);setWallet(w);setClients((c??[]) as any);setCharges((ch??[]) as any);
       setRecurring((rr??[]) as any);setSubscription(sub);setPlatformInvoice(invoice);
-      setTeamMembers((members??[]) as any);setTenantAudit((auditRows??[]) as any);
+      setTeamMembers((members??[]) as any);setTenantAudit((auditRows??[]) as any);setMercadoPago(provider);
 
       if(member.role==='owner'||member.role==='admin'){
         const {data:inviteRows,error:ive}=await supabase.from('organization_invites')
@@ -293,7 +310,17 @@ export default function Home(){
     }
   }
 
-  useEffect(()=>{load()},[user?.id]);
+  useEffect(()=>{
+    load().finally(()=>{
+      if(typeof window==='undefined')return;
+      const params=new URLSearchParams(window.location.search);
+      const mp=params.get('mp');
+      const reason=params.get('reason');
+      if(mp==='connected') setMsg('Mercado Pago conectado com sucesso.');
+      if(mp==='error') setMsg('Não foi possível conectar o Mercado Pago'+(reason?': '+reason:'')+'.');
+      if(mp) window.history.replaceState({},'',window.location.pathname);
+    });
+  },[user?.id]);
 
   async function runOwnerAction(action:()=>Promise<any>,success:string){
     setBusy(true);setMsg('');
@@ -430,24 +457,97 @@ export default function Home(){
   async function addClient(e:React.FormEvent){
     e.preventDefault();if(!supabase||!org)return;
     setBusy(true);setMsg('');
-    const {error}=await supabase.from('clients').insert({organization_id:org.id,...clientForm,status:'active'});
+    const {name,document,email,whatsapp,zip_code,street_name,street_number,neighborhood,city,state}=clientForm;
+    const {error}=await supabase.from('clients').insert({
+      organization_id:org.id,name,document,email,whatsapp,status:'active',
+      address:{
+        zip_code:zip_code.replace(/\D/g,''),street_name,street_number,neighborhood,city,
+        state:state.toUpperCase().slice(0,2)
+      }
+    });
     if(error)setMsg(error.message);
-    else{setClientForm({name:'',document:'',email:'',whatsapp:''});setMsg('Cliente cadastrado com sucesso.');await load();setTenantTab('clientes')}
+    else{
+      setClientForm({name:'',document:'',email:'',whatsapp:'',zip_code:'',street_name:'',street_number:'',neighborhood:'',city:'',state:''});
+      setMsg('Cliente cadastrado com sucesso.');await load();setTenantTab('clientes')
+    }
     setBusy(false);
+  }
+
+  async function authenticatedFetch(url:string,init:RequestInit={}){
+    if(!supabase)throw new Error('Supabase não configurado.');
+    const {data}=await supabase.auth.getSession();
+    const token=data.session?.access_token;
+    if(!token)throw new Error('Sessão expirada. Entre novamente.');
+    return fetch(url,{
+      ...init,
+      headers:{'content-type':'application/json',authorization:'Bearer '+token,...(init.headers||{})}
+    });
+  }
+
+  async function connectMercadoPago(){
+    setBusy(true);setMsg('');
+    try{
+      const response=await authenticatedFetch('/api/integrations/mercadopago/connect',{method:'POST'});
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error||'Não foi possível iniciar a conexão.');
+      window.location.href=data.url;
+    }catch(e){
+      setMsg(e instanceof Error?e.message:'Não foi possível conectar o Mercado Pago.');
+      setBusy(false);
+    }
+  }
+
+  async function disconnectMercadoPago(){
+    if(!window.confirm('Desconectar o Mercado Pago desta empresa?'))return;
+    setBusy(true);setMsg('');
+    try{
+      const response=await authenticatedFetch('/api/integrations/mercadopago/disconnect',{method:'POST'});
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error||'Falha ao desconectar.');
+      setMsg('Mercado Pago desconectado.');
+      await load();
+    }catch(e){setMsg(e instanceof Error?e.message:'Falha ao desconectar.')}
+    finally{setBusy(false)}
+  }
+
+  async function generateMercadoPagoBoleto(chargeId:string){
+    const response=await authenticatedFetch('/api/charges/mercadopago',{
+      method:'POST',body:JSON.stringify({chargeId})
+    });
+    const data=await response.json();
+    if(!response.ok)throw new Error(data.error||'Não foi possível gerar o boleto.');
+    return data;
   }
 
   async function addCharge(e:React.FormEvent){
     e.preventDefault();if(!supabase||!org)return;
     const amount=parseBRL(chargeForm.amount);
     if(amount<=0){setMsg('Informe um valor válido.');return}
+    const isMercadoPago=chargeForm.paymentMethod==='mercadopago';
+    if(isMercadoPago&&mercadoPago?.status!=='connected'){
+      setMsg('Conecte o Mercado Pago em Integrações antes de gerar boletos.');
+      return;
+    }
     setBusy(true);setMsg('');
-    const {error}=await supabase.from('charges').insert({
+    const {data:created,error}=await supabase.from('charges').insert({
       organization_id:org.id,client_id:chargeForm.clientId,description:chargeForm.description,
-      amount_cents:amount,due_date:chargeForm.dueDate,provider:'mock',status:'pending',
+      amount_cents:amount,due_date:chargeForm.dueDate,
+      provider:isMercadoPago?'mercadopago':'mock',
+      status:isMercadoPago?'draft':'pending',
       send_email:false,send_whatsapp:false
-    });
+    }).select('id').single();
+
     if(error)setMsg(error.message);
-    else{setChargeForm(f=>({...f,description:'',amount:'',dueDate:''}));setMsg('Cobrança criada com sucesso.');await load();setTenantTab('cobrancas')}
+    else{
+      try{
+        if(isMercadoPago)await generateMercadoPagoBoleto(created.id);
+        setChargeForm(f=>({...f,description:'',amount:'',dueDate:''}));
+        setMsg(isMercadoPago?'Boleto Mercado Pago gerado com sucesso.':'Cobrança criada com sucesso.');
+      }catch(e){
+        setMsg('Cobrança salva como rascunho. '+(e instanceof Error?e.message:'Não foi possível gerar o boleto.'));
+      }
+      await load();setTenantTab('cobrancas')
+    }
     setBusy(false);
   }
 
@@ -475,6 +575,7 @@ export default function Home(){
       document:clientEdit.document||null,
       email:clientEdit.email||null,
       whatsapp:clientEdit.whatsapp||null,
+      address:clientEdit.address||null,
       updated_at:new Date().toISOString()
     }).eq('id',clientEdit.id);
     if(error)setMsg(error.message);
@@ -510,10 +611,30 @@ export default function Home(){
     if(!supabase)return;
     if(!window.confirm('Cancelar a cobrança "'+charge.description+'"?'))return;
     setBusy(true);setMsg('');
-    const {error}=await supabase.rpc('cancel_charge',{p_charge_id:charge.id});
-    if(error)setMsg(error.message);
-    else{setMsg('Cobrança cancelada.');await load()}
+    try{
+      if(charge.provider==='mercadopago'&&charge.provider_charge_id){
+        const response=await authenticatedFetch('/api/charges/mercadopago/cancel',{
+          method:'POST',body:JSON.stringify({chargeId:charge.id})
+        });
+        const data=await response.json();
+        if(!response.ok)throw new Error(data.error||'Não foi possível cancelar no Mercado Pago.');
+      }else{
+        const {error}=await supabase.rpc('cancel_charge',{p_charge_id:charge.id});
+        if(error)throw error;
+      }
+      setMsg('Cobrança cancelada.');await load()
+    }catch(e){setMsg(e instanceof Error?e.message:'Não foi possível cancelar a cobrança.')}
     setBusy(false);
+  }
+
+  async function retryMercadoPagoBoleto(charge:Charge){
+    setBusy(true);setMsg('');
+    try{
+      await generateMercadoPagoBoleto(charge.id);
+      setMsg('Boleto Mercado Pago gerado com sucesso.');
+      await load();
+    }catch(e){setMsg(e instanceof Error?e.message:'Não foi possível gerar o boleto.')}
+    finally{setBusy(false)}
   }
 
   async function setRecurringStatusAction(id:string,status:string){
@@ -917,7 +1038,7 @@ export default function Home(){
 
   const tenantNav=[
     ['inicio','Início',LayoutDashboard],['clientes','Clientes',UsersRound],['cobrancas','Cobranças',ReceiptText],
-    ['recorrencias','Recorrências',CalendarClock],['equipe','Equipe',UserCog],['atividade','Atividade',History],
+    ['recorrencias','Recorrências',CalendarClock],['integracoes','Integrações',Landmark],['equipe','Equipe',UserCog],['atividade','Atividade',History],
     ['relatorios','Relatórios',BarChart3],['assinatura','Assinatura',WalletCards],['conta','Minha conta',UserCircle2]
   ] as const;
 
@@ -1104,11 +1225,28 @@ export default function Home(){
                   <label>E-mail<input type="email" value={clientEdit.email??''} onChange={e=>setClientEdit({...clientEdit,email:e.target.value})}/></label>
                   <label>WhatsApp<input value={clientEdit.whatsapp??''} onChange={e=>setClientEdit({...clientEdit,whatsapp:e.target.value})}/></label>
                 </div>
+                <div className="address-fields">
+                  <label>CEP<input value={clientEdit.address?.zip_code??''} onChange={e=>setClientEdit({...clientEdit,address:{...(clientEdit.address||{}),zip_code:e.target.value}})}/></label>
+                  <label>Rua<input value={clientEdit.address?.street_name??''} onChange={e=>setClientEdit({...clientEdit,address:{...(clientEdit.address||{}),street_name:e.target.value}})}/></label>
+                  <label>Número<input value={clientEdit.address?.street_number??''} onChange={e=>setClientEdit({...clientEdit,address:{...(clientEdit.address||{}),street_number:e.target.value}})}/></label>
+                  <label>Bairro<input value={clientEdit.address?.neighborhood??''} onChange={e=>setClientEdit({...clientEdit,address:{...(clientEdit.address||{}),neighborhood:e.target.value}})}/></label>
+                  <label>Cidade<input value={clientEdit.address?.city??''} onChange={e=>setClientEdit({...clientEdit,address:{...(clientEdit.address||{}),city:e.target.value}})}/></label>
+                  <label>UF<input maxLength={2} value={clientEdit.address?.state??''} onChange={e=>setClientEdit({...clientEdit,address:{...(clientEdit.address||{}),state:e.target.value.toUpperCase().slice(0,2)}})}/></label>
+                </div>
                 <div className="form-actions"><button className="primaryBtn" disabled={busy}><Save size={16}/> Salvar cliente</button><button type="button" className="secondaryBtn" onClick={()=>setClientEdit(null)}>Cancelar</button></div>
               </form>:<form onSubmit={addClient}>
                 <label>Nome / Razão social<input required value={clientForm.name} onChange={e=>setClientForm({...clientForm,name:e.target.value})}/></label>
                 <label>CPF / CNPJ<input value={clientForm.document} onChange={e=>setClientForm({...clientForm,document:e.target.value})}/></label>
                 <div className="cols"><label>E-mail<input type="email" value={clientForm.email} onChange={e=>setClientForm({...clientForm,email:e.target.value})}/></label><label>WhatsApp<input value={clientForm.whatsapp} onChange={e=>setClientForm({...clientForm,whatsapp:e.target.value})}/></label></div>
+                <div className="address-fields">
+                  <label>CEP<input value={clientForm.zip_code} onChange={e=>setClientForm({...clientForm,zip_code:e.target.value})} placeholder="00000-000"/></label>
+                  <label>Rua<input value={clientForm.street_name} onChange={e=>setClientForm({...clientForm,street_name:e.target.value})}/></label>
+                  <label>Número<input value={clientForm.street_number} onChange={e=>setClientForm({...clientForm,street_number:e.target.value})} placeholder="S/N"/></label>
+                  <label>Bairro<input value={clientForm.neighborhood} onChange={e=>setClientForm({...clientForm,neighborhood:e.target.value})}/></label>
+                  <label>Cidade<input value={clientForm.city} onChange={e=>setClientForm({...clientForm,city:e.target.value})}/></label>
+                  <label>UF<input maxLength={2} value={clientForm.state} onChange={e=>setClientForm({...clientForm,state:e.target.value.toUpperCase().slice(0,2)})}/></label>
+                </div>
+                <p className="permission-note">O endereço completo é necessário para emitir boleto pelo Mercado Pago.</p>
                 <button className="primaryBtn" disabled={busy||!canManageFinance}><Plus size={16}/> Cadastrar cliente</button>
                 {!canManageFinance&&<p className="permission-note">Seu perfil é somente leitura. Solicite acesso Financeiro ou Administrador para alterar clientes.</p>}
               </form>}
@@ -1148,7 +1286,12 @@ export default function Home(){
                 <label>Cliente<select required value={chargeForm.clientId} onChange={e=>setChargeForm({...chargeForm,clientId:e.target.value})}><option value="">Selecione</option>{clients.filter(c=>c.status==='active').map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
                 <label>Descrição<input required value={chargeForm.description} onChange={e=>setChargeForm({...chargeForm,description:e.target.value})}/></label>
                 <div className="cols"><label>Valor<input required placeholder="0,00" value={chargeForm.amount} onChange={e=>setChargeForm({...chargeForm,amount:e.target.value})}/></label><label>Vencimento<input type="date" required value={chargeForm.dueDate} onChange={e=>setChargeForm({...chargeForm,dueDate:e.target.value})}/></label></div>
-                <button className="primaryBtn" disabled={busy||!clients.some(c=>c.status==='active')||!canManageFinance}><Plus size={16}/> Criar cobrança</button>
+                <label>Forma de cobrança<select value={chargeForm.paymentMethod} onChange={e=>setChargeForm({...chargeForm,paymentMethod:e.target.value})}>
+                  <option value="internal">Registro interno</option>
+                  <option value="mercadopago" disabled={mercadoPago?.status!=='connected'}>Boleto Mercado Pago{mercadoPago?.status==='connected'?'':' — conectar primeiro'}</option>
+                </select></label>
+                {chargeForm.paymentMethod==='mercadopago'&&<p className="permission-note">O Mercado Pago permite vencimento entre 1 e 30 dias após a emissão. O cliente precisa ter CPF/CNPJ, e-mail e endereço completo.</p>}
+                <button className="primaryBtn" disabled={busy||!clients.some(c=>c.status==='active')||!canManageFinance}><Plus size={16}/> {chargeForm.paymentMethod==='mercadopago'?'Gerar boleto':'Criar cobrança'}</button>
                 {!canManageFinance&&<p className="permission-note">Seu perfil é somente leitura para operações financeiras.</p>}
               </form>}
             </section>
@@ -1172,9 +1315,11 @@ export default function Home(){
                   <td>{clientName(charge.clients)||'Cliente'}</td><td>{charge.description}</td><td>{dateBR(charge.due_date)}</td>
                   <td><span className={'status '+computedStatus}>{statusLabel[computedStatus]||computedStatus}</span></td><td><strong>{brl(Number(charge.amount_cents))}</strong></td>
                   <td><div className="row-actions">
+                    {charge.provider==='mercadopago'&&!charge.boleto_url&&['draft','pending'].includes(computedStatus)&&<button disabled={!canManageFinance||busy||mercadoPago?.status!=='connected'} onClick={()=>retryMercadoPagoBoleto(charge)}><ReceiptText size={13}/> Gerar boleto</button>}
                     {['pending','draft','overdue'].includes(computedStatus)&&<button disabled={!canManageFinance||busy} onClick={()=>setChargeEdit({id:charge.id,description:charge.description,due_date:charge.due_date})}><Pencil size={13}/> Editar</button>}
                     {['pending','draft','overdue'].includes(computedStatus)&&<button disabled={!canManageFinance||busy} onClick={()=>cancelChargeAction(charge)}><XCircle size={13}/> Cancelar</button>}
-                    {charge.boleto_url&&<a className="table-link" href={charge.boleto_url} target="_blank" rel="noreferrer">Boleto</a>}
+                    {charge.boleto_url&&<a className="table-link" href={charge.boleto_url} target="_blank" rel="noreferrer">Abrir boleto</a>}
+                    {charge.digitable_line&&<button onClick={()=>navigator.clipboard.writeText(charge.digitable_line||'')}>Copiar linha</button>}
                   </div></td>
                 </tr>
               })}
@@ -1206,6 +1351,40 @@ export default function Home(){
               </div></td>
             </tr>)}{!recurring.length&&<tr><td colSpan={7} className="empty">Nenhuma recorrência cadastrada.</td></tr>}
           </tbody></table></div></section>
+        </>}
+
+        {!tenantAccessBlocked&&tenantTab==='integracoes'&&<>
+          <div className="tenant-heading"><div><span className="eyebrow">PAGAMENTOS</span><h1>Integrações</h1><p>Conecte os meios de recebimento usados pela sua empresa.</p></div></div>
+          <section className="card provider-card">
+            <div className="provider-card-head">
+              <div className="provider-logo mp">MP</div>
+              <div><h2>Mercado Pago</h2><p>Emita boletos registrados e receba a confirmação de pagamento automaticamente.</p></div>
+              <span className={'status '+(mercadoPago?.status==='connected'?'active':'inactive')}>{mercadoPago?.status==='connected'?'Conectado':'Não conectado'}</span>
+            </div>
+            <div className="provider-details">
+              <div><span>Modelo</span><strong>Conta própria da empresa</strong></div>
+              <div><span>Conta Mercado Pago</span><strong>{mercadoPago?.external_account_id||'—'}</strong></div>
+              <div><span>Conectado em</span><strong>{mercadoPago?.connected_at?new Date(mercadoPago.connected_at).toLocaleString('pt-BR'):'—'}</strong></div>
+            </div>
+            <div className="provider-note">
+              <ShieldCheck size={18}/><p>O acesso é feito por OAuth. A empresa autoriza o JP Sistema de Cobrança sem compartilhar a senha da conta Mercado Pago.</p>
+            </div>
+            <div className="provider-actions">
+              {mercadoPago?.status==='connected'
+                ?<button className="secondaryBtn" disabled={!canManageTeam||busy} onClick={disconnectMercadoPago}>Desconectar Mercado Pago</button>
+                :<button className="primaryBtn" disabled={!canManageTeam||busy} onClick={connectMercadoPago}>Conectar Mercado Pago</button>}
+            </div>
+            {!canManageTeam&&<p className="permission-note">Somente Proprietário ou Administrador pode conectar ou desconectar integrações.</p>}
+          </section>
+          <section className="card integration-help">
+            <h2>Como funcionará o boleto</h2>
+            <div className="integration-steps">
+              <div><b>1</b><span>Cadastre o cliente com CPF/CNPJ, e-mail e endereço completo.</span></div>
+              <div><b>2</b><span>Crie a cobrança escolhendo “Boleto Mercado Pago”.</span></div>
+              <div><b>3</b><span>O sistema recebe o link do boleto e a linha digitável.</span></div>
+              <div><b>4</b><span>Quando o Mercado Pago confirmar o pagamento, a cobrança muda para “Pago” automaticamente.</span></div>
+            </div>
+          </section>
         </>}
 
         {!tenantAccessBlocked&&tenantTab==='equipe'&&<>
