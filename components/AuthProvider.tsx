@@ -24,10 +24,12 @@ type AuthContextValue = {
   mode: 'supabase' | 'demo';
   user: User | null;
   loading: boolean;
+  recoveryMode: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (payload: SignUpPayload) => Promise<string>;
   resendConfirmation: (email: string) => Promise<string>;
   resetPassword: (email: string) => Promise<string>;
+  updatePassword: (password: string) => Promise<string>;
   signOut: () => Promise<void>;
 };
 
@@ -41,6 +43,7 @@ function appOrigin() {
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(supabaseConfigured ? null : DEMO_USER);
   const [loading, setLoading] = useState(supabaseConfigured);
+  const [recoveryMode, setRecoveryMode] = useState(false);
   const supabase = getSupabaseBrowserClient();
 
   useEffect(() => {
@@ -52,7 +55,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(false);
       }
     });
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') setRecoveryMode(true);
       setUser(session?.user ?? null);
       setLoading(false);
     });
@@ -66,6 +70,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     mode: supabase ? 'supabase' : 'demo',
     user,
     loading,
+    recoveryMode,
     async signIn(email, password) {
       if (!supabase) return;
       const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -117,10 +122,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (error) throw error;
       return 'Enviamos um link de recuperação para o seu e-mail.';
     },
+    async updatePassword(password) {
+      if (!supabase) return 'Modo demonstração ativo.';
+      if (password.length < 8) throw new Error('Use uma senha com pelo menos 8 caracteres.');
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) throw error;
+      setRecoveryMode(false);
+      return 'Senha atualizada com sucesso.';
+    },
     async signOut() {
       if (supabase) await supabase.auth.signOut();
+      setRecoveryMode(false);
     },
-  }), [supabase, user, loading]);
+  }), [supabase, user, loading, recoveryMode]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
