@@ -1109,13 +1109,27 @@ export default function Home(){
         </>}
 
         {!tenantAccessBlocked&&tenantTab==='recorrencias'&&<>
-          <div className="tenant-heading"><div><span className="eyebrow">AUTOMAÇÃO</span><h1>Recorrências</h1><p>Cadastre cobranças que se repetem automaticamente.</p></div></div>
+          <div className="tenant-heading"><div><span className="eyebrow">AUTOMAÇÃO</span><h1>Recorrências</h1><p>As regras ativas são processadas automaticamente pelo sistema todos os dias.</p></div></div>
           <div className="grid">
-            <section className="card"><h2>Nova recorrência</h2><form onSubmit={addRecurring}><label>Cliente<select required value={recurringForm.clientId} onChange={e=>setRecurringForm({...recurringForm,clientId:e.target.value})}><option value="">Selecione</option>{clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label><label>Descrição<input required value={recurringForm.description} onChange={e=>setRecurringForm({...recurringForm,description:e.target.value})}/></label><div className="cols"><label>Valor<input required placeholder="0,00" value={recurringForm.amount} onChange={e=>setRecurringForm({...recurringForm,amount:e.target.value})}/></label><label>Frequência<select value={recurringForm.frequency} onChange={e=>setRecurringForm({...recurringForm,frequency:e.target.value})}><option value="monthly">Mensal</option><option value="biweekly">Quinzenal</option><option value="quarterly">Trimestral</option><option value="annual">Anual</option></select></label></div><div className="cols"><label>Dia de geração<input type="number" min="1" max="28" value={recurringForm.generationDay} onChange={e=>setRecurringForm({...recurringForm,generationDay:e.target.value})}/></label><label>Dia do vencimento<input type="number" min="1" max="28" value={recurringForm.dueDay} onChange={e=>setRecurringForm({...recurringForm,dueDay:e.target.value})}/></label></div><button className="primaryBtn" disabled={busy||!clients.length}><Plus size={16}/> Criar recorrência</button></form></section>
-            <section className="card info-card"><CalendarClock size={26}/><h2>{recurring.filter(r=>r.status==='active').length} recorrências ativas</h2><p>Use recorrências para mensalidades, contratos e cobranças periódicas.</p></section>
+            <section className="card"><h2>Nova recorrência</h2><form onSubmit={addRecurring}>
+              <label>Cliente<select required value={recurringForm.clientId} onChange={e=>setRecurringForm({...recurringForm,clientId:e.target.value})}><option value="">Selecione</option>{clients.filter(c=>c.status==='active').map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+              <label>Descrição<input required value={recurringForm.description} onChange={e=>setRecurringForm({...recurringForm,description:e.target.value})}/></label>
+              <div className="cols"><label>Valor<input required placeholder="0,00" value={recurringForm.amount} onChange={e=>setRecurringForm({...recurringForm,amount:e.target.value})}/></label><label>Frequência<select value={recurringForm.frequency} onChange={e=>setRecurringForm({...recurringForm,frequency:e.target.value})}><option value="monthly">Mensal</option><option value="biweekly">Quinzenal</option><option value="quarterly">Trimestral</option><option value="annual">Anual</option></select></label></div>
+              <div className="cols"><label>Dia de geração<input type="number" min="1" max="28" value={recurringForm.generationDay} onChange={e=>setRecurringForm({...recurringForm,generationDay:e.target.value})}/></label><label>Dia do vencimento<input type="number" min="1" max="28" value={recurringForm.dueDay} onChange={e=>setRecurringForm({...recurringForm,dueDay:e.target.value})}/></label></div>
+              <button className="primaryBtn" disabled={busy||!clients.some(c=>c.status==='active')||!canManageFinance}><Plus size={16}/> Criar recorrência</button>
+              {!canManageFinance&&<p className="permission-note">Seu perfil não permite alterar recorrências.</p>}
+            </form></section>
+            <section className="card info-card"><CalendarClock size={26}/><h2>{recurring.filter(r=>r.status==='active').length} recorrências ativas</h2><p>Mensais, quinzenais, trimestrais e anuais são geradas automaticamente, sem precisar abrir o sistema.</p></section>
           </div>
-          <section className="card tableCard"><div className="cardHead"><div><h2>Cobranças recorrentes</h2><p>Regras cadastradas</p></div></div><div className="tableWrap"><table><thead><tr><th>Cliente</th><th>Descrição</th><th>Frequência</th><th>Vencimento</th><th>Status</th><th>Valor</th></tr></thead><tbody>
-            {recurring.map(r=><tr key={r.id}><td>{clientName(r.clients)||'Cliente'}</td><td>{r.description}</td><td>{frequencyLabel[r.frequency]||r.frequency}</td><td>Dia {r.due_day}</td><td><span className={'status '+r.status}>{statusLabel[r.status]||r.status}</span></td><td>{brl(Number(r.amount_cents))}</td></tr>)}{!recurring.length&&<tr><td colSpan={6} className="empty">Nenhuma recorrência cadastrada.</td></tr>}
+          <section className="card tableCard"><div className="cardHead"><div><h2>Cobranças recorrentes</h2><p>Regras cadastradas e status de automação</p></div></div><div className="tableWrap"><table><thead><tr><th>Cliente</th><th>Descrição</th><th>Frequência</th><th>Vencimento</th><th>Status</th><th>Valor</th><th>Ações</th></tr></thead><tbody>
+            {recurring.map(r=><tr key={r.id}>
+              <td>{clientName(r.clients)||'Cliente'}</td><td>{r.description}</td><td>{frequencyLabel[r.frequency]||r.frequency}</td><td>Dia {r.due_day}</td><td><span className={'status '+r.status}>{statusLabel[r.status]||r.status}</span></td><td>{brl(Number(r.amount_cents))}</td>
+              <td><div className="row-actions">
+                {r.status==='active'&&<button disabled={!canManageFinance||busy} onClick={()=>setRecurringStatusAction(r.id,'paused')}><PauseCircle size={13}/> Pausar</button>}
+                {r.status==='paused'&&<button disabled={!canManageFinance||busy} onClick={()=>setRecurringStatusAction(r.id,'active')}><PlayCircle size={13}/> Ativar</button>}
+                {r.status!=='cancelled'&&<button disabled={!canManageFinance||busy} onClick={()=>setRecurringStatusAction(r.id,'cancelled')}><XCircle size={13}/> Cancelar</button>}
+              </div></td>
+            </tr>)}{!recurring.length&&<tr><td colSpan={7} className="empty">Nenhuma recorrência cadastrada.</td></tr>}
           </tbody></table></div></section>
         </>}
 
