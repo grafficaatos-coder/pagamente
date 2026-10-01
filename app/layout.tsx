@@ -3,7 +3,7 @@ import { AuthProvider } from '@/components/AuthProvider';
 import AppGate from '@/components/AppGate';
 
 export const metadata = {
-  title: 'Sistema de Cobrança',
+  title: 'JP Sistema de Cobrança',
   description: 'Sistema de gestão de cobranças, clientes e recebimentos empresariais',
 };
 
