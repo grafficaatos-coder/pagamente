@@ -199,12 +199,15 @@ export default function Home(){
         supabase.from('clients').select('id,name,document,email,whatsapp').eq('organization_id',orgId).order('created_at',{ascending:false}),
         supabase.from('charges').select('id,description,amount_cents,due_date,status,clients(name)').eq('organization_id',orgId).order('created_at',{ascending:false}).limit(100),
         supabase.from('recurring_rules').select('id,description,amount_cents,frequency,generation_day,due_day,status,clients(name)').eq('organization_id',orgId).order('created_at',{ascending:false}),
-        supabase.from('subscriptions').select('status,trial_ends_at,current_period_end,plans(name,billing_model,monthly_price_cents,boleto_fee_cents)').eq('organization_id',orgId).maybeSingle()
+        supabase.from('subscriptions').select('status,trial_ends_at,current_period_end,chosen_plan_at,plans(name,billing_model,monthly_price_cents,boleto_fee_cents)').eq('organization_id',orgId).maybeSingle()
       ]);
       if(oe||we||ce||che||rre||se)throw oe||we||ce||che||rre||se;
 
       setOrg(o);setWallet(w);setClients(c??[]);setCharges((ch??[]) as any);
       setRecurring((rr??[]) as any);setSubscription(sub);
+      const {data:tenantPlans,error:tpe}=await supabase.from('plans').select('id,code,name,billing_model,monthly_price_cents,boleto_fee_cents,max_clients,max_users,active').eq('active',true).order('monthly_price_cents',{ascending:true});
+      if(tpe)throw tpe;
+      setPlans((tenantPlans??[]) as any);
 
       if(!chargeForm.clientId&&c?.[0]?.id)setChargeForm(f=>({...f,clientId:c[0].id}));
       if(!recurringForm.clientId&&c?.[0]?.id)setRecurringForm(f=>({...f,clientId:c[0].id}));
@@ -329,6 +332,24 @@ export default function Home(){
       });
       if(error)throw error;
     },'Fatura atualizada.');
+  }
+
+  async function chooseTenantPlan(plan:Plan){
+    if(!supabase)return;
+    const ok=window.confirm('Escolher o plano "'+plan.name+'"? A assinatura será ativada com este plano.');
+    if(!ok)return;
+    setBusy(true);setMsg('');
+    try{
+      const {error}=await supabase.rpc('tenant_choose_plan',{p_plan_id:plan.id});
+      if(error)throw error;
+      setMsg('Plano escolhido e assinatura ativada com sucesso.');
+      await load();
+      setTenantTab('inicio');
+    }catch(e){
+      setMsg(e instanceof Error?e.message:'Não foi possível escolher o plano.');
+    }finally{
+      setBusy(false);
+    }
   }
 
   async function addClient(e:React.FormEvent){
@@ -560,6 +581,10 @@ export default function Home(){
   const planPrice=planObj?.monthly_price_cents;
   const planBoletoFee=planObj?.boleto_fee_cents;
   const planBillingModel=planObj?.billing_model;
+  const trialEnd=subscription?.trial_ends_at?new Date(subscription.trial_ends_at):null;
+  const trialExpired=Boolean(subscription?.status==='trialing'&&trialEnd&&trialEnd.getTime()<=Date.now());
+  const needsPlanChoice=Boolean(trialExpired&&!subscription?.chosen_plan_at);
+  const trialDaysLeft=trialEnd?Math.max(0,Math.ceil((trialEnd.getTime()-Date.now())/86400000)):0;
 
   const tenantNav=[
     ['inicio','Início',LayoutDashboard],['clientes','Clientes',UsersRound],['cobrancas','Cobranças',ReceiptText],
@@ -580,7 +605,33 @@ export default function Home(){
       <main className="tenant-content">
         {msg&&<div className="notice">{msg}</div>}
 
-        {tenantTab==='inicio'&&<>
+        {needsPlanChoice&&<section className="trial-choice">
+          <div className="trial-choice-head">
+            <span className="eyebrow">TESTE GRÁTIS ENCERRADO</span>
+            <h1>Escolha seu plano para continuar</h1>
+            <p>Seus dados continuam salvos. Selecione o plano que deseja usar para liberar novamente o painel da empresa.</p>
+          </div>
+          <div className="plan-choice-grid">
+            {plans.filter(p=>p.active).map(p=><div className="choose-plan-card" key={p.id}>
+              <span className="eyebrow">{p.code}</span>
+              <h2>{p.name}</h2>
+              <div className="choose-plan-price">
+                {p.billing_model!=='per_boleto'&&<strong>{brl(Number(p.monthly_price_cents))}<small>/mês</small></strong>}
+                {p.billing_model==='hybrid'&&<span>+</span>}
+                {p.billing_model!=='monthly'&&<strong>{brl(Number(p.boleto_fee_cents))}<small>/boleto</small></strong>}
+              </div>
+              <p>{billingLabel[p.billing_model]}</p>
+              <button className="primaryBtn" onClick={()=>chooseTenantPlan(p)} disabled={busy}>Escolher {p.name}</button>
+            </div>)}
+          </div>
+        </section>}
+
+        {!needsPlanChoice&&subscription?.status==='trialing'&&!trialExpired&&<div className="trial-banner">
+          <div><strong>Teste grátis por 4 dias</strong><span>{trialDaysLeft>1?trialDaysLeft+' dias restantes':trialDaysLeft===1?'1 dia restante':'Último dia do teste'}</span></div>
+          <div>Termina em <strong>{trialEnd?dateBR(trialEnd.toISOString()):'—'}</strong>. Depois você poderá escolher o plano.</div>
+        </div>}
+
+        {!needsPlanChoice&&tenantTab==='inicio'&&<>
           <div className="tenant-heading"><div><span className="eyebrow">VISÃO GERAL</span><h1>Olá, {profile?.display_name?.split(' ')?.[0]??'bem-vindo'}!</h1><p>Acompanhe suas cobranças e recebimentos em um só lugar.</p></div><button className="primaryBtn compact" onClick={()=>setTenantTab('cobrancas')}><Plus size={16}/> Nova cobrança</button></div>
           <section className="metrics tenant-metrics">
             <div className="metric primary"><span>Saldo disponível</span><strong>{brl(Number(wallet?.balance_cents??0))}</strong><small>{wallet?.account_number??'Conta digital'}</small></div>
@@ -596,7 +647,7 @@ export default function Home(){
           </div>
         </>}
 
-        {tenantTab==='clientes'&&<>
+        {!needsPlanChoice&&tenantTab==='clientes'&&<>
           <div className="tenant-heading"><div><span className="eyebrow">CADASTROS</span><h1>Clientes</h1><p>Cadastre e acompanhe os clientes da sua empresa.</p></div></div>
           <div className="grid">
             <section className="card"><h2>Novo cliente</h2><form onSubmit={addClient}><label>Nome / Razão social<input required value={clientForm.name} onChange={e=>setClientForm({...clientForm,name:e.target.value})}/></label><label>CPF / CNPJ<input value={clientForm.document} onChange={e=>setClientForm({...clientForm,document:e.target.value})}/></label><div className="cols"><label>E-mail<input type="email" value={clientForm.email} onChange={e=>setClientForm({...clientForm,email:e.target.value})}/></label><label>WhatsApp<input value={clientForm.whatsapp} onChange={e=>setClientForm({...clientForm,whatsapp:e.target.value})}/></label></div><button className="primaryBtn" disabled={busy}><Plus size={16}/> Cadastrar cliente</button></form></section>
@@ -607,7 +658,7 @@ export default function Home(){
           </tbody></table></div></section>
         </>}
 
-        {tenantTab==='cobrancas'&&<>
+        {!needsPlanChoice&&tenantTab==='cobrancas'&&<>
           <div className="tenant-heading"><div><span className="eyebrow">FINANCEIRO</span><h1>Cobranças</h1><p>Crie e acompanhe as cobranças da sua empresa.</p></div></div>
           <div className="grid">
             <section className="card"><h2>Nova cobrança</h2><form onSubmit={addCharge}><label>Cliente<select required value={chargeForm.clientId} onChange={e=>setChargeForm({...chargeForm,clientId:e.target.value})}><option value="">Selecione</option>{clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label><label>Descrição<input required value={chargeForm.description} onChange={e=>setChargeForm({...chargeForm,description:e.target.value})}/></label><div className="cols"><label>Valor<input required placeholder="0,00" value={chargeForm.amount} onChange={e=>setChargeForm({...chargeForm,amount:e.target.value})}/></label><label>Vencimento<input type="date" required value={chargeForm.dueDate} onChange={e=>setChargeForm({...chargeForm,dueDate:e.target.value})}/></label></div><button className="primaryBtn" disabled={busy||!clients.length}><Plus size={16}/> Criar cobrança</button></form></section>
@@ -618,7 +669,7 @@ export default function Home(){
           </tbody></table></div></section>
         </>}
 
-        {tenantTab==='recorrencias'&&<>
+        {!needsPlanChoice&&tenantTab==='recorrencias'&&<>
           <div className="tenant-heading"><div><span className="eyebrow">AUTOMAÇÃO</span><h1>Recorrências</h1><p>Cadastre cobranças que se repetem automaticamente.</p></div></div>
           <div className="grid">
             <section className="card"><h2>Nova recorrência</h2><form onSubmit={addRecurring}><label>Cliente<select required value={recurringForm.clientId} onChange={e=>setRecurringForm({...recurringForm,clientId:e.target.value})}><option value="">Selecione</option>{clients.map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label><label>Descrição<input required value={recurringForm.description} onChange={e=>setRecurringForm({...recurringForm,description:e.target.value})}/></label><div className="cols"><label>Valor<input required placeholder="0,00" value={recurringForm.amount} onChange={e=>setRecurringForm({...recurringForm,amount:e.target.value})}/></label><label>Frequência<select value={recurringForm.frequency} onChange={e=>setRecurringForm({...recurringForm,frequency:e.target.value})}><option value="monthly">Mensal</option><option value="biweekly">Quinzenal</option><option value="quarterly">Trimestral</option><option value="annual">Anual</option></select></label></div><div className="cols"><label>Dia de geração<input type="number" min="1" max="28" value={recurringForm.generationDay} onChange={e=>setRecurringForm({...recurringForm,generationDay:e.target.value})}/></label><label>Dia do vencimento<input type="number" min="1" max="28" value={recurringForm.dueDay} onChange={e=>setRecurringForm({...recurringForm,dueDay:e.target.value})}/></label></div><button className="primaryBtn" disabled={busy||!clients.length}><Plus size={16}/> Criar recorrência</button></form></section>
@@ -629,19 +680,20 @@ export default function Home(){
           </tbody></table></div></section>
         </>}
 
-        {tenantTab==='relatorios'&&<>
+        {!needsPlanChoice&&tenantTab==='relatorios'&&<>
           <div className="tenant-heading"><div><span className="eyebrow">ANÁLISE</span><h1>Relatórios</h1><p>Resumo dos principais números da sua empresa.</p></div></div>
           <section className="metrics"><div className="metric"><span>Total recebido</span><strong>{brl(paid)}</strong><small>cobranças pagas</small></div><div className="metric"><span>Em aberto</span><strong>{brl(open)}</strong><small>aguardando pagamento</small></div><div className="metric"><span>Em atraso</span><strong>{brl(overdue)}</strong><small>requer atenção</small></div></section>
           <section className="card report-placeholder"><BarChart3 size={34}/><h2>Relatório financeiro</h2><p>Os indicadores acima são calculados com os dados reais da sua empresa.</p></section>
         </>}
 
-        {tenantTab==='assinatura'&&<>
+        {!needsPlanChoice&&tenantTab==='assinatura'&&<>
           <div className="tenant-heading"><div><span className="eyebrow">PLANO</span><h1>Assinatura</h1><p>Acompanhe seu plano e período de teste.</p></div></div>
-          <div className="subscription-card"><div><span className="eyebrow">PLANO ATUAL</span><h2>{planName??'Profissional'}</h2><p>{billingLabel[planBillingModel]||'Mensal'}</p></div><div className="subscription-price">{planBillingModel!=='per_boleto'&&typeof planPrice==='number'?brl(planPrice):''}{planBillingModel==='hybrid'?' + ':''}{planBillingModel!=='monthly'&&typeof planBoletoFee==='number'?brl(planBoletoFee)+'/boleto':''}</div></div>
+          <div className="subscription-card"><div><span className="eyebrow">{subscription?.status==='trialing'?'TESTE GRÁTIS':'PLANO ATUAL'}</span><h2>{subscription?.status==='trialing'?'4 dias grátis':(planName??'Plano')}</h2><p>{subscription?.status==='trialing'?'Depois do teste você escolhe o plano.':(billingLabel[planBillingModel]||'Mensal')}</p></div><div className="subscription-price">{subscription?.status==='trialing'?(trialDaysLeft+' dia'+(trialDaysLeft===1?'':'s')):<>{planBillingModel!=='per_boleto'&&typeof planPrice==='number'?brl(planPrice):''}{planBillingModel==='hybrid'?' + ':''}{planBillingModel!=='monthly'&&typeof planBoletoFee==='number'?brl(planBoletoFee)+'/boleto':''}</>}</div></div>
           <div className="grid"><section className="card"><h2>Status da assinatura</h2><div className="summary-row"><span>Status</span><span className={'status '+(subscription?.status??'trialing')}>{statusLabel[subscription?.status??'trialing']||subscription?.status}</span></div><div className="summary-row"><span>Teste até</span><strong>{subscription?.trial_ends_at?dateBR(subscription.trial_ends_at):'—'}</strong></div><div className="summary-row"><span>Próximo período</span><strong>{subscription?.current_period_end?dateBR(subscription.current_period_end):'—'}</strong></div></section><section className="card plan-benefits"><h2>Incluído no seu acesso</h2><p>✓ Cadastro de clientes</p><p>✓ Cobranças e recorrências</p><p>✓ Relatórios financeiros</p><p>✓ Separação segura dos dados</p></section></div>
+          {subscription?.status==='trialing'&&<section className="card available-plans"><div className="cardHead"><div><h2>Planos disponíveis após o teste</h2><p>Ao terminar os 4 dias grátis, você escolhe uma destas opções.</p></div></div><div className="mini-plan-grid">{plans.filter(p=>p.active).map(p=><div className="mini-plan" key={p.id}><strong>{p.name}</strong><span>{billingLabel[p.billing_model]}</span><b>{p.billing_model!=='per_boleto'?brl(Number(p.monthly_price_cents))+'/mês':''}{p.billing_model==='hybrid'?' + ':''}{p.billing_model!=='monthly'?brl(Number(p.boleto_fee_cents))+'/boleto':''}</b></div>)}</div></section>}
         </>}
 
-        {tenantTab==='conta'&&<>
+        {!needsPlanChoice&&tenantTab==='conta'&&<>
           <div className="tenant-heading"><div><span className="eyebrow">CONTA</span><h1>Minha conta</h1><p>Informações da empresa e do seu acesso.</p></div></div>
           <div className="grid"><section className="card account-card"><Settings size={24}/><h2>{org?.name}</h2><div className="summary-row"><span>E-mail</span><strong>{user?.email}</strong></div><div className="summary-row"><span>Perfil</span><strong>{membership?.role==='owner'?'Administrador da empresa':membership?.role==='admin'?'Gestor':'Usuário'}</strong></div><div className="summary-row"><span>Plano</span><strong>{planName??'—'}</strong></div><div className="summary-row"><span>Status</span><span className={'status '+(subscription?.status??org?.status??'active')}>{statusLabel[subscription?.status??org?.status??'active']||'Ativo'}</span></div></section><section className="card account-card"><WalletCards size={24}/><h2>Conta digital</h2><div className="summary-row"><span>Número da conta</span><strong>{wallet?.account_number??'—'}</strong></div><div className="summary-row"><span>Chave interna</span><strong>{wallet?.pix_key??'—'}</strong></div><div className="summary-row"><span>Saldo</span><strong>{brl(Number(wallet?.balance_cents??0))}</strong></div></section></div>
         </>}
