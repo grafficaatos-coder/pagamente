@@ -3,8 +3,8 @@ import { AuthProvider } from '@/components/AuthProvider';
 import AppGate from '@/components/AppGate';
 
 export const metadata = {
-  title: 'Pagamente',
-  description: 'Gestão de cobranças e recebimentos empresariais',
+  title: 'Sistema de Cobrança',
+  description: 'Sistema de gestão de cobranças, clientes e recebimentos empresariais',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
