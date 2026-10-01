@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: escala-igreja
+    runtime: static
+    branch: igreja-site
+    buildCommand: echo "ready"
+    staticPublishPath: .
