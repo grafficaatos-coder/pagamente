@@ -1133,6 +1133,70 @@ export default function Home(){
           </tbody></table></div></section>
         </>}
 
+        {!tenantAccessBlocked&&tenantTab==='equipe'&&<>
+          <div className="tenant-heading">
+            <div><span className="eyebrow">ACESSOS</span><h1>Equipe</h1><p>Controle quem pode administrar, operar ou apenas consultar os dados da empresa.</p></div>
+            <div className="usage-pill"><span>Usuários do plano</span><strong>{teamMembers.length}{planMaxUsers?'/'+planMaxUsers:''}</strong></div>
+          </div>
+
+          <div className="grid">
+            <section className="card">
+              <h2>Adicionar usuário</h2>
+              {canManageTeam?<form onSubmit={inviteMember}>
+                <label>E-mail do usuário<input type="email" required value={inviteForm.email} onChange={e=>setInviteForm({...inviteForm,email:e.target.value})} placeholder="usuario@empresa.com.br"/></label>
+                <label>Perfil<select value={inviteForm.role} onChange={e=>setInviteForm({...inviteForm,role:e.target.value})}>
+                  <option value="viewer">Consulta</option><option value="finance">Financeiro</option><option value="admin">Administrador</option>
+                </select></label>
+                <button className="primaryBtn" disabled={busy}><Plus size={16}/> Adicionar / convidar</button>
+                <p className="permission-note">Se o e-mail já tiver uma conta, o acesso é liberado imediatamente. Caso contrário, a pessoa deve criar a conta usando exatamente o e-mail convidado.</p>
+              </form>:<div className="read-only-box"><ShieldCheck size={22}/><strong>Gerenciamento restrito</strong><p>Somente Proprietário e Administrador podem convidar ou remover usuários.</p></div>}
+            </section>
+            <section className="card team-role-guide">
+              <h2>Perfis de acesso</h2>
+              <div><strong>Administrador</strong><span>Gerencia equipe, clientes, cobranças e configurações operacionais.</span></div>
+              <div><strong>Financeiro</strong><span>Gerencia clientes, cobranças e recorrências, sem administrar a equipe.</span></div>
+              <div><strong>Consulta</strong><span>Visualiza informações, mas não pode alterar dados financeiros.</span></div>
+            </section>
+          </div>
+
+          <section className="card tableCard">
+            <div className="cardHead"><div><h2>Usuários da empresa</h2><p>{teamMembers.length} acessos ativos</p></div></div>
+            <div className="tableWrap"><table><thead><tr><th>Usuário</th><th>E-mail</th><th>Perfil</th><th>Desde</th><th>Ações</th></tr></thead><tbody>
+              {teamMembers.map(member=><tr key={member.user_id}>
+                <td><strong>{member.display_name||'Usuário'}</strong></td><td>{member.email||'—'}</td>
+                <td>{member.role==='owner'?<span className="status active">Proprietário</span>:canManageTeam?<select value={member.role==='member'?'viewer':member.role} onChange={e=>setMemberRoleAction(member.user_id,e.target.value)} disabled={busy}><option value="viewer">Consulta</option><option value="finance">Financeiro</option><option value="admin">Administrador</option></select>:roleLabel(member.role)}</td>
+                <td>{dateBR(member.created_at)}</td>
+                <td><div className="row-actions">{member.role!=='owner'&&canManageTeam&&<button disabled={busy} onClick={()=>removeMemberAction(member)}><Trash2 size={13}/> Remover</button>}</div></td>
+              </tr>)}
+              {!teamMembers.length&&<tr><td colSpan={5} className="empty">Nenhum usuário encontrado.</td></tr>}
+            </tbody></table></div>
+          </section>
+
+          {canManageTeam&&<section className="card tableCard">
+            <div className="cardHead"><div><h2>Convites pendentes</h2><p>Cadastros aguardando o usuário criar a conta</p></div></div>
+            <div className="tableWrap"><table><thead><tr><th>E-mail</th><th>Perfil</th><th>Enviado em</th><th>Ação</th></tr></thead><tbody>
+              {orgInvites.map(invite=><tr key={invite.id}><td>{invite.email}</td><td>{roleLabel(invite.role)}</td><td>{dateBR(invite.created_at)}</td><td><div className="row-actions"><button disabled={busy} onClick={()=>cancelInviteAction(invite)}><XCircle size={13}/> Cancelar convite</button></div></td></tr>)}
+              {!orgInvites.length&&<tr><td colSpan={4} className="empty">Nenhum convite pendente.</td></tr>}
+            </tbody></table></div>
+          </section>}
+        </>}
+
+        {!tenantAccessBlocked&&tenantTab==='atividade'&&<>
+          <div className="tenant-heading"><div><span className="eyebrow">AUDITORIA</span><h1>Atividade</h1><p>Histórico das principais alterações feitas dentro da empresa.</p></div></div>
+          <section className="card tableCard">
+            <div className="cardHead"><div><h2>Eventos recentes</h2><p>Registro automático de clientes, cobranças, recorrências, usuários e assinatura.</p></div></div>
+            <div className="tableWrap"><table><thead><tr><th>Quando</th><th>Usuário</th><th>Ação</th><th>Item</th></tr></thead><tbody>
+              {tenantAudit.map(item=><tr key={item.id}>
+                <td>{new Date(item.created_at).toLocaleString('pt-BR')}</td>
+                <td>{item.actor_name||item.actor_email||'Sistema'}</td>
+                <td>{auditActionLabel(item.action)}</td>
+                <td>{entityLabel(item.entity_type)}{item.entity_id?' · '+item.entity_id.slice(0,8):''}</td>
+              </tr>)}
+              {!tenantAudit.length&&<tr><td colSpan={4} className="empty">Ainda não há atividades registradas.</td></tr>}
+            </tbody></table></div>
+          </section>
+        </>}
+
         {!tenantAccessBlocked&&tenantTab==='relatorios'&&<>
           <div className="tenant-heading"><div><span className="eyebrow">ANÁLISE</span><h1>Relatórios</h1><p>Resumo dos principais números da sua empresa.</p></div></div>
           <section className="metrics"><div className="metric"><span>Total recebido</span><strong>{brl(paid)}</strong><small>cobranças pagas</small></div><div className="metric"><span>Em aberto</span><strong>{brl(open)}</strong><small>aguardando pagamento</small></div><div className="metric"><span>Em atraso</span><strong>{brl(overdue)}</strong><small>requer atenção</small></div></section>
