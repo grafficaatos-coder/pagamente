@@ -607,9 +607,9 @@ export default function Home(){
 
     return <div className="admin-shell">
       <aside className="admin-sidebar">
-        <div className="tenant-brand">
-          <div className="brand-mark"><ShieldCheck size={21}/></div>
-          <div><strong>{platformSettings.platform_name||'Sistema de Cobrança'}</strong><span>Administração da plataforma</span></div>
+        <div className="tenant-brand jp-brand">
+          <img className="jp-brand-logo" src="/jp-sistema-cobranca.jpg" alt="JP Sistema de Cobrança"/>
+          <span className="jp-brand-subtitle">Administração da plataforma</span>
         </div>
         <div className="admin-owner-card"><Crown size={18}/><div><strong>{profile?.display_name||'Proprietário'}</strong><span>Dono da plataforma</span></div></div>
         <nav className="tenant-nav">
@@ -923,7 +923,7 @@ export default function Home(){
 
   return <div className="tenant-shell">
     <aside className="tenant-sidebar">
-      <div className="tenant-brand"><div className="brand-mark"><WalletCards size={21}/></div><div><strong>Sistema de Cobrança</strong><span>Área do cliente</span></div></div>
+      <div className="tenant-brand jp-brand"><img className="jp-brand-logo" src="/jp-sistema-cobranca.jpg" alt="JP Sistema de Cobrança"/><span className="jp-brand-subtitle">Área do cliente</span></div>
       <div className="company-card"><Building2 size={18}/><div><strong>{org?.name??'Sua empresa'}</strong><span>{planName?'Plano '+planName:'Conta empresarial'}</span></div></div>
       <nav className="tenant-nav">{tenantNav.map(([id,label,Icon])=><button key={id} className={tenantTab===id?'active':''} onClick={()=>setTenantTab(id)}><Icon size={18}/><span>{label}</span></button>)}</nav>
       <div className="tenant-side-bottom"><div className="tenant-user"><div className="avatar">{(profile?.display_name?.[0]??user?.email?.[0]??'U').toUpperCase()}</div><div><strong>{profile?.display_name??'Usuário'}</strong><span>{roleLabel(membership?.role)}</span></div></div><button className="tenant-logout" onClick={()=>signOut()}><LogOut size={17}/> Sair</button></div>
