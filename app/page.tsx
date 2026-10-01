@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import {
-  BarChart3, Building2, CalendarClock, CheckCircle2, CircleDollarSign, CreditCard, Crown,
+  BarChart3, Building2, CalendarClock, CheckCircle2, CircleDollarSign, Clock3, CreditCard, Crown,
   LayoutDashboard, LogOut, Plus, ReceiptText, RefreshCw, Save, Settings, Sparkles,
-  ShieldCheck, Trash2, UserCircle2, UsersRound, WalletCards
+  ShieldCheck, TrendingUp, TriangleAlert, Trash2, UserCircle2, UsersRound, WalletCards
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
@@ -572,10 +572,48 @@ export default function Home(){
     </div>;
   }
 
+  const nowDate=new Date();
+  const todayStart=new Date(nowDate.getFullYear(),nowDate.getMonth(),nowDate.getDate());
+  const next30Days=new Date(todayStart);
+  next30Days.setDate(next30Days.getDate()+30);
+
+  const chargeDueDate=(c:Charge)=>new Date(c.due_date+'T12:00:00');
+  const isComputedOverdue=(c:Charge)=>{
+    if(c.status==='overdue')return true;
+    return ['pending','draft'].includes(c.status)&&chargeDueDate(c)<todayStart;
+  };
+
+  const receivedCharges=charges.filter(c=>c.status==='paid');
+  const awaitingCharges=charges.filter(c=>['pending','draft'].includes(c.status)&&!isComputedOverdue(c));
+  const overdueCharges=charges.filter(c=>isComputedOverdue(c));
   const openCharges=charges.filter(c=>['pending','draft','overdue'].includes(c.status));
   const open=openCharges.reduce((s,c)=>s+Number(c.amount_cents),0);
-  const paid=charges.filter(c=>c.status==='paid').reduce((s,c)=>s+Number(c.amount_cents),0);
-  const overdue=charges.filter(c=>c.status==='overdue').reduce((s,c)=>s+Number(c.amount_cents),0);
+  const paid=receivedCharges.reduce((s,c)=>s+Number(c.amount_cents),0);
+  const overdue=overdueCharges.reduce((s,c)=>s+Number(c.amount_cents),0);
+  const awaiting=awaitingCharges.reduce((s,c)=>s+Number(c.amount_cents),0);
+  const forecastCharges=awaitingCharges.filter(c=>{
+    const due=chargeDueDate(c);
+    return due>=todayStart&&due<=next30Days;
+  });
+  const forecast=forecastCharges.reduce((s,c)=>s+Number(c.amount_cents),0);
+
+  const monthlyChart=Array.from({length:6},(_,index)=>{
+    const d=new Date(nowDate.getFullYear(),nowDate.getMonth()-(5-index),1);
+    const year=d.getFullYear();
+    const month=d.getMonth();
+    const monthCharges=charges.filter(c=>{
+      const due=chargeDueDate(c);
+      return due.getFullYear()===year&&due.getMonth()===month;
+    });
+    return {
+      key:year+'-'+String(month+1).padStart(2,'0'),
+      label:d.toLocaleDateString('pt-BR',{month:'short'}).replace('.',''),
+      received:monthCharges.filter(c=>c.status==='paid').reduce((s,c)=>s+Number(c.amount_cents),0),
+      awaiting:monthCharges.filter(c=>['pending','draft'].includes(c.status)&&!isComputedOverdue(c)).reduce((s,c)=>s+Number(c.amount_cents),0),
+      overdue:monthCharges.filter(c=>isComputedOverdue(c)).reduce((s,c)=>s+Number(c.amount_cents),0),
+    };
+  });
+  const chartMax=Math.max(1,...monthlyChart.map(m=>m.received+m.awaiting+m.overdue));
   const planObj=Array.isArray(subscription?.plans)?subscription?.plans?.[0]:subscription?.plans;
   const planName=planObj?.name;
   const planPrice=planObj?.monthly_price_cents;
@@ -661,19 +699,81 @@ export default function Home(){
         </div>}
 
         {!needsPlanChoice&&tenantTab==='inicio'&&<>
-          <div className="tenant-heading"><div><span className="eyebrow">VISÃO GERAL</span><h1>Olá, {profile?.display_name?.split(' ')?.[0]??'bem-vindo'}!</h1><p>Acompanhe suas cobranças e recebimentos em um só lugar.</p></div><button className="primaryBtn compact" onClick={()=>setTenantTab('cobrancas')}><Plus size={16}/> Nova cobrança</button></div>
-          <section className="metrics tenant-metrics">
-            <div className="metric primary"><span>Saldo disponível</span><strong>{brl(Number(wallet?.balance_cents??0))}</strong><small>{wallet?.account_number??'Conta digital'}</small></div>
-            <div className="metric"><span>A receber</span><strong>{brl(open)}</strong><small>{openCharges.length} cobranças em aberto</small></div>
-            <div className="metric"><span>Recebido</span><strong>{brl(paid)}</strong><small>cobranças pagas</small></div>
-          </section>
-          <div className="grid tenant-home-grid">
-            <section className="card tableCard"><div className="cardHead"><div><h2>Cobranças recentes</h2><p>Últimos lançamentos da empresa</p></div><button className="text-action" onClick={()=>setTenantTab('cobrancas')}>Ver todas</button></div><div className="tableWrap"><table><thead><tr><th>Cliente</th><th>Vencimento</th><th>Status</th><th>Valor</th></tr></thead><tbody>
-              {charges.slice(0,6).map(c=><tr key={c.id}><td>{clientName(c.clients)||'Cliente'}</td><td>{dateBR(c.due_date)}</td><td><span className={'status '+c.status}>{statusLabel[c.status]||c.status}</span></td><td>{brl(Number(c.amount_cents))}</td></tr>)}
-              {!charges.length&&<tr><td colSpan={4} className="empty">Nenhuma cobrança cadastrada.</td></tr>}
-            </tbody></table></div></section>
-            <section className="card summary-card"><h2>Resumo da conta</h2><div className="summary-row"><span>Clientes cadastrados</span><strong>{clients.length}</strong></div><div className="summary-row"><span>Em atraso</span><strong>{brl(overdue)}</strong></div><div className="summary-row"><span>Plano atual</span><strong>{planName??'—'}</strong></div><div className="summary-row"><span>Status</span><span className={'status '+(subscription?.status??org?.status??'active')}>{statusLabel[subscription?.status??org?.status??'active']||'Ativo'}</span></div></section>
+          <div className="tenant-heading dashboard-heading">
+            <div><span className="eyebrow">VISÃO FINANCEIRA</span><h1>Olá, {profile?.display_name?.split(' ')?.[0]??'bem-vindo'}!</h1><p>Acompanhe o que entrou, o que está para receber e o que precisa de atenção.</p></div>
+            <div className="dashboard-heading-actions">
+              <div className="balance-chip"><span>Saldo disponível</span><strong>{brl(Number(wallet?.balance_cents??0))}</strong></div>
+              <button className="primaryBtn compact" onClick={()=>setTenantTab('cobrancas')}><Plus size={16}/> Nova cobrança</button>
+            </div>
           </div>
+
+          <section className="finance-overview-grid">
+            <article className="finance-overview-card received-card">
+              <div className="finance-card-top"><div className="finance-card-icon"><CheckCircle2 size={19}/></div><span>Recebidas</span></div>
+              <strong>{brl(paid)}</strong>
+              <small>{receivedCharges.length} cobrança{receivedCharges.length===1?'':'s'} paga{receivedCharges.length===1?'':'s'}</small>
+            </article>
+            <article className="finance-overview-card awaiting-card">
+              <div className="finance-card-top"><div className="finance-card-icon"><Clock3 size={19}/></div><span>Aguardando pagamento</span></div>
+              <strong>{brl(awaiting)}</strong>
+              <small>{awaitingCharges.length} cobrança{awaitingCharges.length===1?'':'s'} em aberto</small>
+            </article>
+            <article className="finance-overview-card overdue-card">
+              <div className="finance-card-top"><div className="finance-card-icon"><TriangleAlert size={19}/></div><span>Vencidas</span></div>
+              <strong>{brl(overdue)}</strong>
+              <small>{overdueCharges.length} cobrança{overdueCharges.length===1?'':'s'} vencida{overdueCharges.length===1?'':'s'}</small>
+            </article>
+            <article className="finance-overview-card forecast-card">
+              <div className="finance-card-top"><div className="finance-card-icon"><TrendingUp size={19}/></div><span>Previsão de recebimento</span></div>
+              <strong>{brl(forecast)}</strong>
+              <small>próximos 30 dias · {forecastCharges.length} cobrança{forecastCharges.length===1?'':'s'}</small>
+            </article>
+          </section>
+
+          <div className="dashboard-analytics-grid">
+            <section className="card monthly-chart-card">
+              <div className="cardHead dashboard-card-head">
+                <div><h2>Movimentação mensal</h2><p>Últimos 6 meses, conforme o vencimento das cobranças</p></div>
+                <div className="chart-legend">
+                  <span><i className="legend-dot received"></i>Recebidas</span>
+                  <span><i className="legend-dot awaiting"></i>Aguardando</span>
+                  <span><i className="legend-dot overdue"></i>Vencidas</span>
+                </div>
+              </div>
+              <div className="monthly-chart">
+                <div className="chart-y-label">{brl(chartMax)}</div>
+                <div className="chart-plot">
+                  {monthlyChart.map(month=><div className="chart-month" key={month.key}>
+                    <div className="chart-bars">
+                      <div className="chart-bar received" style={{height:Math.max(month.received?6:0,(month.received/chartMax)*100)+'%'}} title={'Recebidas: '+brl(month.received)}></div>
+                      <div className="chart-bar awaiting" style={{height:Math.max(month.awaiting?6:0,(month.awaiting/chartMax)*100)+'%'}} title={'Aguardando: '+brl(month.awaiting)}></div>
+                      <div className="chart-bar overdue" style={{height:Math.max(month.overdue?6:0,(month.overdue/chartMax)*100)+'%'}} title={'Vencidas: '+brl(month.overdue)}></div>
+                    </div>
+                    <span>{month.label}</span>
+                  </div>)}
+                </div>
+              </div>
+            </section>
+
+            <section className="card month-summary-card">
+              <div className="cardHead"><div><h2>Resumo financeiro</h2><p>Visão rápida da operação</p></div></div>
+              <div className="dashboard-summary-list">
+                <div><span>Total em aberto</span><strong>{brl(open)}</strong></div>
+                <div><span>Clientes cadastrados</span><strong>{clients.length}</strong></div>
+                <div><span>Recorrências ativas</span><strong>{recurring.filter(r=>r.status==='active').length}</strong></div>
+                <div><span>Plano atual</span><strong>{planName??'—'}</strong></div>
+              </div>
+              <button className="dashboard-report-link" onClick={()=>setTenantTab('relatorios')}><BarChart3 size={16}/> Ver relatórios</button>
+            </section>
+          </div>
+
+          <section className="card tableCard dashboard-recent-card">
+            <div className="cardHead"><div><h2>Cobranças recentes</h2><p>Últimos lançamentos da empresa</p></div><button className="text-action" onClick={()=>setTenantTab('cobrancas')}>Ver todas</button></div>
+            <div className="tableWrap"><table><thead><tr><th>Cliente</th><th>Descrição</th><th>Vencimento</th><th>Status</th><th>Valor</th></tr></thead><tbody>
+              {charges.slice(0,6).map(c=><tr key={c.id}><td>{clientName(c.clients)||'Cliente'}</td><td>{c.description}</td><td>{dateBR(c.due_date)}</td><td><span className={'status '+(isComputedOverdue(c)?'overdue':c.status)}>{isComputedOverdue(c)?'Em atraso':(statusLabel[c.status]||c.status)}</span></td><td><strong>{brl(Number(c.amount_cents))}</strong></td></tr>)}
+              {!charges.length&&<tr><td colSpan={5} className="empty">Nenhuma cobrança cadastrada.</td></tr>}
+            </tbody></table></div>
+          </section>
         </>}
 
         {!needsPlanChoice&&tenantTab==='clientes'&&<>
