@@ -235,7 +235,7 @@ export function validateWebhookSignature(input:{
   const v1=values.v1;
   if(!ts||!v1) return false;
 
-  const manifest='id:'+input.dataId+';request-id:'+input.xRequestId+';ts:'+ts+';';
+  const manifest='id:'+input.dataId.toLowerCase()+';request-id:'+input.xRequestId+';ts:'+ts+';';
   const expected=createHmac('sha256',secret).update(manifest).digest('hex');
   const a=Buffer.from(expected,'hex');
   const b=Buffer.from(v1,'hex');
