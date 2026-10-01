@@ -56,3 +56,53 @@
   .tenant-main{margin-left:0;width:100%}.tenant-topbar{padding:0 16px}.tenant-content{padding:20px 12px}.tenant-heading{flex-direction:column}
   .tenant-metrics{grid-template-columns:1fr}.tenant-home-grid{grid-template-columns:1fr}.subscription-card{align-items:flex-start;flex-direction:column}
 }
+
+/* Administração do dono da plataforma */
+.admin-shell{min-height:100vh;display:flex;background:#f4f7fb}
+.admin-sidebar{width:260px;position:fixed;inset:0 auto 0 0;background:#0d192a;color:#c7d2e2;padding:20px 14px;display:flex;flex-direction:column;z-index:6}
+.admin-owner-card{display:flex;align-items:center;gap:10px;padding:12px;margin:0 2px 18px;border-radius:11px;background:#16263d;border:1px solid #2b3c55;color:#ffe7a6}
+.admin-owner-card strong,.admin-owner-card span{display:block}.admin-owner-card strong{font-size:11px}.admin-owner-card span{font-size:9px;color:#9dafc6;margin-top:3px}
+.admin-main{margin-left:260px;width:calc(100% - 260px);min-height:100vh}
+.admin-content{max-width:1380px}
+.admin-metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
+.admin-kpi{background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:18px;box-shadow:0 10px 28px rgba(20,32,48,.04)}
+.admin-kpi.primary{background:linear-gradient(145deg,#0d896d,#0b735d);color:#fff;border-color:transparent}
+.admin-kpi span,.admin-kpi small{display:block;font-size:10px;color:#8490a1}.admin-kpi.primary span,.admin-kpi.primary small{color:#d7fff4}
+.admin-kpi strong{display:block;font-size:26px;margin:12px 0 7px}
+.admin-grid{grid-template-columns:minmax(0,1.5fr) minmax(260px,.75fr)}
+.admin-table select{min-width:150px;padding:8px 9px}
+.cell-sub{display:block;color:#8d98a8;font-size:9px;margin-top:4px}
+.create-plan-card{margin-bottom:16px}
+.admin-form-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:11px}
+.admin-save{width:max-content}
+.plan-admin-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:15px}
+.plan-admin-card{display:grid;gap:11px}
+.plan-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.plan-card-head h2{font-size:20px;margin:3px 0 0}
+.switch-label{display:flex;grid-template-columns:none;flex-direction:row;align-items:center;gap:7px;font-size:10px;white-space:nowrap}
+.switch-label input,.check-line input{width:auto}
+.plan-price-preview{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:12px;border-radius:10px;background:#f6f8fb;border:1px solid #e8edf3}
+.plan-price-preview strong{font-size:10px;color:#536174}.plan-price-preview span{font-size:11px;font-weight:800;text-align:right}
+.invoice-action{display:flex;gap:8px;align-items:center}.invoice-action input{width:160px}
+.row-actions{display:flex;gap:6px;flex-wrap:wrap}.row-actions button{border:1px solid #d8dfe8;background:#fff;border-radius:7px;padding:6px 8px;font-size:9px;font-weight:800;cursor:pointer}
+.row-actions button:hover{border-color:#0e8a70;color:#0e8a70}
+.check-line{display:flex;grid-template-columns:none;flex-direction:row;align-items:center;gap:8px;padding:8px 0}
+.admin-help-card{display:flex;flex-direction:column;justify-content:center;background:linear-gradient(145deg,#f9fbfd,#fff)}
+.admin-help-card>svg{color:#0e8a70;margin-bottom:12px}.admin-help-card p{font-size:11px;color:#6e7a8c;line-height:1.6}
+@media(max-width:1100px){
+  .admin-metrics{grid-template-columns:repeat(2,1fr)}
+  .plan-admin-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .admin-form-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:820px){
+  .admin-sidebar{width:215px}.admin-main{margin-left:215px;width:calc(100% - 215px)}
+  .plan-admin-grid{grid-template-columns:1fr}.admin-grid{grid-template-columns:1fr}
+}
+@media(max-width:700px){
+  .admin-shell{display:block}.admin-sidebar{position:relative;width:100%;min-height:auto}
+  .admin-sidebar .tenant-nav{grid-template-columns:repeat(5,1fr);overflow:auto}
+  .admin-sidebar .tenant-nav button{justify-content:center}.admin-sidebar .tenant-nav button span{display:none}
+  .admin-owner-card,.admin-sidebar .tenant-side-bottom{display:none}
+  .admin-main{margin-left:0;width:100%}.admin-metrics{grid-template-columns:1fr 1fr}
+  .admin-form-grid{grid-template-columns:1fr}.invoice-action{width:100%;flex-direction:column;align-items:stretch}.invoice-action input{width:100%}
+}
