@@ -3,16 +3,30 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   BarChart3, Building2, CalendarClock, CheckCircle2, CircleDollarSign, Clock3, CreditCard, Crown,
-  LayoutDashboard, LogOut, Plus, ReceiptText, RefreshCw, Save, Settings, Sparkles,
-  ShieldCheck, TrendingUp, TriangleAlert, Trash2, UserCircle2, UsersRound, WalletCards
+  History, LayoutDashboard, LogOut, PauseCircle, Pencil, PlayCircle, Plus, ReceiptText, RefreshCw,
+  Save, Search, Settings, Sparkles, ShieldCheck, TrendingUp, TriangleAlert, Trash2,
+  UserCircle2, UserCog, UsersRound, WalletCards, XCircle
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
 import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { brl, dateBR, parseBRL } from '@/lib/format';
 
-type Client = { id:string; name:string; document:string|null; email:string|null; whatsapp:string|null };
-type Charge = { id:string; description:string; amount_cents:number; due_date:string; status:string; clients?:{name?:string}|null };
+type Client = { id:string; name:string; document:string|null; email:string|null; whatsapp:string|null; status:string };
+type Charge = {
+  id:string; description:string; amount_cents:number; due_date:string; status:string;
+  provider:string; created_at:string; boleto_url?:string|null; digitable_line?:string|null;
+  clients?:{name?:string}|null
+};
 type RecurringRule = { id:string; description:string; amount_cents:number; frequency:string; generation_day:number; due_day:number; status:string; clients?:{name?:string}|null };
+type TeamMember = { user_id:string; email:string|null; display_name:string|null; role:string; created_at:string };
+type OrgInvite = { id:string; email:string; role:string; status:string; created_at:string };
+type AuditItem = {
+  id:string; organization_id?:string|null; organization_name?:string|null; actor_email?:string|null;
+  actor_name?:string|null; action:string; entity_type:string; entity_id?:string|null; created_at:string
+};
+type OwnerSnapshot = {
+  organization:any; subscription:any; counts:any; members:any[]; recent_invoices:any[]; recent_audit:any[]
+};
 
 type Plan = {
   id:string;
@@ -51,8 +65,8 @@ type PlatformInvoice = {
   plans?:{name?:string}|null;
 };
 
-type TenantTab = 'inicio'|'clientes'|'cobrancas'|'recorrencias'|'relatorios'|'assinatura'|'conta';
-type OwnerTab = 'visao'|'empresas'|'planos'|'faturamento'|'configuracoes';
+type TenantTab = 'inicio'|'clientes'|'cobrancas'|'recorrencias'|'equipe'|'atividade'|'relatorios'|'assinatura'|'conta';
+type OwnerTab = 'visao'|'empresas'|'planos'|'faturamento'|'auditoria'|'configuracoes';
 
 const statusLabel:Record<string,string> = {
   active:'Ativo', trialing:'Em teste', pending:'Pendente', draft:'Rascunho',
@@ -94,6 +108,10 @@ export default function Home(){
   const [profile,setProfile]=useState<any>(null);
   const [membership,setMembership]=useState<any>(null);
   const [subscription,setSubscription]=useState<any>(null);
+  const [platformInvoice,setPlatformInvoice]=useState<any>(null);
+  const [teamMembers,setTeamMembers]=useState<TeamMember[]>([]);
+  const [orgInvites,setOrgInvites]=useState<OrgInvite[]>([]);
+  const [tenantAudit,setTenantAudit]=useState<AuditItem[]>([]);
   const [tenantTab,setTenantTab]=useState<TenantTab>('inicio');
 
   const [ownerTab,setOwnerTab]=useState<OwnerTab>('visao');
@@ -101,6 +119,10 @@ export default function Home(){
   const [plans,setPlans]=useState<Plan[]>([]);
   const [platformInvoices,setPlatformInvoices]=useState<PlatformInvoice[]>([]);
   const [chargeCounts,setChargeCounts]=useState<Record<string,number>>({});
+  const [platformAudit,setPlatformAudit]=useState<AuditItem[]>([]);
+  const [selectedOrgId,setSelectedOrgId]=useState('');
+  const [ownerSnapshot,setOwnerSnapshot]=useState<OwnerSnapshot|null>(null);
+  const [snapshotBusy,setSnapshotBusy]=useState(false);
   const [platformSettings,setPlatformSettings]=useState<any>({
     platform_name:'Sistema de Cobrança',
     trial_days:4,
@@ -122,6 +144,12 @@ export default function Home(){
     max_clients:'',max_users:'',active:true
   });
   const [invoiceMonth,setInvoiceMonth]=useState(monthDateValue());
+  const [clientSearch,setClientSearch]=useState('');
+  const [clientEdit,setClientEdit]=useState<Client|null>(null);
+  const [chargeSearch,setChargeSearch]=useState('');
+  const [chargeStatusFilter,setChargeStatusFilter]=useState('all');
+  const [chargeEdit,setChargeEdit]=useState<{id:string;description:string;due_date:string}|null>(null);
+  const [inviteForm,setInviteForm]=useState({email:'',role:'viewer'});
 
   async function load(){
     if(!supabase||!user)return;
