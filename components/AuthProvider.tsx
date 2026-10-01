@@ -13,6 +13,7 @@ type AuthContextValue = {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (name: string, company: string, email: string, password: string) => Promise<string>;
   resendConfirmation: (email: string) => Promise<string>;
+  resetPassword: (email: string) => Promise<string>;
   signOut: () => Promise<void>;
 };
 
@@ -81,6 +82,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       if (error) throw error;
       return 'Novo e-mail de confirmação enviado. Use o link mais recente.';
+    },
+    async resetPassword(email) {
+      if (!supabase) return 'Modo demonstração ativo.';
+      if (!email) throw new Error('Informe seu e-mail para redefinir a senha.');
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: appOrigin(),
+      });
+      if (error) throw error;
+      return 'Enviamos um link de recuperação para o seu e-mail.';
     },
     async signOut() {
       if (supabase) await supabase.auth.signOut();
