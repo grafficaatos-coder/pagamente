@@ -237,3 +237,144 @@
 .auth-signup-benefits-v2{display:grid;gap:7px;padding:11px 12px;border-radius:10px;background:#edf9f5;border:1px solid #d0eee5;color:#376a5f;font-size:10px;font-weight:700}
 .auth-signup-benefits-v2>div{display:flex;align-items:center;gap:7px}.auth-signup-benefits-v2 svg{color:#0b8f72}
 @media(max-width:600px){.auth-cols-v2{grid-template-columns:1fr}}
+
+
+
+/* Asaas-inspired product design system */
+:root{
+  --sc-blue:#1346e8;
+  --sc-blue-dark:#0d2f9d;
+  --sc-blue-soft:#eef4ff;
+  --sc-ink:#17233a;
+  --sc-muted:#6f7c91;
+  --sc-line:#e3e8ef;
+  --sc-bg:#f6f8fb;
+  --sc-card:#ffffff;
+  --sc-green:#0f9b7b;
+}
+
+/* Auth */
+.auth-page.auth-v2{background:#fff}
+.auth-showcase{background:linear-gradient(180deg,#edf4ff 0%,#dfeaff 100%);color:#0d2259}
+.auth-showcase:before,.auth-showcase:after{border-color:rgba(19,70,232,.12)}
+.auth-logo strong{color:#12306f}.auth-logo span{color:#6f82aa}
+.auth-kicker{color:var(--sc-blue)}
+.auth-pitch h2{color:#10275f}.auth-pitch>p{color:#53688e}
+.auth-benefits svg{color:var(--sc-blue)}.auth-benefits strong{color:#18305f}.auth-benefits small{color:#667b9f}
+.auth-trust{color:#6f82a0}
+.auth-form-side{background:#fff}
+.auth-heading h1{color:#14233a}.auth-heading p{color:#7a8799}
+.auth-card-v2 input,.auth-card-v2 select{border:1px solid #cfd7e4;border-radius:12px;background:#fff}
+.auth-card-v2 input:focus,.auth-card-v2 select:focus{border-color:var(--sc-blue);box-shadow:0 0 0 3px rgba(19,70,232,.10)}
+.auth-forgot,.auth-resend,.auth-account-switch button{color:var(--sc-blue)}
+.auth-primary{background:var(--sc-blue);border-radius:999px;box-shadow:0 12px 26px rgba(19,70,232,.20)}
+.auth-primary:hover{background:#0f3bca}
+.auth-icon{background:#edf3ff;color:var(--sc-blue)}
+.auth-step-v2.active{border-color:#bfd0ff;background:#f2f6ff}
+.auth-step-v2.active span,.auth-step-v2.done span{background:var(--sc-blue)}
+.auth-signup-benefits-v2{background:#f2f6ff;border-color:#d7e2ff;color:#39558e}
+.auth-signup-benefits-v2 svg{color:var(--sc-blue)}
+
+/* Main application */
+body{background:var(--sc-bg);color:var(--sc-ink)}
+.tenant-shell,.admin-shell{background:var(--sc-bg)}
+.tenant-sidebar,.admin-sidebar{
+  background:#fff!important;
+  color:#3b4a63!important;
+  border-right:1px solid var(--sc-line);
+  box-shadow:none!important
+}
+.tenant-brand{color:#17306d}.tenant-brand strong{color:#17306d}.tenant-brand span{color:#7c8ba1}
+.brand-mark{background:var(--sc-blue)!important;color:#fff!important}
+.company-card,.admin-owner-card{background:#f7f9fc!important;border:1px solid var(--sc-line)!important;color:#22324c!important}
+.company-card strong,.admin-owner-card strong{color:#1d2b45!important}
+.company-card span,.admin-owner-card span{color:#7b879b!important}
+.tenant-nav button{color:#617087!important;border-radius:10px}
+.tenant-nav button:hover{background:#f2f5fa!important;color:#223454!important}
+.tenant-nav button.active{
+  background:#eaf1ff!important;
+  color:var(--sc-blue)!important;
+  box-shadow:inset 3px 0 0 var(--sc-blue)
+}
+.tenant-side-bottom{border-top:1px solid var(--sc-line)}
+.tenant-user .avatar{background:#edf3ff!important;color:var(--sc-blue)!important}
+.tenant-user strong{color:#23314a!important}.tenant-user span{color:#8490a2!important}
+.tenant-logout{background:#fff!important;border:1px solid var(--sc-line)!important;color:#5a687d!important}
+.tenant-logout:hover{border-color:#b9c7dc!important;color:#243654!important}
+
+.tenant-main,.admin-main{background:var(--sc-bg)}
+.tenant-topbar{
+  background:#fff!important;
+  color:#21304a!important;
+  border-bottom:1px solid var(--sc-line)!important;
+  box-shadow:none!important
+}
+.tenant-topbar strong{color:#1c2c47!important}.tenant-topbar span{color:#8a96a7!important}
+.tenant-topbar button{background:#fff!important;border:1px solid var(--sc-line)!important;color:#617189!important}
+.tenant-content{max-width:1440px}
+.eyebrow{color:var(--sc-blue)!important;letter-spacing:.14em}
+.tenant-heading h1{color:#17243b;letter-spacing:-.03em}.tenant-heading p{color:#7b8798}
+.primaryBtn{background:var(--sc-blue)!important;border-radius:10px!important;box-shadow:0 8px 18px rgba(19,70,232,.16)}
+.primaryBtn:hover:not(:disabled){background:#0f3bca!important}
+.text-action{color:var(--sc-blue)!important}
+
+.metric,.card,.admin-kpi{
+  background:#fff!important;
+  border:1px solid var(--sc-line)!important;
+  box-shadow:0 7px 22px rgba(26,45,78,.045)!important
+}
+.metric,.admin-kpi{position:relative;overflow:hidden}
+.metric:before,.admin-kpi:before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:#d5deeb}
+.metric.primary,.admin-kpi.primary{
+  background:#fff!important;
+  color:var(--sc-ink)!important;
+  border-color:var(--sc-line)!important
+}
+.metric.primary:before,.admin-kpi.primary:before{background:var(--sc-blue)}
+.metric span,.metric small,.admin-kpi span,.admin-kpi small,
+.metric.primary span,.metric.primary small,.admin-kpi.primary span,.admin-kpi.primary small{color:#7d899a!important}
+.metric strong,.admin-kpi strong,.metric.primary strong,.admin-kpi.primary strong{color:#17253f!important}
+.summary-row{border-color:#edf0f4!important}
+.tableCard{overflow:hidden}
+.cardHead{background:#fff;border-color:#edf0f4!important}
+.cardHead h2{color:#1a2943}.cardHead p{color:#8995a6}
+table{background:#fff}
+th{background:#fafbfc;color:#8490a2!important}
+td{color:#2d3b53;border-color:#edf0f4!important}
+tr:hover td{background:#fbfcfe}
+.status{border:1px solid transparent}
+.status.active,.status.paid{background:#e9f8f3!important;color:#0c7f64!important}
+.status.trialing,.status.pending,.status.draft{background:#eef4ff!important;color:#2854c5!important}
+.status.overdue,.status.past_due,.status.suspended{background:#fff2f2!important;color:#be4343!important}
+
+input,select{border-color:#d6dde7!important}
+input:focus,select:focus{border-color:var(--sc-blue)!important;box-shadow:0 0 0 3px rgba(19,70,232,.09)!important}
+.plan-admin-card.recommended,.plan-selection-card.recommended{border-color:var(--sc-blue)!important;box-shadow:0 16px 34px rgba(19,70,232,.10)!important}
+.recommended-badge{background:var(--sc-blue)!important}
+.plan-selection-card-head .plan-code{color:var(--sc-blue)!important}
+.plan-selection-features svg,.plan-selection-footer svg{color:var(--sc-blue)!important}
+.plan-select-button.primary{background:var(--sc-blue)!important;border-color:var(--sc-blue)!important}
+.plan-select-button.primary:hover:not(:disabled){background:#0f3bca!important}
+.plan-selection-safe{background:#eef4ff!important;color:#3158bb!important}
+
+.subscription-card{
+  background:linear-gradient(135deg,#0f2d83,#1346e8)!important;
+  box-shadow:0 18px 35px rgba(19,70,232,.18)!important
+}
+.trial-banner{background:#eef4ff!important;border-color:#d9e5ff!important;color:#3158bb!important}
+.trial-banner span{color:#6b7fae!important}
+
+.dangerBtn{border-color:#efc6cc!important;background:#fff7f8!important;color:#b84a55!important}
+.row-actions button:hover{border-color:var(--sc-blue)!important;color:var(--sc-blue)!important}
+
+/* owner admin */
+.admin-owner-card{color:#22324c!important}
+.admin-owner-card svg{color:var(--sc-blue)}
+.plan-price-preview{background:#f7f9fc!important;border-color:#e5eaf0!important}
+.admin-help-card>svg{color:var(--sc-blue)!important}
+
+/* mobile */
+@media(max-width:700px){
+  .tenant-sidebar,.admin-sidebar{background:#fff!important}
+  .tenant-nav button.active{box-shadow:inset 0 -3px 0 var(--sc-blue)}
+}
