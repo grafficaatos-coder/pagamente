@@ -59,8 +59,7 @@ export function inferPixKey(value:string){
     // CPF has 11 digits; phone keys are commonly entered with +55 or parentheses.
     const looksPhone=/^\+?55/.test(original)||/[()\s-]/.test(original);
     if(looksPhone){
-      const phone=digits.startsWith('55')&&digits.length===13?digits.slice(2):digits;
-      return {key:phone,type:'PHONE'};
+      return {key:digits,type:'PHONE'};
     }
     return {key:digits,type:'CPF'};
   }
