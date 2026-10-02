@@ -554,6 +554,46 @@ export default function Home(){
     });
   }
 
+  async function createAsaasAccount(e:React.FormEvent){
+    e.preventDefault();
+    const incomeCents=parseBRL(asaasAccountForm.incomeValue);
+    if(incomeCents<=0){setMsg('Informe o faturamento ou renda mensal.');return}
+    setBusy(true);setMsg('');
+    try{
+      const response=await authenticatedFetch('/api/integrations/asaas/subaccount',{
+        method:'POST',
+        body:JSON.stringify({
+          ...asaasAccountForm,
+          incomeValue:incomeCents/100
+        })
+      });
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error||'Não foi possível ativar a conta Asaas.');
+      setMsg('Conta Asaas criada e conectada ao JP Sistema com sucesso.');
+      await load();
+    }catch(e){
+      setMsg(e instanceof Error?e.message:'Não foi possível ativar a conta Asaas.');
+    }finally{
+      setBusy(false);
+    }
+  }
+
+  async function refreshAsaasBalance(){
+    setBusy(true);setMsg('');
+    try{
+      const response=await authenticatedFetch('/api/wallet/asaas/balance',{method:'GET'});
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error||'Não foi possível consultar o saldo Asaas.');
+      setAsaasBalanceCents(Number(data.balanceCents||0));
+      setWallet((current:any)=>current?{...current,balance_cents:Number(data.balanceCents||0)}:current);
+      setMsg('Saldo Asaas atualizado.');
+    }catch(e){
+      setMsg(e instanceof Error?e.message:'Não foi possível consultar o saldo Asaas.');
+    }finally{
+      setBusy(false);
+    }
+  }
+
   async function connectMercadoPago(){
     setBusy(true);setMsg('');
     try{
