@@ -157,6 +157,7 @@ export default function Home(){
   const [platformInvoice,setPlatformInvoice]=useState<any>(null);
   const [mercadoPago,setMercadoPago]=useState<any>(null);
   const [baasConnection,setBaasConnection]=useState<any>(null);
+  const [asaasBalanceCents,setAsaasBalanceCents]=useState<number|null>(null);
   const [walletTransactions,setWalletTransactions]=useState<WalletTransaction[]>([]);
   const [walletTransfers,setWalletTransfers]=useState<WalletTransfer[]>([]);
   const [teamMembers,setTeamMembers]=useState<TeamMember[]>([]);
@@ -210,6 +211,11 @@ export default function Home(){
   const [inviteForm,setInviteForm]=useState({email:'',role:'viewer'});
   const [pixTransferForm,setPixTransferForm]=useState({
     recipientName:'',destinationKey:'',amount:'',description:''
+  });
+  const [asaasAccountForm,setAsaasAccountForm]=useState({
+    name:'',email:'',cpfCnpj:'',companyType:'LIMITED',taxRegime:'UNKNOWN',
+    birthDate:'',mobilePhone:'',incomeValue:'',
+    address:'',addressNumber:'',complement:'',province:'',postalCode:''
   });
 
   async function load(){
