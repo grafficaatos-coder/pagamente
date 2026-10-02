@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   BarChart3, Building2, CalendarClock, CheckCircle2, CircleDollarSign, Clock3, CreditCard, Crown,
-  History, Landmark, LayoutDashboard, LogOut, PauseCircle, Pencil, PlayCircle, Plus, ReceiptText, RefreshCw,
+  History, Landmark, LayoutDashboard, LogOut, Mail, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, ReceiptText, RefreshCw,
   Save, Search, Settings, Sparkles, ShieldCheck, TrendingUp, TriangleAlert, Trash2,
   UserCircle2, UserCog, UsersRound, WalletCards, XCircle
 } from 'lucide-react';
@@ -20,7 +20,7 @@ type Client = {
 type Charge = {
   id:string; description:string; amount_cents:number; due_date:string; status:string;
   provider:string; payment_method?:'boleto'|'pix'|null; provider_charge_id?:string|null; created_at:string; boleto_url?:string|null; digitable_line?:string|null;
-  clients?:{name?:string}|null
+  clients?:{name?:string;email?:string|null;whatsapp?:string|null}|null
 };
 type RecurringRule = { id:string; description:string; amount_cents:number; frequency:string; generation_day:number; due_day:number; status:string; clients?:{name?:string}|null };
 type TeamMember = { user_id:string; email:string|null; display_name:string|null; role:string; created_at:string };
@@ -267,7 +267,7 @@ export default function Home(){
         supabase.from('organizations').select('id,name,status').eq('id',orgId).single(),
         supabase.from('wallet_accounts').select('id,account_number,pix_key,balance_cents').eq('organization_id',orgId).single(),
         supabase.from('clients').select('id,name,document,email,whatsapp,address,status').eq('organization_id',orgId).order('created_at',{ascending:false}),
-        supabase.from('charges').select('id,description,amount_cents,due_date,status,provider,payment_method,provider_charge_id,created_at,boleto_url,digitable_line,clients(name)').eq('organization_id',orgId).order('created_at',{ascending:false}).limit(250),
+        supabase.from('charges').select('id,description,amount_cents,due_date,status,provider,payment_method,provider_charge_id,created_at,boleto_url,digitable_line,clients(name,email,whatsapp)').eq('organization_id',orgId).order('created_at',{ascending:false}).limit(250),
         supabase.from('recurring_rules').select('id,description,amount_cents,frequency,generation_day,due_day,status,clients(name)').eq('organization_id',orgId).order('created_at',{ascending:false}),
         supabase.from('subscriptions').select('status,trial_ends_at,current_period_end,chosen_plan_at,plans(name,billing_model,monthly_price_cents,boleto_fee_cents,max_clients,max_users)').eq('organization_id',orgId).maybeSingle(),
         supabase.from('platform_invoices').select('id,status,total_cents,due_date,reference_month').eq('organization_id',orgId).order('created_at',{ascending:false}).limit(1).maybeSingle(),
@@ -658,6 +658,41 @@ export default function Home(){
       await load();
     }catch(e){setMsg(e instanceof Error?e.message:'Não foi possível gerar o boleto.')}
     finally{setBusy(false)}
+  }
+
+  function chargeClient(charge:Charge){
+    return Array.isArray(charge.clients)?charge.clients[0]:charge.clients;
+  }
+
+  function paymentShareText(charge:Charge){
+    const client=chargeClient(charge);
+    const method=charge.payment_method==='pix'?'Pix':'boleto';
+    const lines=[
+      'Olá '+(client?.name||'')+',',
+      '',
+      'Segue sua cobrança '+method+' referente a '+charge.description+'.',
+      'Valor: '+brl(Number(charge.amount_cents)),
+      'Vencimento: '+dateBR(charge.due_date)
+    ];
+    if(charge.boleto_url) lines.push('Link para pagamento: '+charge.boleto_url);
+    if(charge.digitable_line) lines.push((charge.payment_method==='pix'?'Pix Copia e Cola: ':'Linha digitável: ')+charge.digitable_line);
+    lines.push('','JP Sistema de Cobrança');
+    return lines.join('\n');
+  }
+
+  function openWhatsAppCharge(charge:Charge){
+    const client=chargeClient(charge);
+    let phone=String(client?.whatsapp||'').replace(/\D/g,'');
+    if(phone.length>=10&&phone.length<=11) phone='55'+phone;
+    const text=encodeURIComponent(paymentShareText(charge));
+    window.open('https://wa.me/'+phone+'?text='+text,'_blank','noopener,noreferrer');
+  }
+
+  function openEmailCharge(charge:Charge){
+    const client=chargeClient(charge);
+    const subject=encodeURIComponent('Cobrança - '+charge.description);
+    const body=encodeURIComponent(paymentShareText(charge));
+    window.location.href='mailto:'+(client?.email||'')+'?subject='+subject+'&body='+body;
   }
 
   async function setRecurringStatusAction(id:string,status:string){
@@ -1345,6 +1380,8 @@ export default function Home(){
                     {['pending','draft','overdue'].includes(computedStatus)&&<button disabled={!canManageFinance||busy} onClick={()=>cancelChargeAction(charge)}><XCircle size={13}/> Cancelar</button>}
                     {charge.boleto_url&&<a className="table-link" href={charge.boleto_url} target="_blank" rel="noreferrer">{charge.payment_method==='pix'?'Abrir Pix':'Abrir boleto'}</a>}
                     {charge.digitable_line&&<button onClick={()=>navigator.clipboard.writeText(charge.digitable_line||'')}>{charge.payment_method==='pix'?'Copiar Pix':'Copiar linha'}</button>}
+                    {charge.boleto_url&&chargeClient(charge)?.email&&<button onClick={()=>openEmailCharge(charge)}><Mail size={13}/> E-mail</button>}
+                    {charge.boleto_url&&chargeClient(charge)?.whatsapp&&<button onClick={()=>openWhatsAppCharge(charge)}><MessageCircle size={13}/> WhatsApp</button>}
                   </div></td>
                 </tr>
               })}
