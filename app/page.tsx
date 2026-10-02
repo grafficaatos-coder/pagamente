@@ -694,11 +694,21 @@ export default function Home(){
     window.open('https://wa.me/'+phone+'?text='+text,'_blank','noopener,noreferrer');
   }
 
-  function openEmailCharge(charge:Charge){
-    const client=chargeClient(charge);
-    const subject=encodeURIComponent('Cobrança - '+charge.description);
-    const body=encodeURIComponent(paymentShareText(charge));
-    window.location.href='mailto:'+(client?.email||'')+'?subject='+subject+'&body='+body;
+  async function openEmailCharge(charge:Charge){
+    setBusy(true);setMsg('');
+    try{
+      const response=await authenticatedFetch('/api/charges/email',{
+        method:'POST',
+        body:JSON.stringify({chargeId:charge.id})
+      });
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error||'Não foi possível enviar o e-mail.');
+      setMsg('Cobrança enviada por e-mail com sucesso.');
+    }catch(e){
+      setMsg(e instanceof Error?e.message:'Não foi possível enviar o e-mail.');
+    }finally{
+      setBusy(false);
+    }
   }
 
   async function setRecurringStatusAction(id:string,status:string){
@@ -1404,7 +1414,7 @@ export default function Home(){
                     {['pending','draft','overdue'].includes(computedStatus)&&<button disabled={!canManageFinance||busy} onClick={()=>cancelChargeAction(charge)}><XCircle size={13}/> Cancelar</button>}
                     {charge.boleto_url&&<a className="table-link" href={charge.boleto_url} target="_blank" rel="noreferrer">{charge.payment_method==='pix'?'Abrir Pix':'Abrir boleto'}</a>}
                     {charge.digitable_line&&<button onClick={()=>navigator.clipboard.writeText(charge.digitable_line||'')}>{charge.payment_method==='pix'?'Copiar Pix':'Copiar linha'}</button>}
-                    {charge.boleto_url&&chargeClient(charge)?.email&&<button onClick={()=>openEmailCharge(charge)}><Mail size={13}/> E-mail</button>}
+                    {charge.boleto_url&&chargeClient(charge)?.email&&<button disabled={busy} onClick={()=>openEmailCharge(charge)}><Mail size={13}/> Enviar e-mail</button>}
                     {charge.boleto_url&&chargeClient(charge)?.whatsapp&&<button onClick={()=>openWhatsAppCharge(charge)}><MessageCircle size={13}/> WhatsApp</button>}
                   </div></td>
                 </tr>
