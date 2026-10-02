@@ -13,6 +13,7 @@ import { brl, dateBR, parseBRL } from '@/lib/format';
 
 type Client = {
   id:string; name:string; document:string|null; email:string|null; whatsapp:string|null; status:string;
+  delivery_preference?:'manual'|'email'|'whatsapp'|'both';
   address?:{
     zip_code?:string; street_name?:string; street_number?:string; neighborhood?:string; city?:string; state?:string
   }|null
@@ -165,7 +166,7 @@ export default function Home(){
   const [msg,setMsg]=useState('');
 
   const [clientForm,setClientForm]=useState({
-    name:'',document:'',email:'',whatsapp:'',
+    name:'',document:'',email:'',whatsapp:'',deliveryPreference:'manual',
     zip_code:'',street_name:'',street_number:'',neighborhood:'',city:'',state:''
   });
   const [chargeForm,setChargeForm]=useState({
@@ -266,7 +267,7 @@ export default function Home(){
       ]=await Promise.all([
         supabase.from('organizations').select('id,name,status').eq('id',orgId).single(),
         supabase.from('wallet_accounts').select('id,account_number,pix_key,balance_cents').eq('organization_id',orgId).single(),
-        supabase.from('clients').select('id,name,document,email,whatsapp,address,status').eq('organization_id',orgId).order('created_at',{ascending:false}),
+        supabase.from('clients').select('id,name,document,email,whatsapp,delivery_preference,address,status').eq('organization_id',orgId).order('created_at',{ascending:false}),
         supabase.from('charges').select('id,description,amount_cents,due_date,status,provider,payment_method,provider_charge_id,created_at,boleto_url,digitable_line,clients(name,email,whatsapp)').eq('organization_id',orgId).order('created_at',{ascending:false}).limit(250),
         supabase.from('recurring_rules').select('id,description,amount_cents,frequency,generation_day,due_day,status,clients(name)').eq('organization_id',orgId).order('created_at',{ascending:false}),
         supabase.from('subscriptions').select('status,trial_ends_at,current_period_end,chosen_plan_at,plans(name,billing_model,monthly_price_cents,boleto_fee_cents,max_clients,max_users)').eq('organization_id',orgId).maybeSingle(),
@@ -457,9 +458,9 @@ export default function Home(){
   async function addClient(e:React.FormEvent){
     e.preventDefault();if(!supabase||!org)return;
     setBusy(true);setMsg('');
-    const {name,document,email,whatsapp,zip_code,street_name,street_number,neighborhood,city,state}=clientForm;
+    const {name,document,email,whatsapp,deliveryPreference,zip_code,street_name,street_number,neighborhood,city,state}=clientForm;
     const {error}=await supabase.from('clients').insert({
-      organization_id:org.id,name,document,email,whatsapp,status:'active',
+      organization_id:org.id,name,document,email,whatsapp,delivery_preference:deliveryPreference,status:'active',
       address:{
         zip_code:zip_code.replace(/\D/g,''),street_name,street_number,neighborhood,city,
         state:state.toUpperCase().slice(0,2)
@@ -467,7 +468,7 @@ export default function Home(){
     });
     if(error)setMsg(error.message);
     else{
-      setClientForm({name:'',document:'',email:'',whatsapp:'',zip_code:'',street_name:'',street_number:'',neighborhood:'',city:'',state:''});
+      setClientForm({name:'',document:'',email:'',whatsapp:'',deliveryPreference:'manual',zip_code:'',street_name:'',street_number:'',neighborhood:'',city:'',state:''});
       setMsg('Cliente cadastrado com sucesso.');await load();setTenantTab('clientes')
     }
     setBusy(false);
@@ -530,8 +531,8 @@ export default function Home(){
       setMsg('Conecte o Mercado Pago em Integrações antes de gerar pagamentos.');
       return;
     }
+    const selectedClient=clients.find(c=>c.id===chargeForm.clientId);
     if(isMercadoPago){
-      const selectedClient=clients.find(c=>c.id===chargeForm.clientId);
       if(!selectedClient?.email){
         setMsg('Cadastre o e-mail do cliente antes de gerar o pagamento.');
         return;
@@ -557,7 +558,8 @@ export default function Home(){
       provider:isMercadoPago?'mercadopago':'mock',
       payment_method:isMercadoPagoPix?'pix':isMercadoPagoBoleto?'boleto':null,
       status:isMercadoPago?'draft':'pending',
-      send_email:false,send_whatsapp:false
+      send_email:['email','both'].includes(selectedClient?.delivery_preference||'manual'),
+      send_whatsapp:['whatsapp','both'].includes(selectedClient?.delivery_preference||'manual')
     }).select('id').single();
 
     if(error)setMsg(error.message);
@@ -579,10 +581,13 @@ export default function Home(){
     const amount=parseBRL(recurringForm.amount);
     if(amount<=0){setMsg('Informe um valor válido.');return}
     setBusy(true);setMsg('');
+    const recurringClient=clients.find(c=>c.id===recurringForm.clientId);
     const {error}=await supabase.from('recurring_rules').insert({
       organization_id:org.id,client_id:recurringForm.clientId,description:recurringForm.description,
       amount_cents:amount,frequency:recurringForm.frequency,generation_day:Number(recurringForm.generationDay),
-      due_day:Number(recurringForm.dueDay),provider:'mock',status:'active',send_email:false,send_whatsapp:false
+      due_day:Number(recurringForm.dueDay),provider:'mock',status:'active',
+      send_email:['email','both'].includes(recurringClient?.delivery_preference||'manual'),
+      send_whatsapp:['whatsapp','both'].includes(recurringClient?.delivery_preference||'manual')
     });
     if(error)setMsg(error.message);
     else{setRecurringForm(f=>({...f,description:'',amount:''}));setMsg('Cobrança recorrente criada com sucesso.');await load();setTenantTab('recorrencias')}
@@ -598,6 +603,7 @@ export default function Home(){
       document:clientEdit.document||null,
       email:clientEdit.email||null,
       whatsapp:clientEdit.whatsapp||null,
+      delivery_preference:clientEdit.delivery_preference||'manual',
       address:clientEdit.address||null,
       updated_at:new Date().toISOString()
     }).eq('id',clientEdit.id);
@@ -1283,6 +1289,14 @@ export default function Home(){
                   <label>E-mail<input type="email" value={clientEdit.email??''} onChange={e=>setClientEdit({...clientEdit,email:e.target.value})}/></label>
                   <label>WhatsApp<input value={clientEdit.whatsapp??''} onChange={e=>setClientEdit({...clientEdit,whatsapp:e.target.value})}/></label>
                 </div>
+                <label>Enviar cobranças automaticamente por
+                  <select value={clientEdit.delivery_preference||'manual'} onChange={e=>setClientEdit({...clientEdit,delivery_preference:e.target.value as Client['delivery_preference']})}>
+                    <option value="manual">Não enviar automaticamente</option>
+                    <option value="email">Somente e-mail</option>
+                    <option value="whatsapp">Somente WhatsApp</option>
+                    <option value="both">E-mail e WhatsApp</option>
+                  </select>
+                </label>
                 <div className="address-fields">
                   <label>CEP<input value={clientEdit.address?.zip_code??''} onChange={e=>setClientEdit({...clientEdit,address:{...(clientEdit.address||{}),zip_code:e.target.value}})}/></label>
                   <label>Rua<input value={clientEdit.address?.street_name??''} onChange={e=>setClientEdit({...clientEdit,address:{...(clientEdit.address||{}),street_name:e.target.value}})}/></label>
@@ -1296,6 +1310,15 @@ export default function Home(){
                 <label>Nome / Razão social<input required value={clientForm.name} onChange={e=>setClientForm({...clientForm,name:e.target.value})}/></label>
                 <label>CPF / CNPJ<input value={clientForm.document} onChange={e=>setClientForm({...clientForm,document:e.target.value})}/></label>
                 <div className="cols"><label>E-mail<input type="email" value={clientForm.email} onChange={e=>setClientForm({...clientForm,email:e.target.value})}/></label><label>WhatsApp<input value={clientForm.whatsapp} onChange={e=>setClientForm({...clientForm,whatsapp:e.target.value})}/></label></div>
+                <label>Enviar cobranças automaticamente por
+                  <select value={clientForm.deliveryPreference} onChange={e=>setClientForm({...clientForm,deliveryPreference:e.target.value})}>
+                    <option value="manual">Não enviar automaticamente</option>
+                    <option value="email">Somente e-mail</option>
+                    <option value="whatsapp">Somente WhatsApp</option>
+                    <option value="both">E-mail e WhatsApp</option>
+                  </select>
+                </label>
+                <p className="permission-note">A preferência será aplicada automaticamente às novas cobranças deste cliente.</p>
                 <div className="address-fields">
                   <label>CEP<input value={clientForm.zip_code} onChange={e=>setClientForm({...clientForm,zip_code:e.target.value})} placeholder="00000-000"/></label>
                   <label>Rua<input value={clientForm.street_name} onChange={e=>setClientForm({...clientForm,street_name:e.target.value})}/></label>
@@ -1317,16 +1340,17 @@ export default function Home(){
               <div><h2>Lista de clientes</h2><p>{filteredClients.length} registros encontrados</p></div>
               <div className="table-search"><Search size={15}/><input value={clientSearch} onChange={e=>setClientSearch(e.target.value)} placeholder="Buscar cliente..."/></div>
             </div>
-            <div className="tableWrap"><table><thead><tr><th>Nome</th><th>Documento</th><th>E-mail</th><th>WhatsApp</th><th>Status</th><th>Ações</th></tr></thead><tbody>
+            <div className="tableWrap"><table><thead><tr><th>Nome</th><th>Documento</th><th>E-mail</th><th>WhatsApp</th><th>Envio</th><th>Status</th><th>Ações</th></tr></thead><tbody>
               {filteredClients.map(client=><tr key={client.id}>
                 <td><strong>{client.name}</strong></td><td>{client.document||'—'}</td><td>{client.email||'—'}</td><td>{client.whatsapp||'—'}</td>
+                <td>{client.delivery_preference==='email'?'E-mail':client.delivery_preference==='whatsapp'?'WhatsApp':client.delivery_preference==='both'?'E-mail + WhatsApp':'Manual'}</td>
                 <td><span className={'status '+client.status}>{client.status==='active'?'Ativo':'Inativo'}</span></td>
                 <td><div className="row-actions">
                   <button disabled={!canManageFinance||busy} onClick={()=>setClientEdit(client)}><Pencil size={13}/> Editar</button>
                   <button disabled={!canManageFinance||busy} onClick={()=>toggleClientStatus(client)}>{client.status==='active'?<XCircle size={13}/>:<CheckCircle2 size={13}/>} {client.status==='active'?'Inativar':'Ativar'}</button>
                 </div></td>
               </tr>)}
-              {!filteredClients.length&&<tr><td colSpan={6} className="empty">Nenhum cliente encontrado.</td></tr>}
+              {!filteredClients.length&&<tr><td colSpan={7} className="empty">Nenhum cliente encontrado.</td></tr>}
             </tbody></table></div>
           </section>
         </>}
