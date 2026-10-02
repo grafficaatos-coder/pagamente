@@ -27,6 +27,7 @@ export async function POST(request:Request){
     const url=new URL('https://auth.mercadopago.com/authorization');
     url.searchParams.set('client_id',clientId);
     url.searchParams.set('response_type','code');
+    url.searchParams.set('platform_id','mp');
     url.searchParams.set('state',state);
     url.searchParams.set('redirect_uri',mercadoPagoRedirectUri());
     url.searchParams.set('code_challenge',pkceChallenge(verifier));
