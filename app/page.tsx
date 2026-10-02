@@ -98,6 +98,12 @@ function monthDateValue(){
   return String(d.getFullYear())+'-'+String(d.getMonth()+1).padStart(2,'0')+'-01';
 }
 
+function parsePercent(value:string){
+  const normalized=String(value||'').trim().replace(',','.');
+  const parsed=Number(normalized);
+  return Number.isFinite(parsed)?parsed:0;
+}
+
 function clientName(value:any){
   return Array.isArray(value) ? value[0]?.name : value?.name;
 }
@@ -170,7 +176,10 @@ export default function Home(){
     zip_code:'',street_name:'',street_number:'',neighborhood:'',city:'',state:''
   });
   const [chargeForm,setChargeForm]=useState({
-    clientId:'',description:'',amount:'',dueDate:'',paymentMethod:'internal'
+    clientId:'',description:'',amount:'',dueDate:'',paymentMethod:'internal',
+    interestMonthly:'0,00',
+    fineType:'percent',fineValue:'0,00',
+    discountType:'percent',discountValue:'0,00',discountDeadlineDays:'0'
   });
   const [recurringForm,setRecurringForm]=useState({
     clientId:'',description:'',amount:'',frequency:'monthly',generationDay:'1',dueDay:'10'
@@ -524,6 +533,16 @@ export default function Home(){
     e.preventDefault();if(!supabase||!org)return;
     const amount=parseBRL(chargeForm.amount);
     if(amount<=0){setMsg('Informe um valor válido.');return}
+    const interestMonthly=parsePercent(chargeForm.interestMonthly);
+    const finePercent=chargeForm.fineType==='percent'?parsePercent(chargeForm.fineValue):0;
+    const fineAmountCents=chargeForm.fineType==='fixed'?parseBRL(chargeForm.fineValue):0;
+    const discountPercent=chargeForm.discountType==='percent'?parsePercent(chargeForm.discountValue):0;
+    const discountAmountCents=chargeForm.discountType==='fixed'?parseBRL(chargeForm.discountValue):0;
+    const discountDeadlineDays=Math.max(0,Number.parseInt(chargeForm.discountDeadlineDays||'0',10)||0);
+    if(interestMonthly<0||interestMonthly>100||finePercent<0||finePercent>100||discountPercent<0||discountPercent>100){
+      setMsg('Juros, multa e desconto percentual devem ficar entre 0% e 100%.');
+      return;
+    }
     const isMercadoPagoBoleto=chargeForm.paymentMethod==='mercadopago';
     const isMercadoPagoPix=chargeForm.paymentMethod==='mercadopago_pix';
     const isMercadoPago=isMercadoPagoBoleto||isMercadoPagoPix;
@@ -558,6 +577,14 @@ export default function Home(){
       provider:isMercadoPago?'mercadopago':'mock',
       payment_method:isMercadoPagoPix?'pix':isMercadoPagoBoleto?'boleto':null,
       status:isMercadoPago?'draft':'pending',
+      interest_monthly_percent:interestMonthly,
+      fine_type:chargeForm.fineType,
+      fine_percent:finePercent,
+      fine_amount_cents:fineAmountCents,
+      discount_type:chargeForm.discountType,
+      discount_percent:discountPercent,
+      discount_amount_cents:discountAmountCents,
+      discount_deadline_days:discountDeadlineDays,
       send_email:['email','both'].includes(selectedClient?.delivery_preference||'manual'),
       send_whatsapp:['whatsapp','both'].includes(selectedClient?.delivery_preference||'manual')
     }).select('id').single();
@@ -567,7 +594,11 @@ export default function Home(){
       try{
         let paymentResult:any=null;
         if(isMercadoPago)paymentResult=await generateMercadoPagoPayment(created.id,isMercadoPagoPix?'pix':'boleto');
-        setChargeForm(f=>({...f,description:'',amount:'',dueDate:''}));
+        setChargeForm(f=>({
+          ...f,description:'',amount:'',dueDate:'',
+          interestMonthly:'0,00',fineType:'percent',fineValue:'0,00',
+          discountType:'percent',discountValue:'0,00',discountDeadlineDays:'0'
+        }));
         const sentByEmail=Boolean(paymentResult?.email?.sent);
         setMsg(
           isMercadoPagoPix
@@ -1386,6 +1417,62 @@ export default function Home(){
                 <label>Cliente<select required value={chargeForm.clientId} onChange={e=>setChargeForm({...chargeForm,clientId:e.target.value})}><option value="">Selecione</option>{clients.filter(c=>c.status==='active').map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
                 <label>Descrição<input required value={chargeForm.description} onChange={e=>setChargeForm({...chargeForm,description:e.target.value})}/></label>
                 <div className="cols"><label>Valor<input required placeholder="0,00" value={chargeForm.amount} onChange={e=>setChargeForm({...chargeForm,amount:e.target.value})}/></label><label>Vencimento<input type="date" required value={chargeForm.dueDate} onChange={e=>setChargeForm({...chargeForm,dueDate:e.target.value})}/></label></div>
+
+                <div className="charge-terms">
+                  <div className="charge-terms-head">
+                    <div><strong>Juros, multa e desconto</strong><span>Configurações opcionais da cobrança</span></div>
+                    <small>Use 0,00 para não aplicar</small>
+                  </div>
+
+                  <div className="charge-term-block">
+                    <div className="charge-term-title"><strong>Juros</strong><span>Aplicado após o vencimento</span></div>
+                    <label>Juros ao mês (%)
+                      <input inputMode="decimal" placeholder="0,00" value={chargeForm.interestMonthly} onChange={e=>setChargeForm({...chargeForm,interestMonthly:e.target.value})}/>
+                    </label>
+                  </div>
+
+                  <div className="charge-term-block">
+                    <div className="charge-term-title"><strong>Multa</strong><span>Somada ao valor após o vencimento</span></div>
+                    <div className="cols">
+                      <label>Tipo
+                        <select value={chargeForm.fineType} onChange={e=>setChargeForm({...chargeForm,fineType:e.target.value})}>
+                          <option value="percent">Percentual</option>
+                          <option value="fixed">Valor fixo</option>
+                        </select>
+                      </label>
+                      <label>{chargeForm.fineType==='percent'?'Valor percentual da multa (%)':'Valor fixo da multa (R$)'}
+                        <input inputMode="decimal" placeholder="0,00" value={chargeForm.fineValue} onChange={e=>setChargeForm({...chargeForm,fineValue:e.target.value})}/>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div className="charge-term-block">
+                    <div className="charge-term-title"><strong>Desconto</strong><span>Incentivo para pagamento antecipado</span></div>
+                    <div className="cols">
+                      <label>Tipo
+                        <select value={chargeForm.discountType} onChange={e=>setChargeForm({...chargeForm,discountType:e.target.value})}>
+                          <option value="percent">Percentual</option>
+                          <option value="fixed">Valor fixo</option>
+                        </select>
+                      </label>
+                      <label>{chargeForm.discountType==='percent'?'Valor percentual do desconto (%)':'Valor fixo do desconto (R$)'}
+                        <input inputMode="decimal" placeholder="0,00" value={chargeForm.discountValue} onChange={e=>setChargeForm({...chargeForm,discountValue:e.target.value})}/>
+                      </label>
+                    </div>
+                    <label>Prazo máximo do desconto
+                      <select value={chargeForm.discountDeadlineDays} onChange={e=>setChargeForm({...chargeForm,discountDeadlineDays:e.target.value})}>
+                        <option value="0">Até o dia do vencimento</option>
+                        <option value="1">Até 1 dia antes do vencimento</option>
+                        <option value="3">Até 3 dias antes do vencimento</option>
+                        <option value="5">Até 5 dias antes do vencimento</option>
+                        <option value="10">Até 10 dias antes do vencimento</option>
+                      </select>
+                    </label>
+                  </div>
+
+                  <p className="permission-note">As condições ficam salvas na cobrança. A aplicação no boleto depende dos recursos suportados pelo banco ou provedor conectado.</p>
+                </div>
+
                 <label>Forma de cobrança<select value={chargeForm.paymentMethod} onChange={e=>setChargeForm({...chargeForm,paymentMethod:e.target.value})}>
                   <option value="internal">Registro interno</option>
                   <option value="mercadopago" disabled={mercadoPago?.status!=='connected'}>Boleto Mercado Pago{mercadoPago?.status==='connected'?'':' — conectar primeiro'}</option>
