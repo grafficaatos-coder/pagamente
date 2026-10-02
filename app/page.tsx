@@ -702,10 +702,11 @@ export default function Home(){
   async function retryMercadoPagoBoleto(charge:Charge){
     setBusy(true);setMsg('');
     try{
-      await generateMercadoPagoPayment(charge.id,charge.payment_method==='pix'?'pix':'boleto');
-      setMsg(charge.payment_method==='pix'?'Pix Mercado Pago gerado com sucesso.':'Boleto Mercado Pago gerado com sucesso.');
+      const method=charge.payment_method==='pix'?'pix':charge.payment_method==='boleto_pix'?'both':'boleto';
+      await generateMercadoPagoPayment(charge.id,method);
+      setMsg(charge.payment_method==='pix'?'Pix Mercado Pago gerado com sucesso.':charge.payment_method==='boleto_pix'?'Boleto e Pix Mercado Pago gerados com sucesso.':'Boleto Mercado Pago gerado com sucesso.');
       await load();
-    }catch(e){setMsg(e instanceof Error?e.message:'Não foi possível gerar o boleto.')}
+    }catch(e){setMsg(e instanceof Error?e.message:'Não foi possível gerar o pagamento.')}
     finally{setBusy(false)}
   }
 
@@ -715,7 +716,7 @@ export default function Home(){
 
   function paymentShareText(charge:Charge){
     const client=chargeClient(charge);
-    const method=charge.payment_method==='pix'?'Pix':'boleto';
+    const method=charge.payment_method==='pix'?'Pix':charge.payment_method==='boleto_pix'?'boleto ou Pix':'boleto';
     const lines=[
       'Olá '+(client?.name||'')+',',
       '',
@@ -723,8 +724,15 @@ export default function Home(){
       'Valor: '+brl(Number(charge.amount_cents)),
       'Vencimento: '+dateBR(charge.due_date)
     ];
-    if(charge.boleto_url) lines.push('Link para pagamento: '+charge.boleto_url);
-    if(charge.digitable_line) lines.push((charge.payment_method==='pix'?'Pix Copia e Cola: ':'Linha digitável: ')+charge.digitable_line);
+    if(charge.payment_method==='boleto_pix'){
+      if(charge.boleto_url) lines.push('Boleto: '+charge.boleto_url);
+      if(charge.digitable_line) lines.push('Linha digitável do boleto: '+charge.digitable_line);
+      if(charge.pix_url) lines.push('Pix: '+charge.pix_url);
+      if(charge.pix_code) lines.push('Pix Copia e Cola: '+charge.pix_code);
+    }else{
+      if(charge.boleto_url) lines.push('Link para pagamento: '+charge.boleto_url);
+      if(charge.digitable_line) lines.push((charge.payment_method==='pix'?'Pix Copia e Cola: ':'Linha digitável: ')+charge.digitable_line);
+    }
     lines.push('','JP Sistema de Cobrança');
     return lines.join('\n');
   }
