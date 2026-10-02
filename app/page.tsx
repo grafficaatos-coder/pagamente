@@ -528,6 +528,24 @@ export default function Home(){
       setMsg('Conecte o Mercado Pago em Integrações antes de gerar boletos.');
       return;
     }
+    if(isMercadoPago){
+      const selectedClient=clients.find(c=>c.id===chargeForm.clientId);
+      const document=String(selectedClient?.document||'').replace(/\D/g,'');
+      if(![11,14].includes(document.length)){
+        setMsg('Cadastre um CPF ou CNPJ válido no cliente antes de gerar o boleto.');
+        return;
+      }
+      if(!selectedClient?.email){
+        setMsg('Cadastre o e-mail do cliente antes de gerar o boleto.');
+        return;
+      }
+      const address:any=selectedClient?.address||{};
+      const requiredAddress=['zip_code','street_name','street_number','neighborhood','city','state'];
+      if(requiredAddress.some(key=>!String(address[key]||'').trim())){
+        setMsg('Complete o endereço do cliente: CEP, rua, número, bairro, cidade e UF.');
+        return;
+      }
+    }
     setBusy(true);setMsg('');
     const {data:created,error}=await supabase.from('charges').insert({
       organization_id:org.id,client_id:chargeForm.clientId,description:chargeForm.description,
