@@ -20,7 +20,8 @@ type Client = {
 };
 type Charge = {
   id:string; description:string; amount_cents:number; due_date:string; status:string;
-  provider:string; payment_method?:'boleto'|'pix'|null; provider_charge_id?:string|null; created_at:string; boleto_url?:string|null; digitable_line?:string|null;
+  provider:string; payment_method?:'boleto'|'pix'|'boleto_pix'|null; provider_charge_id?:string|null; created_at:string; boleto_url?:string|null; digitable_line?:string|null;
+  pix_provider_charge_id?:string|null; pix_url?:string|null; pix_code?:string|null;
   clients?:{name?:string;email?:string|null;whatsapp?:string|null}|null
 };
 type RecurringRule = { id:string; description:string; amount_cents:number; frequency:string; generation_day:number; due_day:number; status:string; clients?:{name?:string}|null };
@@ -277,7 +278,7 @@ export default function Home(){
         supabase.from('organizations').select('id,name,status').eq('id',orgId).single(),
         supabase.from('wallet_accounts').select('id,account_number,pix_key,balance_cents').eq('organization_id',orgId).single(),
         supabase.from('clients').select('id,name,document,email,whatsapp,delivery_preference,address,status').eq('organization_id',orgId).order('created_at',{ascending:false}),
-        supabase.from('charges').select('id,description,amount_cents,due_date,status,provider,payment_method,provider_charge_id,created_at,boleto_url,digitable_line,clients(name,email,whatsapp)').eq('organization_id',orgId).order('created_at',{ascending:false}).limit(250),
+        supabase.from('charges').select('id,description,amount_cents,due_date,status,provider,payment_method,provider_charge_id,pix_provider_charge_id,created_at,boleto_url,digitable_line,pix_url,pix_code,clients(name,email,whatsapp)').eq('organization_id',orgId).order('created_at',{ascending:false}).limit(250),
         supabase.from('recurring_rules').select('id,description,amount_cents,frequency,generation_day,due_day,status,clients(name)').eq('organization_id',orgId).order('created_at',{ascending:false}),
         supabase.from('subscriptions').select('status,trial_ends_at,current_period_end,chosen_plan_at,plans(name,billing_model,monthly_price_cents,boleto_fee_cents,max_clients,max_users)').eq('organization_id',orgId).maybeSingle(),
         supabase.from('platform_invoices').select('id,status,total_cents,due_date,reference_month').eq('organization_id',orgId).order('created_at',{ascending:false}).limit(1).maybeSingle(),
@@ -520,12 +521,12 @@ export default function Home(){
     finally{setBusy(false)}
   }
 
-  async function generateMercadoPagoPayment(chargeId:string,method:'boleto'|'pix'){
+  async function generateMercadoPagoPayment(chargeId:string,method:'boleto'|'pix'|'both'){
     const response=await authenticatedFetch('/api/charges/mercadopago',{
       method:'POST',body:JSON.stringify({chargeId,method})
     });
     const data=await response.json();
-    if(!response.ok)throw new Error(data.error||(method==='pix'?'Não foi possível gerar o Pix.':'Não foi possível gerar o boleto.'));
+    if(!response.ok)throw new Error(data.error||(method==='pix'?'Não foi possível gerar o Pix.':method==='both'?'Não foi possível gerar boleto e Pix.':'Não foi possível gerar o boleto.'));
     return data;
   }
 
@@ -545,7 +546,8 @@ export default function Home(){
     }
     const isMercadoPagoBoleto=chargeForm.paymentMethod==='mercadopago';
     const isMercadoPagoPix=chargeForm.paymentMethod==='mercadopago_pix';
-    const isMercadoPago=isMercadoPagoBoleto||isMercadoPagoPix;
+    const isMercadoPagoBoth=chargeForm.paymentMethod==='mercadopago_both';
+    const isMercadoPago=isMercadoPagoBoleto||isMercadoPagoPix||isMercadoPagoBoth;
     if(isMercadoPago&&mercadoPago?.status!=='connected'){
       setMsg('Conecte o Mercado Pago em Integrações antes de gerar pagamentos.');
       return;
@@ -556,7 +558,7 @@ export default function Home(){
         setMsg('Cadastre o e-mail do cliente antes de gerar o pagamento.');
         return;
       }
-      if(isMercadoPagoBoleto){
+      if(isMercadoPagoBoleto||isMercadoPagoBoth){
         const document=String(selectedClient?.document||'').replace(/\D/g,'');
         if(![11,14].includes(document.length)){
           setMsg('Cadastre um CPF ou CNPJ válido no cliente antes de gerar o boleto.');
@@ -575,7 +577,7 @@ export default function Home(){
       organization_id:org.id,client_id:chargeForm.clientId,description:chargeForm.description,
       amount_cents:amount,due_date:chargeForm.dueDate,
       provider:isMercadoPago?'mercadopago':'mock',
-      payment_method:isMercadoPagoPix?'pix':isMercadoPagoBoleto?'boleto':null,
+      payment_method:isMercadoPagoPix?'pix':isMercadoPagoBoth?'boleto_pix':isMercadoPagoBoleto?'boleto':null,
       status:isMercadoPago?'draft':'pending',
       interest_monthly_percent:interestMonthly,
       fine_type:chargeForm.fineType,
@@ -593,7 +595,7 @@ export default function Home(){
     else{
       try{
         let paymentResult:any=null;
-        if(isMercadoPago)paymentResult=await generateMercadoPagoPayment(created.id,isMercadoPagoPix?'pix':'boleto');
+        if(isMercadoPago)paymentResult=await generateMercadoPagoPayment(created.id,isMercadoPagoPix?'pix':isMercadoPagoBoth?'both':'boleto');
         setChargeForm(f=>({
           ...f,description:'',amount:'',dueDate:'',
           interestMonthly:'0,00',fineType:'percent',fineValue:'0,00',
@@ -603,9 +605,11 @@ export default function Home(){
         setMsg(
           isMercadoPagoPix
             ? (sentByEmail?'Pix gerado e enviado por e-mail automaticamente.':'Pix Mercado Pago gerado com sucesso.')
-            : isMercadoPagoBoleto
-              ? (sentByEmail?'Boleto gerado e enviado por e-mail automaticamente.':'Boleto Mercado Pago gerado com sucesso.')
-              : 'Cobrança criada com sucesso.'
+            : isMercadoPagoBoth
+              ? (sentByEmail?'Boleto e Pix gerados e enviados por e-mail para o cliente escolher.':'Boleto e Pix Mercado Pago gerados com sucesso.')
+              : isMercadoPagoBoleto
+                ? (sentByEmail?'Boleto gerado e enviado por e-mail automaticamente.':'Boleto Mercado Pago gerado com sucesso.')
+                : 'Cobrança criada com sucesso.'
         );
       }catch(e){
         setMsg('Cobrança salva como rascunho. '+(e instanceof Error?e.message:'Não foi possível gerar o pagamento.'));
