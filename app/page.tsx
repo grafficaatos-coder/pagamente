@@ -1,4 +1,4 @@
-// Conta digital JP integrada ao BaaS
+// Conta digital JP integrada ao BaaS - build Pro
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
