@@ -35,7 +35,8 @@ function dateBR(value:string){
 }
 
 export async function sendChargeEmail(input:ChargeEmailInput){
-  const apiKey=required('EMAIL_API_KEY');
+  const apiKey=process.env.RESEND_API_KEY||process.env.EMAIL_API_KEY;
+  if(!apiKey) throw new Error('RESEND_API_KEY (ou EMAIL_API_KEY) não configurado no servidor.');
   const from=required('EMAIL_FROM');
   const method=input.paymentMethod==='pix'?'Pix':'boleto';
   const clientName=(input.clientName||'cliente').trim();
