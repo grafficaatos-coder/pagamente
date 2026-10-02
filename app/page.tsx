@@ -217,6 +217,7 @@ export default function Home(){
     birthDate:'',mobilePhone:'',incomeValue:'',
     address:'',addressNumber:'',complement:'',province:'',postalCode:''
   });
+  const [asaasFormError,setAsaasFormError]=useState('');
 
   async function load(){
     if(!supabase||!user)return;
@@ -556,8 +557,28 @@ export default function Home(){
 
   async function createAsaasAccount(e:React.FormEvent){
     e.preventDefault();
+    setAsaasFormError('');
+    const cpfCnpj=asaasAccountForm.cpfCnpj.replace(/\D/g,'');
+    const mobilePhone=asaasAccountForm.mobilePhone.replace(/\D/g,'');
+    const postalCode=asaasAccountForm.postalCode.replace(/\D/g,'');
     const incomeCents=parseBRL(asaasAccountForm.incomeValue);
-    if(incomeCents<=0){setMsg('Informe o faturamento ou renda mensal.');return}
+    const missing:string[]=[];
+    if(!asaasAccountForm.name.trim())missing.push('Nome / Razão social');
+    if(!asaasAccountForm.email.trim())missing.push('E-mail');
+    if(![11,14].includes(cpfCnpj.length))missing.push('CPF ou CNPJ válido');
+    if(mobilePhone.length<10)missing.push('Celular com DDD');
+    if(incomeCents<=0)missing.push('Faturamento / renda mensal');
+    if(!asaasAccountForm.address.trim())missing.push('Endereço');
+    if(!asaasAccountForm.addressNumber.trim())missing.push('Número');
+    if(!asaasAccountForm.province.trim())missing.push('Bairro');
+    if(postalCode.length!==8)missing.push('CEP válido');
+    if(cpfCnpj.length===11&&!asaasAccountForm.birthDate)missing.push('Data de nascimento');
+    if(missing.length){
+      const message='Preencha antes de criar a conta: '+missing.join(', ')+'.';
+      setAsaasFormError(message);
+      setMsg(message);
+      return;
+    }
     setBusy(true);setMsg('');
     try{
       const response=await authenticatedFetch('/api/integrations/asaas/subaccount',{
@@ -569,10 +590,13 @@ export default function Home(){
       });
       const data=await response.json();
       if(!response.ok)throw new Error(data.error||'Não foi possível ativar a conta Asaas.');
+      setAsaasFormError('');
       setMsg('Conta Asaas criada e conectada ao JP Sistema com sucesso.');
       await load();
     }catch(e){
-      setMsg(e instanceof Error?e.message:'Não foi possível ativar a conta Asaas.');
+      const message=e instanceof Error?e.message:'Não foi possível ativar a conta Asaas.';
+      setAsaasFormError(message);
+      setMsg(message);
     }finally{
       setBusy(false);
     }
@@ -1708,7 +1732,7 @@ export default function Home(){
             <div className="provider-note">
               <ShieldCheck size={18}/><p>Estamos usando o ambiente Sandbox. Nenhum dinheiro real será movimentado durante os testes. A chave da subconta será armazenada criptografada no servidor.</p>
             </div>
-            {canManageTeam?<form onSubmit={createAsaasAccount} className="asaas-onboarding-form">
+            {canManageTeam?<form onSubmit={createAsaasAccount} className="asaas-onboarding-form" noValidate>
               <div className="cols">
                 <label>Nome / Razão social<input required value={asaasAccountForm.name} onChange={e=>setAsaasAccountForm({...asaasAccountForm,name:e.target.value})}/></label>
                 <label>E-mail<input type="email" required value={asaasAccountForm.email} onChange={e=>setAsaasAccountForm({...asaasAccountForm,email:e.target.value})}/></label>
@@ -1736,7 +1760,8 @@ export default function Home(){
               </div>
               <label>Complemento<input value={asaasAccountForm.complement} onChange={e=>setAsaasAccountForm({...asaasAccountForm,complement:e.target.value})} placeholder="Opcional"/></label>
               <button className="primaryBtn" disabled={busy}><Landmark size={16}/> {busy?'Ativando...':'Criar conta Asaas de teste'}</button>
-              <p className="permission-note">O Asaas exige esses dados para criar a subconta e realizar o onboarding cadastral.</p>
+              {asaasFormError&&<div className="asaas-form-error">{asaasFormError}</div>}
+              <p className="permission-note">Campos obrigatórios: CPF/CNPJ, celular, faturamento/renda, endereço, número, bairro e CEP. O Asaas exige esses dados para criar a subconta e realizar o onboarding cadastral.</p>
             </form>:<p className="permission-note">Somente Proprietário ou Administrador pode ativar a Conta Digital Asaas.</p>}
           </section>}
 
