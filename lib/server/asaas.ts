@@ -2,7 +2,7 @@ function baseUrl(){
   return (process.env.ASAAS_BASE_URL||'https://api-sandbox.asaas.com/v3').replace(/\/$/,'');
 }
 
-function parentApiKey(){
+export function getParentAsaasApiKey(){
   const value=process.env.ASAAS_API_KEY;
   if(!value) throw new Error('ASAAS_API_KEY não configurada no servidor.');
   return value;
@@ -39,7 +39,7 @@ export async function asaasRequest<T=any>(
 }
 
 export async function createAsaasSubaccount(input:any){
-  return asaasRequest<any>(parentApiKey(),'/accounts',{
+  return asaasRequest<any>(getParentAsaasApiKey(),'/accounts',{
     method:'POST',
     body:JSON.stringify(input)
   });
