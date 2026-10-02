@@ -1274,8 +1274,8 @@ export default function Home(){
   const canManageTeam=['owner','admin'].includes(membership?.role);
   const baasConnected=baasConnection?.status==='connected';
   const mercadoPagoConnected=mercadoPago?.status==='connected';
-  const financialProviderConnected=mercadoPagoConnected||baasConnected;
-  const financialProviderName=mercadoPagoConnected?'Mercado Pago':baasConnected?'BaaS':'Nenhum';
+  const asaasWalletId=baasConnection?.metadata?.walletId||null;
+  const accountBalanceCents=baasConnected?(asaasBalanceCents??Number(wallet?.balance_cents??0)):Number(wallet?.balance_cents??0);
   const planMaxClients=planObj?.max_clients??null;
   const planMaxUsers=planObj?.max_users??null;
   const filteredClients=clients.filter(client=>{
