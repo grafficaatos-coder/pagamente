@@ -28,6 +28,8 @@ export async function POST(request:Request){
       .eq('organization_id',member.organization_id)
       .single();
     if(chargeError) throw chargeError;
+    if(!charge) throw new Error('Cobrança não encontrada.');
+    const emailCharge=charge;
 
     if(charge.status==='paid'||charge.status==='cancelled') throw new Error('Esta cobrança não pode gerar um novo pagamento.');
     const requestedMethod=body?.method==='pix'?'pix':body?.method==='boleto'?'boleto':null;
@@ -36,15 +38,15 @@ export async function POST(request:Request){
     const client:any=Array.isArray(charge.clients)?charge.clients[0]:charge.clients;
 
     async function sendEmailIfNeeded(paymentUrl:string|null,paymentLine:string|null,method:string|null){
-      if(!charge.send_email||charge.email_sent_at||!client?.email)return {sent:false,skipped:true};
+      if(!emailCharge.send_email||emailCharge.email_sent_at||!client?.email)return {sent:false,skipped:true};
       try{
         const result=await sendChargeEmail({
           to:client.email,
           clientName:client.name,
           organizationName:organization.name,
-          description:charge.description,
-          amountCents:Number(charge.amount_cents),
-          dueDate:charge.due_date,
+          description:emailCharge.description,
+          amountCents:Number(emailCharge.amount_cents),
+          dueDate:emailCharge.due_date,
           paymentMethod:method,
           paymentUrl,
           digitableLine:paymentLine
@@ -54,14 +56,14 @@ export async function POST(request:Request){
           email_delivery_id:result.id||null,
           email_delivery_error:null,
           updated_at:new Date().toISOString()
-        }).eq('id',charge.id);
+        }).eq('id',emailCharge.id);
         return {sent:true,skipped:false};
       }catch(error){
         const message=error instanceof Error?error.message:'Falha ao enviar e-mail.';
         await admin.from('charges').update({
           email_delivery_error:message,
           updated_at:new Date().toISOString()
-        }).eq('id',charge.id);
+        }).eq('id',emailCharge.id);
         return {sent:false,skipped:false,error:message};
       }
     }
@@ -90,8 +92,8 @@ export async function POST(request:Request){
     if(paymentMethod==='pix'){
       order=await createPixOrder(accessToken,{
         chargeId:charge.id,
-        amountCents:Number(charge.amount_cents),
-        description:charge.description,
+        amountCents:Number(emailCharge.amount_cents),
+        description:emailCharge.description,
         expirationDays,
         payer:{email:client.email}
       });
@@ -105,8 +107,8 @@ export async function POST(request:Request){
 
       order=await createBoletoOrder(accessToken,{
         chargeId:charge.id,
-        amountCents:Number(charge.amount_cents),
-        description:charge.description,
+        amountCents:Number(emailCharge.amount_cents),
+        description:emailCharge.description,
         expirationDays,
         payer:{
           email:client.email,
@@ -141,7 +143,7 @@ export async function POST(request:Request){
       provider_status_detail:fields.providerStatusDetail,
       status:mapped.status,
       updated_at:new Date().toISOString()
-    }).eq('id',charge.id);
+    }).eq('id',emailCharge.id);
     if(updateError) throw updateError;
 
     const email=await sendEmailIfNeeded(
