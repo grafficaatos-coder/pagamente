@@ -335,6 +335,25 @@ export default function Home(){
       setRecurring((rr??[]) as any);setSubscription(sub);setPlatformInvoice(invoice);
       setTeamMembers((members??[]) as any);setTenantAudit((auditRows??[]) as any);setMercadoPago(provider);
       setBaasConnection(baas);setWalletTransactions((txRows??[]) as any);setWalletTransfers((transferRows??[]) as any);
+      setAsaasAccountForm(form=>({
+        ...form,
+        name:form.name||o?.name||'',
+        email:form.email||user?.email||''
+      }));
+      if(baas?.status==='connected'){
+        try{
+          const balanceResponse=await authenticatedFetch('/api/wallet/asaas/balance',{method:'GET'});
+          const balanceData=await balanceResponse.json();
+          if(balanceResponse.ok){
+            setAsaasBalanceCents(Number(balanceData.balanceCents||0));
+            setWallet((current:any)=>current?{...current,balance_cents:Number(balanceData.balanceCents||0)}:current);
+          }
+        }catch{
+          setAsaasBalanceCents(null);
+        }
+      }else{
+        setAsaasBalanceCents(null);
+      }
 
       if(member.role==='owner'||member.role==='admin'){
         const {data:inviteRows,error:ive}=await supabase.from('organization_invites')
