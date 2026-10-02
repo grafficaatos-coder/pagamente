@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import {
-  BarChart3, Building2, CalendarClock, CheckCircle2, CircleDollarSign, Clock3, CreditCard, Crown,
+  ArrowDownLeft, ArrowUpRight, BarChart3, Building2, CalendarClock, CheckCircle2, CircleDollarSign, Clock3, CreditCard, Crown,
   History, Landmark, LayoutDashboard, LogOut, Mail, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, ReceiptText, RefreshCw,
-  Save, Search, Settings, Sparkles, ShieldCheck, TrendingUp, TriangleAlert, Trash2,
+  Save, Search, Send, Settings, Sparkles, ShieldCheck, TrendingUp, TriangleAlert, Trash2,
   UserCircle2, UserCog, UsersRound, WalletCards, XCircle
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
@@ -27,6 +27,14 @@ type Charge = {
 type RecurringRule = { id:string; description:string; amount_cents:number; frequency:string; generation_day:number; due_day:number; status:string; clients?:{name?:string}|null };
 type TeamMember = { user_id:string; email:string|null; display_name:string|null; role:string; created_at:string };
 type OrgInvite = { id:string; email:string; role:string; status:string; created_at:string };
+type WalletTransaction = {
+  id:string; type:string; direction:'credit'|'debit'; description:string; counterpart:string|null;
+  amount_cents:number; reference_id:string|null; created_at:string
+};
+type WalletTransfer = {
+  id:string; recipient_name:string; destination_key:string; description:string; amount_cents:number;
+  fee_cents:number; status:string; provider:string; provider_transfer_id:string|null; created_at:string; completed_at:string|null
+};
 type AuditItem = {
   id:string; organization_id?:string|null; organization_name?:string|null; actor_email?:string|null;
   actor_name?:string|null; action:string; entity_type:string; entity_id?:string|null; created_at:string
@@ -72,7 +80,7 @@ type PlatformInvoice = {
   plans?:{name?:string}|null;
 };
 
-type TenantTab = 'inicio'|'clientes'|'cobrancas'|'recorrencias'|'integracoes'|'equipe'|'atividade'|'relatorios'|'assinatura'|'conta';
+type TenantTab = 'inicio'|'clientes'|'cobrancas'|'recorrencias'|'conta_digital'|'integracoes'|'equipe'|'atividade'|'relatorios'|'assinatura'|'conta';
 type OwnerTab = 'visao'|'empresas'|'planos'|'faturamento'|'auditoria'|'configuracoes';
 
 const statusLabel:Record<string,string> = {
@@ -147,6 +155,9 @@ export default function Home(){
   const [subscription,setSubscription]=useState<any>(null);
   const [platformInvoice,setPlatformInvoice]=useState<any>(null);
   const [mercadoPago,setMercadoPago]=useState<any>(null);
+  const [baasConnection,setBaasConnection]=useState<any>(null);
+  const [walletTransactions,setWalletTransactions]=useState<WalletTransaction[]>([]);
+  const [walletTransfers,setWalletTransfers]=useState<WalletTransfer[]>([]);
   const [teamMembers,setTeamMembers]=useState<TeamMember[]>([]);
   const [orgInvites,setOrgInvites]=useState<OrgInvite[]>([]);
   const [tenantAudit,setTenantAudit]=useState<AuditItem[]>([]);
@@ -196,6 +207,9 @@ export default function Home(){
   const [chargeStatusFilter,setChargeStatusFilter]=useState('all');
   const [chargeEdit,setChargeEdit]=useState<{id:string;description:string;due_date:string}|null>(null);
   const [inviteForm,setInviteForm]=useState({email:'',role:'viewer'});
+  const [pixTransferForm,setPixTransferForm]=useState({
+    recipientName:'',destinationKey:'',amount:'',description:''
+  });
 
   async function load(){
     if(!supabase||!user)return;
