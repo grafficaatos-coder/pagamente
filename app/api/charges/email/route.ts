@@ -11,7 +11,7 @@ export async function POST(request:Request){
     if(!chargeId) throw new Error('Cobrança não informada.');
 
     const {data:charge,error}=await admin.from('charges')
-      .select('id,organization_id,description,amount_cents,due_date,payment_method,boleto_url,digitable_line,clients(name,email)')
+      .select('id,organization_id,description,amount_cents,due_date,payment_method,boleto_url,digitable_line,pix_url,pix_code,clients(name,email)')
       .eq('id',chargeId)
       .eq('organization_id',member.organization_id)
       .single();
@@ -19,7 +19,7 @@ export async function POST(request:Request){
 
     const client:any=Array.isArray(charge.clients)?charge.clients[0]:charge.clients;
     if(!client?.email) throw new Error('O cliente não possui e-mail cadastrado.');
-    if(!charge.boleto_url) throw new Error('Esta cobrança ainda não possui link de pagamento.');
+    if(!charge.boleto_url&&!charge.pix_url) throw new Error('Esta cobrança ainda não possui link de pagamento.');
 
     const result=await sendChargeEmail({
       to:client.email,
@@ -29,8 +29,12 @@ export async function POST(request:Request){
       amountCents:Number(charge.amount_cents),
       dueDate:charge.due_date,
       paymentMethod:charge.payment_method,
-      paymentUrl:charge.boleto_url,
-      digitableLine:charge.digitable_line
+      paymentUrl:charge.payment_method==='boleto_pix'?null:charge.boleto_url,
+      digitableLine:charge.payment_method==='boleto_pix'?null:charge.digitable_line,
+      boletoUrl:charge.payment_method==='boleto_pix'?charge.boleto_url:null,
+      boletoLine:charge.payment_method==='boleto_pix'?charge.digitable_line:null,
+      pixUrl:charge.payment_method==='boleto_pix'?charge.pix_url:null,
+      pixCode:charge.payment_method==='boleto_pix'?charge.pix_code:null
     });
 
     await admin.from('charges').update({
