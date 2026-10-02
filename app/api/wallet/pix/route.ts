@@ -1,3 +1,4 @@
+import { randomUUID } from 'crypto';
 import { apiError, requireTenant } from '@/lib/server/supabaseAdmin';
 import { asaasRequest, getAsaasBalance, inferPixKey } from '@/lib/server/asaas';
 import { decryptSecret } from '@/lib/server/secretCrypto';
@@ -57,7 +58,7 @@ export async function POST(request:Request){
     });
 
     const mappedStatus=mapStatus(transfer?.status);
-    const idempotencyKey='asaas-'+String(transfer?.id||crypto.randomUUID());
+    const idempotencyKey='asaas-'+String(transfer?.id||randomUUID());
 
     const {error:transferError}=await admin.from('transfers').insert({
       sender_organization_id:member.organization_id,
