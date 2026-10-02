@@ -15,7 +15,7 @@ function mapStatus(value:any){
 
 export async function POST(request:Request){
   try{
-    const {admin,member}=await requireTenant(request,['owner','admin','finance']);
+    const {admin,member,user}=await requireTenant(request,['owner','admin','finance']);
     const body=await request.json().catch(()=>({}));
     const recipientName=String(body?.recipientName||'').trim();
     const destinationKey=String(body?.destinationKey||'').trim();
@@ -72,7 +72,7 @@ export async function POST(request:Request){
       provider:'asaas',
       provider_transfer_id:String(transfer?.id||''),
       idempotency_key:idempotencyKey,
-      created_by:(await admin.auth.getUser(request.headers.get('authorization')?.replace('Bearer ','')||'')).data.user?.id||null,
+      created_by:user.id,
       completed_at:mappedStatus==='completed'?new Date().toISOString():null,
       failed_at:mappedStatus==='failed'?new Date().toISOString():null
     });
