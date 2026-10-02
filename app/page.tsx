@@ -1394,6 +1394,24 @@ export default function Home(){
               <button className="secondaryBtn" disabled>Aguardando liberação do Bradesco</button>
             </div>
           </section>
+          <section className="card provider-card">
+            <div className="provider-card-head">
+              <div className="provider-logo itau">I</div>
+              <div><h2>Itaú</h2><p>Emissão de boletos registrados e Bolecode pela conta bancária da própria empresa.</p></div>
+              <span className="status pending">Aguardando configuração</span>
+            </div>
+            <div className="provider-details">
+              <div><span>Modelo</span><strong>Conta própria da empresa</strong></div>
+              <div><span>Produto</span><strong>Cobrança / Bolecode</strong></div>
+              <div><span>Segurança</span><strong>mTLS + certificado</strong></div>
+            </div>
+            <div className="provider-note itau-note">
+              <ShieldCheck size={18}/><p>A integração do Itaú exige credenciais da empresa e certificado para autenticação mTLS. Assim que a contratação e as credenciais forem liberadas, habilitaremos o cadastro seguro por empresa.</p>
+            </div>
+            <div className="provider-actions">
+              <button className="secondaryBtn" disabled>Aguardando credenciais do Itaú</button>
+            </div>
+          </section>
           <section className="card integration-help">
             <h2>Como funciona o boleto Mercado Pago</h2>
             <div className="integration-steps">
