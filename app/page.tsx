@@ -1706,6 +1706,24 @@ export default function Home(){
 
         {!tenantAccessBlocked&&tenantTab==='integracoes'&&<>
           <div className="tenant-heading"><div><span className="eyebrow">PAGAMENTOS</span><h1>Integrações</h1><p>Conecte os meios de recebimento usados pela sua empresa.</p></div></div>
+          <section className="card provider-card digital-provider-card">
+            <div className="provider-card-head">
+              <div className="provider-logo digital-bank"><WalletCards size={20}/></div>
+              <div><h2>Conta Digital (BaaS)</h2><p>Conta de pagamento integrada ao JP Sistema para receber, consultar saldo e enviar Pix sem entrar no site do banco.</p></div>
+              <span className={'status '+(baasConnected?'active':'pending')}>{baasConnected?'Conectada':'Estrutura pronta'}</span>
+            </div>
+            <div className="provider-details">
+              <div><span>Modelo</span><strong>Banking as a Service</strong></div>
+              <div><span>Conta JP</span><strong>{wallet?.account_number??'—'}</strong></div>
+              <div><span>Próxima etapa</span><strong>{baasConnected?'Operação bancária ativa':'Escolher e homologar o provedor BaaS'}</strong></div>
+            </div>
+            <div className="provider-note">
+              <ShieldCheck size={18}/><p>A interface da conta digital já está preparada. Para movimentar dinheiro de verdade, precisamos conectar uma instituição financeira parceira e concluir a homologação da conta.</p>
+            </div>
+            <div className="provider-actions">
+              <button className="primaryBtn" onClick={()=>setTenantTab('conta_digital')}><WalletCards size={16}/> Abrir Conta Digital</button>
+            </div>
+          </section>
           <section className="card provider-card">
             <div className="provider-card-head">
               <div className="provider-logo mp">MP</div>
