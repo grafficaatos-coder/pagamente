@@ -602,6 +602,21 @@ export default function Home(){
     }
   }
 
+  async function connectPrincipalAsaas(){
+    setBusy(true);setMsg('');
+    try{
+      const response=await authenticatedFetch('/api/integrations/asaas/direct',{method:'POST'});
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error||'Não foi possível conectar a conta principal Asaas.');
+      setMsg('Conta principal Asaas conectada ao JP Sistema com sucesso.');
+      await load();
+    }catch(e){
+      setMsg(e instanceof Error?e.message:'Não foi possível conectar a conta principal Asaas.');
+    }finally{
+      setBusy(false);
+    }
+  }
+
   async function refreshAsaasBalance(){
     setBusy(true);setMsg('');
     try{
@@ -1298,6 +1313,7 @@ export default function Home(){
   const canManageTeam=['owner','admin'].includes(membership?.role);
   const baasConnected=baasConnection?.status==='connected';
   const mercadoPagoConnected=mercadoPago?.status==='connected';
+  const asaasDirect=baasConnection?.metadata?.mode==='direct';
   const asaasWalletId=baasConnection?.metadata?.walletId||null;
   const accountBalanceCents=baasConnected?(asaasBalanceCents??Number(wallet?.balance_cents??0)):Number(wallet?.balance_cents??0);
   const planMaxClients=planObj?.max_clients??null;
@@ -1726,43 +1742,15 @@ export default function Home(){
 
           {!baasConnected&&<section className="card asaas-onboarding-card">
             <div className="cardHead digital-card-head">
-              <div><h2>Ativar Conta Digital Asaas</h2><p>Cria uma subconta separada para esta empresa no BaaS do Asaas.</p></div>
+              <div><h2>Conectar minha conta Asaas</h2><p>Use a conta Asaas principal já configurada no JP, sem criar uma segunda conta ou subconta.</p></div>
               <Landmark size={21}/>
             </div>
             <div className="provider-note">
-              <ShieldCheck size={18}/><p>Estamos usando o ambiente Sandbox. Nenhum dinheiro real será movimentado durante os testes. A chave da subconta será armazenada criptografada no servidor.</p>
+              <ShieldCheck size={18}/><p>O JP vai usar a chave Asaas que já está salva com segurança na Vercel. O dinheiro continua na sua própria conta Asaas e o sistema apenas consulta o saldo e envia as ordens de Pix pela API.</p>
             </div>
-            {canManageTeam?<form onSubmit={createAsaasAccount} className="asaas-onboarding-form" noValidate>
-              <div className="cols">
-                <label>Nome / Razão social<input required value={asaasAccountForm.name} onChange={e=>setAsaasAccountForm({...asaasAccountForm,name:e.target.value})}/></label>
-                <label>E-mail<input type="email" required value={asaasAccountForm.email} onChange={e=>setAsaasAccountForm({...asaasAccountForm,email:e.target.value})}/></label>
-              </div>
-              <div className="cols">
-                <label>CPF ou CNPJ<input required value={asaasAccountForm.cpfCnpj} onChange={e=>setAsaasAccountForm({...asaasAccountForm,cpfCnpj:e.target.value})} placeholder="Somente números ou formatado"/></label>
-                <label>Celular<input required value={asaasAccountForm.mobilePhone} onChange={e=>setAsaasAccountForm({...asaasAccountForm,mobilePhone:e.target.value})} placeholder="DDD + número"/></label>
-              </div>
-              {asaasAccountForm.cpfCnpj.replace(/\D/g,'').length===14?<div className="cols">
-                <label>Tipo de empresa<select value={asaasAccountForm.companyType} onChange={e=>setAsaasAccountForm({...asaasAccountForm,companyType:e.target.value})}>
-                  <option value="MEI">MEI</option><option value="LIMITED">Limitada</option><option value="INDIVIDUAL">Empresário individual</option><option value="ASSOCIATION">Associação</option>
-                </select></label>
-                <label>Regime tributário<select value={asaasAccountForm.taxRegime} onChange={e=>setAsaasAccountForm({...asaasAccountForm,taxRegime:e.target.value})}>
-                  <option value="UNKNOWN">Não informar</option><option value="MEI">MEI</option><option value="NATIONAL_SIMPLE">Simples Nacional</option><option value="NORMAL_REGIME">Regime normal</option>
-                </select></label>
-              </div>:asaasAccountForm.cpfCnpj.replace(/\D/g,'').length===11?<label>Data de nascimento<input type="date" required value={asaasAccountForm.birthDate} onChange={e=>setAsaasAccountForm({...asaasAccountForm,birthDate:e.target.value})}/></label>:null}
-              <label>Faturamento / renda mensal<input required value={asaasAccountForm.incomeValue} onChange={e=>setAsaasAccountForm({...asaasAccountForm,incomeValue:e.target.value})} placeholder="0,00"/></label>
-              <div className="cols">
-                <label>Endereço<input required value={asaasAccountForm.address} onChange={e=>setAsaasAccountForm({...asaasAccountForm,address:e.target.value})} placeholder="Rua / Avenida"/></label>
-                <label>Número<input required value={asaasAccountForm.addressNumber} onChange={e=>setAsaasAccountForm({...asaasAccountForm,addressNumber:e.target.value})}/></label>
-              </div>
-              <div className="cols">
-                <label>Bairro<input required value={asaasAccountForm.province} onChange={e=>setAsaasAccountForm({...asaasAccountForm,province:e.target.value})}/></label>
-                <label>CEP<input required value={asaasAccountForm.postalCode} onChange={e=>setAsaasAccountForm({...asaasAccountForm,postalCode:e.target.value})} placeholder="00000-000"/></label>
-              </div>
-              <label>Complemento<input value={asaasAccountForm.complement} onChange={e=>setAsaasAccountForm({...asaasAccountForm,complement:e.target.value})} placeholder="Opcional"/></label>
-              <button className="primaryBtn" disabled={busy}><Landmark size={16}/> {busy?'Ativando...':'Criar conta Asaas de teste'}</button>
-              {asaasFormError&&<div className="asaas-form-error">{asaasFormError}</div>}
-              <p className="permission-note">Campos obrigatórios: CPF/CNPJ, celular, faturamento/renda, endereço, número, bairro e CEP. O Asaas exige esses dados para criar a subconta e realizar o onboarding cadastral.</p>
-            </form>:<p className="permission-note">Somente Proprietário ou Administrador pode ativar a Conta Digital Asaas.</p>}
+            {canManageTeam
+              ?<button className="primaryBtn" disabled={busy} onClick={connectPrincipalAsaas}><Landmark size={16}/> {busy?'Conectando...':'Usar minha conta principal Asaas'}</button>
+              :<p className="permission-note">Somente Proprietário ou Administrador pode conectar a Conta Digital Asaas.</p>}
           </section>}
 
           <section className="digital-wallet-hero">
@@ -1774,9 +1762,9 @@ export default function Home(){
             </div>
             <div className="digital-wallet-identity">
               <div><span>Provedor financeiro</span><strong>{baasConnected?'Asaas':'Ainda não conectado'}</strong></div>
-              <div><span>Wallet ID Asaas</span><strong>{asaasWalletId||'—'}</strong>{asaasWalletId&&<button type="button" className="wallet-copy" onClick={()=>navigator.clipboard.writeText(String(asaasWalletId))}>Copiar</button>}</div>
+              <div><span>Conta Asaas</span><strong>{asaasDirect?'Conta principal':asaasWalletId||'—'}</strong>{asaasWalletId&&!asaasDirect&&<button type="button" className="wallet-copy" onClick={()=>navigator.clipboard.writeText(String(asaasWalletId))}>Copiar</button>}</div>
               <div><span>Conta JP</span><strong>{wallet?.account_number??'—'}</strong></div>
-              <p>{baasConnected?'O dinheiro real permanece na conta Asaas. O JP consulta o saldo e envia as ordens de Pix pela API.':'Ative a subconta Asaas para transformar esta área em uma conta digital operacional.'}</p>
+              <p>{baasConnected?'O dinheiro real permanece na sua conta Asaas. O JP consulta o saldo e envia as ordens de Pix pela API.':'Conecte sua conta Asaas principal para ativar saldo e Pix no JP Sistema.'}</p>
             </div>
           </section>
 
@@ -1843,16 +1831,16 @@ export default function Home(){
           <section className="card provider-card digital-provider-card">
             <div className="provider-card-head">
               <div className="provider-logo digital-bank"><WalletCards size={20}/></div>
-              <div><h2>Conta Digital Asaas (BaaS)</h2><p>Conta separada por empresa para consultar saldo e enviar Pix sem sair do JP Sistema.</p></div>
+              <div><h2>Conta Digital Asaas</h2><p>Use sua própria conta Asaas para consultar saldo e enviar Pix sem sair do JP Sistema.</p></div>
               <span className={'status '+(baasConnected?'active':'pending')}>{baasConnected?'Conectada':'Pronta para ativar'}</span>
             </div>
             <div className="provider-details">
-              <div><span>Modelo</span><strong>Asaas Banking as a Service</strong></div>
-              <div><span>Wallet ID</span><strong>{asaasWalletId||'—'}</strong></div>
-              <div><span>Situação</span><strong>{baasConnected?'Conta digital ativa':'Ative a subconta no menu Conta digital'}</strong></div>
+              <div><span>Modelo</span><strong>{asaasDirect?'Conta Asaas principal':'Asaas Banking as a Service'}</strong></div>
+              <div><span>Conta</span><strong>{asaasDirect?'Principal':asaasWalletId||'—'}</strong></div>
+              <div><span>Situação</span><strong>{baasConnected?'Conta digital ativa':'Conecte sua conta Asaas no menu Conta digital'}</strong></div>
             </div>
             <div className="provider-note">
-              <ShieldCheck size={18}/><p>{baasConnected?'A subconta Asaas está conectada ao JP. O saldo real pode ser consultado e usado em transferências Pix pelo sistema.':'A integração com o Sandbox do Asaas está preparada. Abra Conta digital para criar a subconta desta empresa.'}</p>
+              <ShieldCheck size={18}/><p>{baasConnected?'Sua conta Asaas está conectada ao JP. O saldo real pode ser consultado e usado em transferências Pix pelo sistema.':'A integração com o Asaas está preparada. Abra Conta digital para conectar sua conta principal.'}</p>
             </div>
             <div className="provider-actions">
               <button className="primaryBtn" onClick={()=>setTenantTab('conta_digital')}><WalletCards size={16}/> Abrir Conta Digital</button>
