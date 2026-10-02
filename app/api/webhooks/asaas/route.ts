@@ -85,17 +85,26 @@ export async function POST(request:Request){
 
     if(event==='PAYMENT_RECEIVED'){
       const client:any=Array.isArray((charge as any).clients)?(charge as any).clients[0]:(charge as any).clients;
-      const {error:txError}=await admin.from('transactions').upsert({
-        organization_id:charge.organization_id,
-        type:'charge',
-        direction:'credit',
-        description:'Recebimento Asaas - '+charge.description,
-        counterpart:client?.name||'Cliente',
-        amount_cents:Number(charge.amount_cents),
-        reference_id:charge.id
-      },{onConflict:'reference_id',ignoreDuplicates:true});
-      if(txError&&txError.code!=='23505'){
-        return Response.json({error:txError.message},{status:500});
+      const {data:existingTx,error:existingTxError}=await admin.from('transactions')
+        .select('id')
+        .eq('reference_id',charge.id)
+        .eq('type','charge')
+        .eq('direction','credit')
+        .maybeSingle();
+      if(existingTxError) return Response.json({error:existingTxError.message},{status:500});
+      if(!existingTx){
+        const {error:txError}=await admin.from('transactions').insert({
+          organization_id:charge.organization_id,
+          type:'charge',
+          direction:'credit',
+          description:'Recebimento Asaas - '+charge.description,
+          counterpart:client?.name||'Cliente',
+          amount_cents:Number(charge.amount_cents),
+          reference_id:charge.id
+        });
+        if(txError&&txError.code!=='23505'){
+          return Response.json({error:txError.message},{status:500});
+        }
       }
     }
   }
