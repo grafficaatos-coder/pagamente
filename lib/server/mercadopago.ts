@@ -118,6 +118,7 @@ export async function getMercadoPagoAccessToken(organizationId:string){
 
 export async function createBoletoOrder(accessToken:string,input:{
   chargeId:string;
+  idempotencyKey?:string;
   amountCents:number;
   description:string;
   expirationDays:number;
@@ -147,7 +148,7 @@ export async function createBoletoOrder(accessToken:string,input:{
       accept:'application/json',
       'content-type':'application/json',
       authorization:'Bearer '+accessToken,
-      'x-idempotency-key':input.chargeId
+      'x-idempotency-key':input.idempotencyKey||input.chargeId
     },
     body:JSON.stringify({
       type:'online',
@@ -175,6 +176,7 @@ export async function createBoletoOrder(accessToken:string,input:{
 
 export async function createPixOrder(accessToken:string,input:{
   chargeId:string;
+  idempotencyKey?:string;
   amountCents:number;
   description:string;
   expirationDays:number;
@@ -186,7 +188,7 @@ export async function createPixOrder(accessToken:string,input:{
       accept:'application/json',
       'content-type':'application/json',
       authorization:'Bearer '+accessToken,
-      'x-idempotency-key':input.chargeId
+      'x-idempotency-key':input.idempotencyKey||input.chargeId
     },
     body:JSON.stringify({
       type:'online',
