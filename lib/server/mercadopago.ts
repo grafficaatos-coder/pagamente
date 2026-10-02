@@ -173,6 +173,39 @@ export async function createBoletoOrder(accessToken:string,input:{
   });
 }
 
+export async function createPixOrder(accessToken:string,input:{
+  chargeId:string;
+  amountCents:number;
+  description:string;
+  expirationDays:number;
+  payer:{ email:string }
+}){
+  return mpFetch('/v1/orders',{
+    method:'POST',
+    headers:{
+      accept:'application/json',
+      'content-type':'application/json',
+      authorization:'Bearer '+accessToken,
+      'x-idempotency-key':input.chargeId
+    },
+    body:JSON.stringify({
+      type:'online',
+      external_reference:input.chargeId,
+      processing_mode:'automatic',
+      total_amount:(input.amountCents/100).toFixed(2),
+      description:input.description,
+      payer:{email:input.payer.email},
+      transactions:{
+        payments:[{
+          amount:(input.amountCents/100).toFixed(2),
+          expiration_time:'P'+input.expirationDays+'D',
+          payment_method:{id:'pix',type:'bank_transfer'}
+        }]
+      }
+    })
+  });
+}
+
 export async function getMercadoPagoOrder(accessToken:string,orderId:string){
   return mpFetch('/v1/orders/'+encodeURIComponent(orderId),{
     headers:{accept:'application/json',authorization:'Bearer '+accessToken}
@@ -203,18 +236,22 @@ export function mapMercadoPagoOrderStatus(order:any){
   return {status:'pending',detail};
 }
 
-export function boletoFields(order:any){
+export function paymentFields(order:any){
   const payment=order?.transactions?.payments?.[0]||{};
   const method=payment?.payment_method||{};
+  const isPix=method?.id==='pix'||method?.type==='bank_transfer';
   return {
     orderId:order?.id?String(order.id):null,
     paymentId:payment?.id?String(payment.id):null,
+    paymentMethod:isPix?'pix':'boleto',
     boletoUrl:method.ticket_url||null,
-    barcodeContent:method.barcode_content||null,
-    digitableLine:method.digitable_line||null,
+    barcodeContent:isPix?(method.qr_code_base64||method.qr_code||null):(method.barcode_content||null),
+    digitableLine:isPix?(method.qr_code||null):(method.digitable_line||null),
     providerStatusDetail:payment?.status_detail||order?.status_detail||null
   };
 }
+
+export const boletoFields=paymentFields;
 
 export function validateWebhookSignature(input:{
   xSignature:string|null;
