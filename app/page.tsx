@@ -1376,8 +1376,26 @@ export default function Home(){
             </div>
             {!canManageTeam&&<p className="permission-note">Somente Proprietário ou Administrador pode conectar ou desconectar integrações.</p>}
           </section>
+          <section className="card provider-card">
+            <div className="provider-card-head">
+              <div className="provider-logo bradesco">B</div>
+              <div><h2>Bradesco</h2><p>Emissão de boleto registrado com QR Code Pix pela conta bancária da própria empresa.</p></div>
+              <span className="status pending">Em homologação</span>
+            </div>
+            <div className="provider-details">
+              <div><span>Modelo</span><strong>Conta própria da empresa</strong></div>
+              <div><span>Produto</span><strong>Cobrança com QR Code</strong></div>
+              <div><span>Situação</span><strong>Aguardando aprovação do Bradesco</strong></div>
+            </div>
+            <div className="provider-note bradesco-note">
+              <ShieldCheck size={18}/><p>A integração está preparada no painel. Assim que o Bradesco aprovar a assinatura de produção, habilitaremos o cadastro seguro das credenciais e do certificado de cada empresa.</p>
+            </div>
+            <div className="provider-actions">
+              <button className="secondaryBtn" disabled>Aguardando liberação do Bradesco</button>
+            </div>
+          </section>
           <section className="card integration-help">
-            <h2>Como funcionará o boleto</h2>
+            <h2>Como funciona o boleto Mercado Pago</h2>
             <div className="integration-steps">
               <div><b>1</b><span>Cadastre o cliente com CPF/CNPJ, e-mail e endereço completo.</span></div>
               <div><b>2</b><span>Crie a cobrança escolhendo “Boleto Mercado Pago”.</span></div>
