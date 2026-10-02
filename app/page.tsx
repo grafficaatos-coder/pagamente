@@ -1748,24 +1748,6 @@ export default function Home(){
           </section>
           <section className="card provider-card">
             <div className="provider-card-head">
-              <div className="provider-logo bradesco">B</div>
-              <div><h2>Bradesco</h2><p>Emissão de boleto registrado com QR Code Pix pela conta bancária da própria empresa.</p></div>
-              <span className="status pending">Em homologação</span>
-            </div>
-            <div className="provider-details">
-              <div><span>Modelo</span><strong>Conta própria da empresa</strong></div>
-              <div><span>Produto</span><strong>Cobrança com QR Code</strong></div>
-              <div><span>Situação</span><strong>Aguardando aprovação do Bradesco</strong></div>
-            </div>
-            <div className="provider-note bradesco-note">
-              <ShieldCheck size={18}/><p>A integração está preparada no painel. Assim que o Bradesco aprovar a assinatura de produção, habilitaremos o cadastro seguro das credenciais e do certificado de cada empresa.</p>
-            </div>
-            <div className="provider-actions">
-              <button className="secondaryBtn" disabled>Aguardando liberação do Bradesco</button>
-            </div>
-          </section>
-          <section className="card provider-card">
-            <div className="provider-card-head">
               <div className="provider-logo itau">I</div>
               <div><h2>Itaú</h2><p>Emissão de boletos registrados e Bolecode pela conta bancária da própria empresa.</p></div>
               <span className="status pending">Aguardando configuração</span>
