@@ -50,20 +50,55 @@ export async function POST(request:Request){
       const fields=boletoFields(order);
       const externalReference=String(order?.external_reference||'');
 
-      let query=admin.from('charges').update({
-        status:mapped.status,
-        paid_at:mapped.status==='paid'?new Date().toISOString():null,
-        cancelled_at:mapped.status==='cancelled'?new Date().toISOString():null,
-        provider_payment_id:fields.paymentId,
-        boleto_url:fields.boletoUrl,
-        digitable_line:fields.digitableLine,
-        barcode_content:fields.barcodeContent,
+      let chargeQuery=admin.from('charges')
+        .select('id,status,payment_method,provider_charge_id,pix_provider_charge_id')
+        .eq('organization_id',secret.organization_id);
+
+      chargeQuery=externalReference
+        ? chargeQuery.eq('id',externalReference)
+        : chargeQuery.or('provider_charge_id.eq.'+dataId+',pix_provider_charge_id.eq.'+dataId);
+
+      const {data:charge,error:chargeError}=await chargeQuery.maybeSingle();
+      if(chargeError) throw chargeError;
+      if(!charge){
+        await admin.from('webhook_events').update({
+          processed_at:new Date().toISOString(),
+          processing_error:null
+        }).eq('provider','mercadopago').eq('event_key',eventKey);
+        return Response.json({ok:true,ignored:true});
+      }
+
+      const combined=charge.payment_method==='boleto_pix';
+      const isPix=fields.paymentMethod==='pix';
+      let nextStatus=charge.status;
+      if(mapped.status==='paid') nextStatus='paid';
+      else if(!combined&&mapped.status==='cancelled') nextStatus='cancelled';
+      else if(charge.status!=='paid'&&mapped.status==='pending') nextStatus='pending';
+
+      const update:any={
+        status:nextStatus,
+        paid_at:nextStatus==='paid'?(charge.status==='paid'?undefined:new Date().toISOString()):undefined,
+        cancelled_at:nextStatus==='cancelled'?new Date().toISOString():null,
         provider_status_detail:fields.providerStatusDetail,
         updated_at:new Date().toISOString()
-      }).eq('organization_id',secret.organization_id);
+      };
 
-      query=externalReference?query.eq('id',externalReference):query.eq('provider_charge_id',dataId);
-      const {error:updateError}=await query;
+      if(isPix&&combined){
+        update.pix_provider_charge_id=fields.orderId;
+        update.pix_provider_payment_id=fields.paymentId;
+        update.pix_url=fields.boletoUrl;
+        update.pix_code=fields.digitableLine;
+        update.pix_qr_base64=fields.barcodeContent;
+      }else{
+        update.provider_payment_id=fields.paymentId;
+        update.boleto_url=fields.boletoUrl;
+        update.digitable_line=fields.digitableLine;
+        update.barcode_content=fields.barcodeContent;
+      }
+
+      if(update.paid_at===undefined) delete update.paid_at;
+
+      const {error:updateError}=await admin.from('charges').update(update).eq('id',charge.id);
       if(updateError) throw updateError;
 
       await admin.from('webhook_events').update({
