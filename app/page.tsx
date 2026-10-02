@@ -1487,12 +1487,14 @@ export default function Home(){
 
                 <label>Forma de cobrança<select value={chargeForm.paymentMethod} onChange={e=>setChargeForm({...chargeForm,paymentMethod:e.target.value})}>
                   <option value="internal">Registro interno</option>
-                  <option value="mercadopago" disabled={mercadoPago?.status!=='connected'}>Boleto Mercado Pago{mercadoPago?.status==='connected'?'':' — conectar primeiro'}</option>
-                  <option value="mercadopago_pix" disabled={mercadoPago?.status!=='connected'}>Pix Mercado Pago{mercadoPago?.status==='connected'?'':' — conectar primeiro'}</option>
+                  <option value="mercadopago_both" disabled={mercadoPago?.status!=='connected'}>Boleto + Pix Mercado Pago — cliente escolhe{mercadoPago?.status==='connected'?'':' — conectar primeiro'}</option>
+                  <option value="mercadopago" disabled={mercadoPago?.status!=='connected'}>Somente boleto Mercado Pago{mercadoPago?.status==='connected'?'':' — conectar primeiro'}</option>
+                  <option value="mercadopago_pix" disabled={mercadoPago?.status!=='connected'}>Somente Pix Mercado Pago{mercadoPago?.status==='connected'?'':' — conectar primeiro'}</option>
                 </select></label>
+                {chargeForm.paymentMethod==='mercadopago_both'&&<p className="permission-note">Serão gerados boleto e Pix para a mesma cobrança. O cliente receberá as duas opções e escolherá como pagar. Para o boleto, mantenha CPF/CNPJ, e-mail e endereço completos.</p>}
                 {chargeForm.paymentMethod==='mercadopago'&&<p className="permission-note">O boleto pode vencer entre 1 e 30 dias após a emissão. O cliente precisa ter CPF/CNPJ, e-mail e endereço completo.</p>}
                 {chargeForm.paymentMethod==='mercadopago_pix'&&<p className="permission-note">O Pix gera QR Code e código Copia e Cola pelo Mercado Pago. O cliente precisa ter e-mail cadastrado.</p>}
-                <button className="primaryBtn" disabled={busy||!clients.some(c=>c.status==='active')||!canManageFinance}><Plus size={16}/> {chargeForm.paymentMethod==='mercadopago_pix'?'Gerar Pix':chargeForm.paymentMethod==='mercadopago'?'Gerar boleto':'Criar cobrança'}</button>
+                <button className="primaryBtn" disabled={busy||!clients.some(c=>c.status==='active')||!canManageFinance}><Plus size={16}/> {chargeForm.paymentMethod==='mercadopago_both'?'Gerar boleto + Pix':chargeForm.paymentMethod==='mercadopago_pix'?'Gerar Pix':chargeForm.paymentMethod==='mercadopago'?'Gerar boleto':'Criar cobrança'}</button>
                 {!canManageFinance&&<p className="permission-note">Seu perfil é somente leitura para operações financeiras.</p>}
               </form>}
             </section>
@@ -1516,13 +1518,15 @@ export default function Home(){
                   <td>{clientName(charge.clients)||'Cliente'}</td><td>{charge.description}</td><td>{dateBR(charge.due_date)}</td>
                   <td><span className={'status '+computedStatus}>{statusLabel[computedStatus]||computedStatus}</span></td><td><strong>{brl(Number(charge.amount_cents))}</strong></td>
                   <td><div className="row-actions">
-                    {charge.provider==='mercadopago'&&!charge.boleto_url&&['draft','pending'].includes(computedStatus)&&<button disabled={!canManageFinance||busy||mercadoPago?.status!=='connected'} onClick={()=>retryMercadoPagoBoleto(charge)}><ReceiptText size={13}/> {charge.payment_method==='pix'?'Gerar Pix':'Gerar boleto'}</button>}
+                    {charge.provider==='mercadopago'&&!charge.boleto_url&&['draft','pending'].includes(computedStatus)&&<button disabled={!canManageFinance||busy||mercadoPago?.status!=='connected'} onClick={()=>retryMercadoPagoBoleto(charge)}><ReceiptText size={13}/> {charge.payment_method==='pix'?'Gerar Pix':charge.payment_method==='boleto_pix'?'Gerar boleto + Pix':'Gerar boleto'}</button>}
                     {['pending','draft','overdue'].includes(computedStatus)&&<button disabled={!canManageFinance||busy} onClick={()=>setChargeEdit({id:charge.id,description:charge.description,due_date:charge.due_date})}><Pencil size={13}/> Editar</button>}
                     {['pending','draft','overdue'].includes(computedStatus)&&<button disabled={!canManageFinance||busy} onClick={()=>cancelChargeAction(charge)}><XCircle size={13}/> Cancelar</button>}
                     {charge.boleto_url&&<a className="table-link" href={charge.boleto_url} target="_blank" rel="noreferrer">{charge.payment_method==='pix'?'Abrir Pix':'Abrir boleto'}</a>}
                     {charge.digitable_line&&<button onClick={()=>navigator.clipboard.writeText(charge.digitable_line||'')}>{charge.payment_method==='pix'?'Copiar Pix':'Copiar linha'}</button>}
-                    {charge.boleto_url&&chargeClient(charge)?.email&&<button disabled={busy} onClick={()=>openEmailCharge(charge)}><Mail size={13}/> Enviar e-mail</button>}
-                    {charge.boleto_url&&chargeClient(charge)?.whatsapp&&<button onClick={()=>openWhatsAppCharge(charge)}><MessageCircle size={13}/> WhatsApp</button>}
+                    {charge.payment_method==='boleto_pix'&&charge.pix_url&&<a className="table-link" href={charge.pix_url} target="_blank" rel="noreferrer">Abrir Pix</a>}
+                    {charge.payment_method==='boleto_pix'&&charge.pix_code&&<button onClick={()=>navigator.clipboard.writeText(charge.pix_code||'')}>Copiar Pix</button>}
+                    {(charge.boleto_url||charge.pix_url)&&chargeClient(charge)?.email&&<button disabled={busy} onClick={()=>openEmailCharge(charge)}><Mail size={13}/> Enviar e-mail</button>}
+                    {(charge.boleto_url||charge.pix_url)&&chargeClient(charge)?.whatsapp&&<button onClick={()=>openWhatsAppCharge(charge)}><MessageCircle size={13}/> WhatsApp</button>}
                   </div></td>
                 </tr>
               })}
