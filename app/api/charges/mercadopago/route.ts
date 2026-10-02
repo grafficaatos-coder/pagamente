@@ -1,5 +1,6 @@
 import { apiError, requireTenant } from '@/lib/server/supabaseAdmin';
 import { createBoletoOrder, createPixOrder, getMercadoPagoAccessToken, mapMercadoPagoOrderStatus, paymentFields } from '@/lib/server/mercadopago';
+import { sendChargeEmail } from '@/lib/server/email';
 
 export const runtime='nodejs';
 
@@ -22,7 +23,7 @@ export async function POST(request:Request){
     if(!chargeId) throw new Error('Cobrança não informada.');
 
     const {data:charge,error:chargeError}=await admin.from('charges')
-      .select('id,organization_id,client_id,description,amount_cents,due_date,status,provider,payment_method,provider_charge_id,boleto_url,digitable_line,barcode_content,clients(id,name,document,email,address,status)')
+      .select('id,organization_id,client_id,description,amount_cents,due_date,status,provider,payment_method,provider_charge_id,boleto_url,digitable_line,barcode_content,send_email,email_sent_at,clients(id,name,document,email,address,status)')
       .eq('id',chargeId)
       .eq('organization_id',member.organization_id)
       .single();
@@ -32,16 +33,49 @@ export async function POST(request:Request){
     const requestedMethod=body?.method==='pix'?'pix':body?.method==='boleto'?'boleto':null;
     const paymentMethod=requestedMethod||charge.payment_method||'boleto';
 
+    const client:any=Array.isArray(charge.clients)?charge.clients[0]:charge.clients;
+
+    async function sendEmailIfNeeded(paymentUrl:string|null,paymentLine:string|null,method:string|null){
+      if(!charge.send_email||charge.email_sent_at||!client?.email)return {sent:false,skipped:true};
+      try{
+        const result=await sendChargeEmail({
+          to:client.email,
+          clientName:client.name,
+          organizationName:organization.name,
+          description:charge.description,
+          amountCents:Number(charge.amount_cents),
+          dueDate:charge.due_date,
+          paymentMethod:method,
+          paymentUrl,
+          digitableLine:paymentLine
+        });
+        await admin.from('charges').update({
+          email_sent_at:new Date().toISOString(),
+          email_delivery_id:result.id||null,
+          email_delivery_error:null,
+          updated_at:new Date().toISOString()
+        }).eq('id',charge.id);
+        return {sent:true,skipped:false};
+      }catch(error){
+        const message=error instanceof Error?error.message:'Falha ao enviar e-mail.';
+        await admin.from('charges').update({
+          email_delivery_error:message,
+          updated_at:new Date().toISOString()
+        }).eq('id',charge.id);
+        return {sent:false,skipped:false,error:message};
+      }
+    }
+
     if(charge.provider==='mercadopago'&&charge.provider_charge_id&&charge.boleto_url){
+      const email=await sendEmailIfNeeded(charge.boleto_url,charge.digitable_line,charge.payment_method||paymentMethod);
       return Response.json({
         ok:true,existing:true,paymentMethod:charge.payment_method||paymentMethod,
         paymentUrl:charge.boleto_url,boletoUrl:charge.boleto_url,
         copyPaste:charge.digitable_line,digitableLine:charge.digitable_line,
-        barcodeContent:charge.barcode_content,orderId:charge.provider_charge_id
+        barcodeContent:charge.barcode_content,orderId:charge.provider_charge_id,
+        email
       });
     }
-
-    const client:any=Array.isArray(charge.clients)?charge.clients[0]:charge.clients;
     if(!client||client.status!=='active') throw new Error('Cliente inválido ou inativo.');
     if(!client.email) throw new Error('Cadastre o e-mail do cliente antes de gerar o pagamento.');
 
@@ -110,6 +144,12 @@ export async function POST(request:Request){
     }).eq('id',charge.id);
     if(updateError) throw updateError;
 
+    const email=await sendEmailIfNeeded(
+      fields.boletoUrl,
+      fields.digitableLine,
+      fields.paymentMethod||paymentMethod
+    );
+
     return Response.json({
       ok:true,
       paymentMethod:fields.paymentMethod||paymentMethod,
@@ -120,7 +160,8 @@ export async function POST(request:Request){
       copyPaste:fields.digitableLine,
       digitableLine:fields.digitableLine,
       barcodeContent:fields.barcodeContent,
-      status:mapped.status
+      status:mapped.status,
+      email
     });
   }catch(error){
     return apiError(error);
