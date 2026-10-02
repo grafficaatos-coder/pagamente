@@ -579,3 +579,5 @@ input:focus,select:focus{border-color:#0e9878!important;box-shadow:0 0 0 3px rgb
 
 .asaas-onboarding-card{margin-bottom:16px;border-color:#d7e9e3}.asaas-onboarding-form{display:grid;gap:10px;margin-top:14px}.asaas-onboarding-form .provider-note{margin-bottom:2px}
 .wallet-refresh{margin-top:14px;width:max-content;display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.38);background:rgba(255,255,255,.12);color:#fff;border-radius:9px;padding:8px 11px;font-size:9px;font-weight:900;cursor:pointer}.wallet-refresh:disabled{opacity:.55;cursor:not-allowed}
+
+.asaas-form-error{margin-top:10px;padding:10px 12px;border:1px solid #f1b7b2;background:#fff2f1;color:#a23f37;border-radius:9px;font-size:10px;font-weight:800;line-height:1.45}
