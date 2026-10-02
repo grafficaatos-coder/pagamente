@@ -668,6 +668,15 @@ export default function Home(){
     return data;
   }
 
+  async function generateAsaasPayment(chargeId:string,method:'boleto'|'pix'|'both'){
+    const response=await authenticatedFetch('/api/charges/asaas',{
+      method:'POST',body:JSON.stringify({chargeId,method})
+    });
+    const data=await response.json();
+    if(!response.ok)throw new Error(data.error||(method==='pix'?'Não foi possível gerar o Pix Asaas.':method==='both'?'Não foi possível gerar a cobrança Asaas.':'Não foi possível gerar o boleto Asaas.'));
+    return data;
+  }
+
   async function submitPixTransfer(e:React.FormEvent){
     e.preventDefault();
     const amountCents=parseBRL(pixTransferForm.amount);
@@ -713,27 +722,49 @@ export default function Home(){
       setMsg('Juros, multa e desconto percentual devem ficar entre 0% e 100%.');
       return;
     }
+
     const isMercadoPagoBoleto=chargeForm.paymentMethod==='mercadopago';
     const isMercadoPagoPix=chargeForm.paymentMethod==='mercadopago_pix';
     const isMercadoPagoBoth=chargeForm.paymentMethod==='mercadopago_both';
     const isMercadoPago=isMercadoPagoBoleto||isMercadoPagoPix||isMercadoPagoBoth;
+
+    const isAsaasBoleto=chargeForm.paymentMethod==='asaas';
+    const isAsaasPix=chargeForm.paymentMethod==='asaas_pix';
+    const isAsaasBoth=chargeForm.paymentMethod==='asaas_both';
+    const isAsaas=isAsaasBoleto||isAsaasPix||isAsaasBoth;
+
     if(isMercadoPago&&mercadoPago?.status!=='connected'){
       setMsg('Conecte o Mercado Pago em Integrações antes de gerar pagamentos.');
       return;
     }
+    if(isAsaas&&(!baasConnected||!asaasDirect)){
+      setMsg('Conecte sua conta principal Asaas em Conta digital antes de gerar cobranças.');
+      return;
+    }
+
     const selectedClient=clients.find(c=>c.id===chargeForm.clientId);
+    if(!selectedClient){setMsg('Selecione um cliente.');return}
+
+    if(isAsaas){
+      const document=String(selectedClient.document||'').replace(/\D/g,'');
+      if(![11,14].includes(document.length)){
+        setMsg('Cadastre um CPF ou CNPJ válido no cliente antes de gerar a cobrança Asaas.');
+        return;
+      }
+    }
+
     if(isMercadoPago){
-      if(!selectedClient?.email){
+      if(!selectedClient.email){
         setMsg('Cadastre o e-mail do cliente antes de gerar o pagamento.');
         return;
       }
       if(isMercadoPagoBoleto||isMercadoPagoBoth){
-        const document=String(selectedClient?.document||'').replace(/\D/g,'');
+        const document=String(selectedClient.document||'').replace(/\D/g,'');
         if(![11,14].includes(document.length)){
           setMsg('Cadastre um CPF ou CNPJ válido no cliente antes de gerar o boleto.');
           return;
         }
-        const address:any=selectedClient?.address||{};
+        const address:any=selectedClient.address||{};
         const requiredAddress=['zip_code','street_name','street_number','neighborhood','city','state'];
         if(requiredAddress.some(key=>!String(address[key]||'').trim())){
           setMsg('Complete o endereço do cliente: CEP, rua, número, bairro, cidade e UF.');
@@ -741,13 +772,18 @@ export default function Home(){
         }
       }
     }
+
     setBusy(true);setMsg('');
+    const provider=isAsaas?'asaas':isMercadoPago?'mercadopago':'mock';
+    const paymentMethod=isAsaasPix||isMercadoPagoPix?'pix':isAsaasBoth||isMercadoPagoBoth?'boleto_pix':isAsaasBoleto||isMercadoPagoBoleto?'boleto':null;
+    const externalProvider=isAsaas||isMercadoPago;
+
     const {data:created,error}=await supabase.from('charges').insert({
       organization_id:org.id,client_id:chargeForm.clientId,description:chargeForm.description,
       amount_cents:amount,due_date:chargeForm.dueDate,
-      provider:isMercadoPago?'mercadopago':'mock',
-      payment_method:isMercadoPagoPix?'pix':isMercadoPagoBoth?'boleto_pix':isMercadoPagoBoleto?'boleto':null,
-      status:isMercadoPago?'draft':'pending',
+      provider,
+      payment_method:paymentMethod,
+      status:externalProvider?'draft':'pending',
       interest_monthly_percent:interestMonthly,
       fine_type:chargeForm.fineType,
       fine_percent:finePercent,
@@ -756,30 +792,43 @@ export default function Home(){
       discount_percent:discountPercent,
       discount_amount_cents:discountAmountCents,
       discount_deadline_days:discountDeadlineDays,
-      send_email:['email','both'].includes(selectedClient?.delivery_preference||'manual'),
-      send_whatsapp:['whatsapp','both'].includes(selectedClient?.delivery_preference||'manual')
+      send_email:['email','both'].includes(selectedClient.delivery_preference||'manual'),
+      send_whatsapp:['whatsapp','both'].includes(selectedClient.delivery_preference||'manual')
     }).select('id').single();
 
     if(error)setMsg(error.message);
     else{
       try{
         let paymentResult:any=null;
-        if(isMercadoPago)paymentResult=await generateMercadoPagoPayment(created.id,isMercadoPagoPix?'pix':isMercadoPagoBoth?'both':'boleto');
+        if(isMercadoPago) paymentResult=await generateMercadoPagoPayment(created.id,isMercadoPagoPix?'pix':isMercadoPagoBoth?'both':'boleto');
+        if(isAsaas) paymentResult=await generateAsaasPayment(created.id,isAsaasPix?'pix':isAsaasBoth?'both':'boleto');
+
         setChargeForm(f=>({
           ...f,description:'',amount:'',dueDate:'',
           interestMonthly:'0,00',fineType:'percent',fineValue:'0,00',
           discountType:'percent',discountValue:'0,00',discountDeadlineDays:'0'
         }));
+
         const sentByEmail=Boolean(paymentResult?.email?.sent);
-        setMsg(
-          isMercadoPagoPix
-            ? (sentByEmail?'Pix gerado e enviado por e-mail automaticamente.':'Pix Mercado Pago gerado com sucesso.')
-            : isMercadoPagoBoth
-              ? (sentByEmail?'Boleto e Pix gerados e enviados por e-mail para o cliente escolher.':'Boleto e Pix Mercado Pago gerados com sucesso.')
-              : isMercadoPagoBoleto
-                ? (sentByEmail?'Boleto gerado e enviado por e-mail automaticamente.':'Boleto Mercado Pago gerado com sucesso.')
-                : 'Cobrança criada com sucesso.'
-        );
+        if(isAsaas){
+          setMsg(
+            isAsaasPix
+              ? (sentByEmail?'Pix Asaas gerado e enviado por e-mail. O pagamento ficará no saldo da Conta Digital Asaas.':'Pix Asaas gerado. O pagamento ficará no saldo da Conta Digital Asaas.')
+              : isAsaasBoth
+                ? (sentByEmail?'Cobrança Asaas enviada por e-mail para o cliente escolher boleto ou Pix. O valor ficará na Conta Digital Asaas.':'Cobrança Asaas criada. O cliente pode escolher boleto ou Pix e o valor ficará na Conta Digital Asaas.')
+                : (sentByEmail?'Boleto Asaas gerado e enviado por e-mail. O pagamento ficará no saldo da Conta Digital Asaas.':'Boleto Asaas gerado. O pagamento ficará no saldo da Conta Digital Asaas.')
+          );
+        }else{
+          setMsg(
+            isMercadoPagoPix
+              ? (sentByEmail?'Pix gerado e enviado por e-mail automaticamente.':'Pix Mercado Pago gerado com sucesso.')
+              : isMercadoPagoBoth
+                ? (sentByEmail?'Boleto e Pix gerados e enviados por e-mail para o cliente escolher.':'Boleto e Pix Mercado Pago gerados com sucesso.')
+                : isMercadoPagoBoleto
+                  ? (sentByEmail?'Boleto gerado e enviado por e-mail automaticamente.':'Boleto Mercado Pago gerado com sucesso.')
+                  : 'Cobrança criada com sucesso.'
+          );
+        }
       }catch(e){
         setMsg('Cobrança salva como rascunho. '+(e instanceof Error?e.message:'Não foi possível gerar o pagamento.'));
       }
@@ -1661,14 +1710,27 @@ export default function Home(){
 
                 <label>Forma de cobrança<select value={chargeForm.paymentMethod} onChange={e=>setChargeForm({...chargeForm,paymentMethod:e.target.value})}>
                   <option value="internal">Registro interno</option>
+                  <option value="asaas_both" disabled={!baasConnected||!asaasDirect}>Boleto ou Pix Asaas — dinheiro fica na Conta Digital{baasConnected&&asaasDirect?'':' — conectar conta Asaas'}</option>
+                  <option value="asaas" disabled={!baasConnected||!asaasDirect}>Somente boleto Asaas{baasConnected&&asaasDirect?'':' — conectar conta Asaas'}</option>
+                  <option value="asaas_pix" disabled={!baasConnected||!asaasDirect}>Somente Pix Asaas{baasConnected&&asaasDirect?'':' — conectar conta Asaas'}</option>
                   <option value="mercadopago_both" disabled={mercadoPago?.status!=='connected'}>Boleto + Pix Mercado Pago — cliente escolhe{mercadoPago?.status==='connected'?'':' — conectar primeiro'}</option>
                   <option value="mercadopago" disabled={mercadoPago?.status!=='connected'}>Somente boleto Mercado Pago{mercadoPago?.status==='connected'?'':' — conectar primeiro'}</option>
                   <option value="mercadopago_pix" disabled={mercadoPago?.status!=='connected'}>Somente Pix Mercado Pago{mercadoPago?.status==='connected'?'':' — conectar primeiro'}</option>
                 </select></label>
+                {chargeForm.paymentMethod==='asaas_both'&&<p className="permission-note">O cliente abre a fatura Asaas e escolhe boleto ou Pix. Depois do recebimento, o dinheiro permanece no saldo da Conta Digital Asaas até você transferir para outro banco.</p>}
+                {chargeForm.paymentMethod==='asaas'&&<p className="permission-note">O boleto é emitido pelo Asaas e, quando recebido, o valor fica na sua Conta Digital Asaas.</p>}
+                {chargeForm.paymentMethod==='asaas_pix'&&<p className="permission-note">O Pix é emitido pelo Asaas e, quando recebido, o valor fica na sua Conta Digital Asaas.</p>}
                 {chargeForm.paymentMethod==='mercadopago_both'&&<p className="permission-note">Serão gerados boleto e Pix para a mesma cobrança. O cliente receberá as duas opções e escolherá como pagar. Para o boleto, mantenha CPF/CNPJ, e-mail e endereço completos.</p>}
                 {chargeForm.paymentMethod==='mercadopago'&&<p className="permission-note">O boleto pode vencer entre 1 e 30 dias após a emissão. O cliente precisa ter CPF/CNPJ, e-mail e endereço completo.</p>}
                 {chargeForm.paymentMethod==='mercadopago_pix'&&<p className="permission-note">O Pix gera QR Code e código Copia e Cola pelo Mercado Pago. O cliente precisa ter e-mail cadastrado.</p>}
-                <button className="primaryBtn" disabled={busy||!clients.some(c=>c.status==='active')||!canManageFinance}><Plus size={16}/> {chargeForm.paymentMethod==='mercadopago_both'?'Gerar boleto + Pix':chargeForm.paymentMethod==='mercadopago_pix'?'Gerar Pix':chargeForm.paymentMethod==='mercadopago'?'Gerar boleto':'Criar cobrança'}</button>
+                <button className="primaryBtn" disabled={busy||!clients.some(c=>c.status==='active')||!canManageFinance}><Plus size={16}/> {
+                  chargeForm.paymentMethod==='asaas_both'?'Gerar cobrança Asaas':
+                  chargeForm.paymentMethod==='asaas_pix'?'Gerar Pix Asaas':
+                  chargeForm.paymentMethod==='asaas'?'Gerar boleto Asaas':
+                  chargeForm.paymentMethod==='mercadopago_both'?'Gerar boleto + Pix':
+                  chargeForm.paymentMethod==='mercadopago_pix'?'Gerar Pix':
+                  chargeForm.paymentMethod==='mercadopago'?'Gerar boleto':'Criar cobrança'
+                }</button>
                 {!canManageFinance&&<p className="permission-note">Seu perfil é somente leitura para operações financeiras.</p>}
               </form>}
             </section>
