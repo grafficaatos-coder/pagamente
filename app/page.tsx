@@ -287,7 +287,10 @@ export default function Home(){
         {data:invoice,error:ine},
         {data:members,error:tme},
         {data:auditRows,error:tae},
-        {data:provider,error:pre}
+        {data:provider,error:pre},
+        {data:baas,error:bae},
+        {data:txRows,error:txe},
+        {data:transferRows,error:tre}
       ]=await Promise.all([
         supabase.from('organizations').select('id,name,status').eq('id',orgId).single(),
         supabase.from('wallet_accounts').select('id,account_number,pix_key,balance_cents').eq('organization_id',orgId).single(),
@@ -302,13 +305,29 @@ export default function Home(){
           .select('provider,status,external_account_id,connected_at,metadata')
           .eq('organization_id',orgId)
           .eq('provider','mercadopago')
-          .maybeSingle()
+          .maybeSingle(),
+        supabase.from('provider_connections')
+          .select('provider,status,external_account_id,connected_at,metadata')
+          .eq('organization_id',orgId)
+          .eq('provider','baas')
+          .maybeSingle(),
+        supabase.from('transactions')
+          .select('id,type,direction,description,counterpart,amount_cents,reference_id,created_at')
+          .eq('organization_id',orgId)
+          .order('created_at',{ascending:false})
+          .limit(100),
+        supabase.from('transfers')
+          .select('id,recipient_name,destination_key,description,amount_cents,fee_cents,status,provider,provider_transfer_id,created_at,completed_at')
+          .eq('sender_organization_id',orgId)
+          .order('created_at',{ascending:false})
+          .limit(100)
       ]);
-      if(oe||we||ce||che||rre||se||ine||tme||tae||pre)throw oe||we||ce||che||rre||se||ine||tme||tae||pre;
+      if(oe||we||ce||che||rre||se||ine||tme||tae||pre||bae||txe||tre)throw oe||we||ce||che||rre||se||ine||tme||tae||pre||bae||txe||tre;
 
       setOrg(o);setWallet(w);setClients((c??[]) as any);setCharges((ch??[]) as any);
       setRecurring((rr??[]) as any);setSubscription(sub);setPlatformInvoice(invoice);
       setTeamMembers((members??[]) as any);setTenantAudit((auditRows??[]) as any);setMercadoPago(provider);
+      setBaasConnection(baas);setWalletTransactions((txRows??[]) as any);setWalletTransfers((transferRows??[]) as any);
 
       if(member.role==='owner'||member.role==='admin'){
         const {data:inviteRows,error:ive}=await supabase.from('organization_invites')
