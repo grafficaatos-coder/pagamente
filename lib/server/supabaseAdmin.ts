@@ -6,10 +6,16 @@ function required(name:string){
   return value;
 }
 
+function supabaseServerKey(){
+  const value=process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if(!value) throw new Error('SUPABASE_SECRET_KEY não configurado no servidor.');
+  return value;
+}
+
 export function getSupabaseAdmin(){
   return createClient(
     required('NEXT_PUBLIC_SUPABASE_URL'),
-    required('SUPABASE_SERVICE_ROLE_KEY'),
+    supabaseServerKey(),
     {auth:{persistSession:false,autoRefreshToken:false}}
   );
 }
