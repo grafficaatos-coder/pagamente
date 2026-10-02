@@ -565,9 +565,17 @@ export default function Home(){
     if(error)setMsg(error.message);
     else{
       try{
-        if(isMercadoPago)await generateMercadoPagoPayment(created.id,isMercadoPagoPix?'pix':'boleto');
+        let paymentResult:any=null;
+        if(isMercadoPago)paymentResult=await generateMercadoPagoPayment(created.id,isMercadoPagoPix?'pix':'boleto');
         setChargeForm(f=>({...f,description:'',amount:'',dueDate:''}));
-        setMsg(isMercadoPagoPix?'Pix Mercado Pago gerado com sucesso.':isMercadoPagoBoleto?'Boleto Mercado Pago gerado com sucesso.':'Cobrança criada com sucesso.');
+        const sentByEmail=Boolean(paymentResult?.email?.sent);
+        setMsg(
+          isMercadoPagoPix
+            ? (sentByEmail?'Pix gerado e enviado por e-mail automaticamente.':'Pix Mercado Pago gerado com sucesso.')
+            : isMercadoPagoBoleto
+              ? (sentByEmail?'Boleto gerado e enviado por e-mail automaticamente.':'Boleto Mercado Pago gerado com sucesso.')
+              : 'Cobrança criada com sucesso.'
+        );
       }catch(e){
         setMsg('Cobrança salva como rascunho. '+(e instanceof Error?e.message:'Não foi possível gerar o pagamento.'));
       }
