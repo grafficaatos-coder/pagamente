@@ -23,7 +23,7 @@ export async function POST(request:Request){
     if(!chargeId) throw new Error('Cobrança não informada.');
 
     const {data:charge,error:chargeError}=await admin.from('charges')
-      .select('id,organization_id,client_id,description,amount_cents,due_date,status,provider,payment_method,provider_charge_id,boleto_url,digitable_line,barcode_content,send_email,email_sent_at,clients(id,name,document,email,address,status)')
+      .select('id,organization_id,client_id,description,amount_cents,due_date,status,provider,payment_method,provider_charge_id,provider_payment_id,boleto_url,digitable_line,barcode_content,pix_provider_charge_id,pix_provider_payment_id,pix_url,pix_code,pix_qr_base64,send_email,email_sent_at,clients(id,name,document,email,address,status)')
       .eq('id',chargeId)
       .eq('organization_id',member.organization_id)
       .single();
@@ -32,12 +32,20 @@ export async function POST(request:Request){
     const emailCharge=charge;
 
     if(charge.status==='paid'||charge.status==='cancelled') throw new Error('Esta cobrança não pode gerar um novo pagamento.');
-    const requestedMethod=body?.method==='pix'?'pix':body?.method==='boleto'?'boleto':null;
+    const requestedMethod=body?.method==='pix'?'pix':body?.method==='boleto'?'boleto':body?.method==='both'?'boleto_pix':null;
     const paymentMethod=requestedMethod||charge.payment_method||'boleto';
 
     const client:any=Array.isArray(charge.clients)?charge.clients[0]:charge.clients;
 
-    async function sendEmailIfNeeded(paymentUrl:string|null,paymentLine:string|null,method:string|null){
+    async function sendEmailIfNeeded(input:{
+      method:string|null;
+      paymentUrl?:string|null;
+      paymentLine?:string|null;
+      boletoUrl?:string|null;
+      boletoLine?:string|null;
+      pixUrl?:string|null;
+      pixCode?:string|null;
+    }){
       if(!emailCharge.send_email||emailCharge.email_sent_at||!client?.email)return {sent:false,skipped:true};
       try{
         const result=await sendChargeEmail({
@@ -47,9 +55,13 @@ export async function POST(request:Request){
           description:emailCharge.description,
           amountCents:Number(emailCharge.amount_cents),
           dueDate:emailCharge.due_date,
-          paymentMethod:method,
-          paymentUrl,
-          digitableLine:paymentLine
+          paymentMethod:input.method,
+          paymentUrl:input.paymentUrl,
+          digitableLine:input.paymentLine,
+          boletoUrl:input.boletoUrl,
+          boletoLine:input.boletoLine,
+          pixUrl:input.pixUrl,
+          pixCode:input.pixCode
         });
         await admin.from('charges').update({
           email_sent_at:new Date().toISOString(),
@@ -68,8 +80,32 @@ export async function POST(request:Request){
       }
     }
 
-    if(charge.provider==='mercadopago'&&charge.provider_charge_id&&charge.boleto_url){
-      const email=await sendEmailIfNeeded(charge.boleto_url,charge.digitable_line,charge.payment_method||paymentMethod);
+    const hasExistingSingle=charge.provider==='mercadopago'&&charge.payment_method!=='boleto_pix'&&charge.provider_charge_id&&charge.boleto_url;
+    const hasExistingBoth=charge.provider==='mercadopago'&&charge.payment_method==='boleto_pix'&&charge.provider_charge_id&&charge.boleto_url&&charge.pix_provider_charge_id&&charge.pix_url;
+
+    if(hasExistingBoth){
+      const email=await sendEmailIfNeeded({
+        method:'boleto_pix',
+        boletoUrl:charge.boleto_url,
+        boletoLine:charge.digitable_line,
+        pixUrl:charge.pix_url,
+        pixCode:charge.pix_code
+      });
+      return Response.json({
+        ok:true,existing:true,paymentMethod:'boleto_pix',
+        boletoUrl:charge.boleto_url,digitableLine:charge.digitable_line,
+        pixUrl:charge.pix_url,pixCode:charge.pix_code,
+        orderId:charge.provider_charge_id,pixOrderId:charge.pix_provider_charge_id,
+        email
+      });
+    }
+
+    if(hasExistingSingle){
+      const email=await sendEmailIfNeeded({
+        method:charge.payment_method||paymentMethod,
+        paymentUrl:charge.boleto_url,
+        paymentLine:charge.digitable_line
+      });
       return Response.json({
         ok:true,existing:true,paymentMethod:charge.payment_method||paymentMethod,
         paymentUrl:charge.boleto_url,boletoUrl:charge.boleto_url,
@@ -78,6 +114,7 @@ export async function POST(request:Request){
         email
       });
     }
+
     if(!client||client.status!=='active') throw new Error('Cliente inválido ou inativo.');
     if(!client.email) throw new Error('Cadastre o e-mail do cliente antes de gerar o pagamento.');
 
@@ -87,17 +124,9 @@ export async function POST(request:Request){
     }
 
     const accessToken=await getMercadoPagoAccessToken(member.organization_id);
-    let order:any;
+    const amountCents=Number(emailCharge.amount_cents);
 
-    if(paymentMethod==='pix'){
-      order=await createPixOrder(accessToken,{
-        chargeId:charge.id,
-        amountCents:Number(emailCharge.amount_cents),
-        description:emailCharge.description,
-        expirationDays,
-        payer:{email:client.email}
-      });
-    }else{
+    const createBoleto=async()=>{
       const document=String(client.document||'').replace(/\D/g,'');
       if(![11,14].includes(document.length)) throw new Error('Cadastre um CPF ou CNPJ válido no cliente.');
       const address=client.address||{};
@@ -105,9 +134,10 @@ export async function POST(request:Request){
       const missing=required.filter(key=>!String(address[key]||'').trim());
       if(missing.length) throw new Error('Complete o endereço do cliente: CEP, rua, número, bairro, cidade e UF.');
 
-      order=await createBoletoOrder(accessToken,{
+      const order=await createBoletoOrder(accessToken,{
         chargeId:charge.id,
-        amountCents:Number(emailCharge.amount_cents),
+        idempotencyKey:charge.id+'-boleto',
+        amountCents,
         description:emailCharge.description,
         expirationDays,
         payer:{
@@ -124,13 +154,67 @@ export async function POST(request:Request){
           }
         }
       });
+      const fields=paymentFields(order);
+      if(!fields.orderId||!fields.boletoUrl) throw new Error('Mercado Pago não retornou os dados do boleto.');
+      return {order,fields,mapped:mapMercadoPagoOrderStatus(order)};
+    };
+
+    const createPix=async()=>{
+      const order=await createPixOrder(accessToken,{
+        chargeId:charge.id,
+        idempotencyKey:charge.id+'-pix',
+        amountCents,
+        description:emailCharge.description,
+        expirationDays,
+        payer:{email:client.email}
+      });
+      const fields=paymentFields(order);
+      if(!fields.orderId||!fields.boletoUrl) throw new Error('Mercado Pago não retornou os dados do Pix.');
+      return {order,fields,mapped:mapMercadoPagoOrderStatus(order)};
+    };
+
+    if(paymentMethod==='boleto_pix'){
+      const boleto=await createBoleto();
+      const pix=await createPix();
+
+      const {error:updateError}=await admin.from('charges').update({
+        provider:'mercadopago',
+        payment_method:'boleto_pix',
+        provider_charge_id:boleto.fields.orderId,
+        provider_payment_id:boleto.fields.paymentId,
+        boleto_url:boleto.fields.boletoUrl,
+        digitable_line:boleto.fields.digitableLine,
+        barcode_content:boleto.fields.barcodeContent,
+        pix_provider_charge_id:pix.fields.orderId,
+        pix_provider_payment_id:pix.fields.paymentId,
+        pix_url:pix.fields.boletoUrl,
+        pix_code:pix.fields.digitableLine,
+        pix_qr_base64:pix.fields.barcodeContent,
+        provider_status_detail:boleto.fields.providerStatusDetail||pix.fields.providerStatusDetail,
+        status:boleto.mapped.status==='paid'||pix.mapped.status==='paid'?'paid':'pending',
+        updated_at:new Date().toISOString()
+      }).eq('id',emailCharge.id);
+      if(updateError) throw updateError;
+
+      const email=await sendEmailIfNeeded({
+        method:'boleto_pix',
+        boletoUrl:boleto.fields.boletoUrl,
+        boletoLine:boleto.fields.digitableLine,
+        pixUrl:pix.fields.boletoUrl,
+        pixCode:pix.fields.digitableLine
+      });
+
+      return Response.json({
+        ok:true,paymentMethod:'boleto_pix',
+        boletoUrl:boleto.fields.boletoUrl,digitableLine:boleto.fields.digitableLine,
+        pixUrl:pix.fields.boletoUrl,pixCode:pix.fields.digitableLine,
+        orderId:boleto.fields.orderId,pixOrderId:pix.fields.orderId,
+        status:'pending',email
+      });
     }
 
-    const mapped=mapMercadoPagoOrderStatus(order);
-    const fields=paymentFields(order);
-    if(!fields.orderId||!fields.boletoUrl){
-      throw new Error(paymentMethod==='pix'?'Mercado Pago não retornou os dados do Pix.':'Mercado Pago não retornou os dados do boleto.');
-    }
+    const result=paymentMethod==='pix'?await createPix():await createBoleto();
+    const fields=result.fields;
 
     const {error:updateError}=await admin.from('charges').update({
       provider:'mercadopago',
@@ -141,16 +225,16 @@ export async function POST(request:Request){
       digitable_line:fields.digitableLine,
       barcode_content:fields.barcodeContent,
       provider_status_detail:fields.providerStatusDetail,
-      status:mapped.status,
+      status:result.mapped.status,
       updated_at:new Date().toISOString()
     }).eq('id',emailCharge.id);
     if(updateError) throw updateError;
 
-    const email=await sendEmailIfNeeded(
-      fields.boletoUrl,
-      fields.digitableLine,
-      fields.paymentMethod||paymentMethod
-    );
+    const email=await sendEmailIfNeeded({
+      method:fields.paymentMethod||paymentMethod,
+      paymentUrl:fields.boletoUrl,
+      paymentLine:fields.digitableLine
+    });
 
     return Response.json({
       ok:true,
@@ -162,7 +246,7 @@ export async function POST(request:Request){
       copyPaste:fields.digitableLine,
       digitableLine:fields.digitableLine,
       barcodeContent:fields.barcodeContent,
-      status:mapped.status,
+      status:result.mapped.status,
       email
     });
   }catch(error){
