@@ -1696,27 +1696,69 @@ export default function Home(){
 
         {!tenantAccessBlocked&&tenantTab==='conta_digital'&&<>
           <div className="tenant-heading digital-account-heading">
-            <div><span className="eyebrow">CONTA DIGITAL</span><h1>Conta digital JP</h1><p>Centralize recebimentos, acompanhe o saldo e gerencie pagamentos sem sair do sistema.</p></div>
-            <span className={'status '+(financialProviderConnected?'active':'pending')}>{financialProviderConnected?financialProviderName+' conectado':'Preparando conexão bancária'}</span>
+            <div><span className="eyebrow">CONTA DIGITAL</span><h1>Conta digital JP</h1><p>Saldo e Pix reais operados pelo Asaas, sem precisar sair do JP Sistema.</p></div>
+            <span className={'status '+(baasConnected?'active':'pending')}>{baasConnected?'Asaas conectado':'Ativar conta Asaas'}</span>
           </div>
+
+          {!baasConnected&&<section className="card asaas-onboarding-card">
+            <div className="cardHead digital-card-head">
+              <div><h2>Ativar Conta Digital Asaas</h2><p>Cria uma subconta separada para esta empresa no BaaS do Asaas.</p></div>
+              <Landmark size={21}/>
+            </div>
+            <div className="provider-note">
+              <ShieldCheck size={18}/><p>Estamos usando o ambiente Sandbox. Nenhum dinheiro real será movimentado durante os testes. A chave da subconta será armazenada criptografada no servidor.</p>
+            </div>
+            {canManageTeam?<form onSubmit={createAsaasAccount} className="asaas-onboarding-form">
+              <div className="cols">
+                <label>Nome / Razão social<input required value={asaasAccountForm.name} onChange={e=>setAsaasAccountForm({...asaasAccountForm,name:e.target.value})}/></label>
+                <label>E-mail<input type="email" required value={asaasAccountForm.email} onChange={e=>setAsaasAccountForm({...asaasAccountForm,email:e.target.value})}/></label>
+              </div>
+              <div className="cols">
+                <label>CPF ou CNPJ<input required value={asaasAccountForm.cpfCnpj} onChange={e=>setAsaasAccountForm({...asaasAccountForm,cpfCnpj:e.target.value})} placeholder="Somente números ou formatado"/></label>
+                <label>Celular<input required value={asaasAccountForm.mobilePhone} onChange={e=>setAsaasAccountForm({...asaasAccountForm,mobilePhone:e.target.value})} placeholder="DDD + número"/></label>
+              </div>
+              {asaasAccountForm.cpfCnpj.replace(/\D/g,'').length===14?<div className="cols">
+                <label>Tipo de empresa<select value={asaasAccountForm.companyType} onChange={e=>setAsaasAccountForm({...asaasAccountForm,companyType:e.target.value})}>
+                  <option value="MEI">MEI</option><option value="LIMITED">Limitada</option><option value="INDIVIDUAL">Empresário individual</option><option value="ASSOCIATION">Associação</option>
+                </select></label>
+                <label>Regime tributário<select value={asaasAccountForm.taxRegime} onChange={e=>setAsaasAccountForm({...asaasAccountForm,taxRegime:e.target.value})}>
+                  <option value="UNKNOWN">Não informar</option><option value="MEI">MEI</option><option value="NATIONAL_SIMPLE">Simples Nacional</option><option value="NORMAL_REGIME">Regime normal</option>
+                </select></label>
+              </div>:asaasAccountForm.cpfCnpj.replace(/\D/g,'').length===11?<label>Data de nascimento<input type="date" required value={asaasAccountForm.birthDate} onChange={e=>setAsaasAccountForm({...asaasAccountForm,birthDate:e.target.value})}/></label>:null}
+              <label>Faturamento / renda mensal<input required value={asaasAccountForm.incomeValue} onChange={e=>setAsaasAccountForm({...asaasAccountForm,incomeValue:e.target.value})} placeholder="0,00"/></label>
+              <div className="cols">
+                <label>Endereço<input required value={asaasAccountForm.address} onChange={e=>setAsaasAccountForm({...asaasAccountForm,address:e.target.value})} placeholder="Rua / Avenida"/></label>
+                <label>Número<input required value={asaasAccountForm.addressNumber} onChange={e=>setAsaasAccountForm({...asaasAccountForm,addressNumber:e.target.value})}/></label>
+              </div>
+              <div className="cols">
+                <label>Bairro<input required value={asaasAccountForm.province} onChange={e=>setAsaasAccountForm({...asaasAccountForm,province:e.target.value})}/></label>
+                <label>CEP<input required value={asaasAccountForm.postalCode} onChange={e=>setAsaasAccountForm({...asaasAccountForm,postalCode:e.target.value})} placeholder="00000-000"/></label>
+              </div>
+              <label>Complemento<input value={asaasAccountForm.complement} onChange={e=>setAsaasAccountForm({...asaasAccountForm,complement:e.target.value})} placeholder="Opcional"/></label>
+              <button className="primaryBtn" disabled={busy}><Landmark size={16}/> {busy?'Ativando...':'Criar conta Asaas de teste'}</button>
+              <p className="permission-note">O Asaas exige esses dados para criar a subconta e realizar o onboarding cadastral.</p>
+            </form>:<p className="permission-note">Somente Proprietário ou Administrador pode ativar a Conta Digital Asaas.</p>}
+          </section>}
 
           <section className="digital-wallet-hero">
             <div className="digital-wallet-balance">
-              <span>Saldo interno disponível</span>
-              <strong>{brl(Number(wallet?.balance_cents??0))}</strong>
-              <small>{mercadoPagoConnected?'O Mercado Pago já está conectado para recebimentos. O Pix de saída será liberado após ativarmos o produto Payouts.':baasConnected?'Saldo sincronizado com a conta digital conectada.':'Este saldo é o controle interno do sistema até a conexão com uma instituição financeira.'}</small>
+              <span>{baasConnected?'Saldo Asaas disponível':'Saldo interno disponível'}</span>
+              <strong>{brl(accountBalanceCents)}</strong>
+              <small>{baasConnected?'Este é o saldo consultado diretamente na conta Asaas desta empresa.':'Até a conta Asaas ser ativada, este valor é apenas o controle interno do sistema.'}</small>
+              {baasConnected&&<button type="button" className="wallet-refresh" onClick={refreshAsaasBalance} disabled={busy}><RefreshCw size={14}/> Atualizar saldo</button>}
             </div>
             <div className="digital-wallet-identity">
-              <div><span>Número da conta JP</span><strong>{wallet?.account_number??'—'}</strong></div>
-              <div><span>Chave interna</span><strong>{wallet?.pix_key??'—'}</strong>{wallet?.pix_key&&<button type="button" className="wallet-copy" onClick={()=>navigator.clipboard.writeText(wallet.pix_key)}>Copiar</button>}</div>
-              <p>{mercadoPagoConnected?'Sua conta Mercado Pago já está vinculada ao JP para cobranças. Para enviar Pix pelo próprio JP, falta habilitar a API Payouts do Mercado Pago.':baasConnected?'A conta está habilitada para operações bancárias pelo provedor conectado.':'A chave acima ainda não é uma chave Pix bancária registrada.'}</p>
+              <div><span>Provedor financeiro</span><strong>{baasConnected?'Asaas':'Ainda não conectado'}</strong></div>
+              <div><span>Wallet ID Asaas</span><strong>{asaasWalletId||'—'}</strong>{asaasWalletId&&<button type="button" className="wallet-copy" onClick={()=>navigator.clipboard.writeText(String(asaasWalletId))}>Copiar</button>}</div>
+              <div><span>Conta JP</span><strong>{wallet?.account_number??'—'}</strong></div>
+              <p>{baasConnected?'O dinheiro real permanece na conta Asaas. O JP consulta o saldo e envia as ordens de Pix pela API.':'Ative a subconta Asaas para transformar esta área em uma conta digital operacional.'}</p>
             </div>
           </section>
 
           <div className="grid digital-account-grid">
             <section className="card pix-transfer-card">
               <div className="cardHead digital-card-head">
-                <div><h2>Fazer Pix</h2><p>Envie para uma chave Pix de qualquer banco.</p></div>
+                <div><h2>Fazer Pix</h2><p>Envie o saldo Asaas para uma chave Pix de qualquer banco.</p></div>
                 <Send size={20}/>
               </div>
               <form onSubmit={submitPixTransfer}>
@@ -1726,32 +1768,27 @@ export default function Home(){
                   <label>Valor<input required disabled={!baasConnected||!canManageFinance} value={pixTransferForm.amount} onChange={e=>setPixTransferForm({...pixTransferForm,amount:e.target.value})} placeholder="0,00"/></label>
                   <label>Descrição<input disabled={!baasConnected||!canManageFinance} value={pixTransferForm.description} onChange={e=>setPixTransferForm({...pixTransferForm,description:e.target.value})} placeholder="Opcional"/></label>
                 </div>
-                {baasConnected
-                  ?<button className="primaryBtn" disabled={busy||!canManageFinance}><Send size={16}/> Enviar Pix</button>
-                  :mercadoPagoConnected
-                    ?<button type="button" className="primaryBtn" onClick={()=>setTenantTab('integracoes')}><Landmark size={16}/> Ativar Pix de saída do Mercado Pago</button>
-                    :<button type="button" className="primaryBtn" onClick={()=>setTenantTab('integracoes')}><Landmark size={16}/> Conectar instituição financeira</button>}
-                {mercadoPagoConnected&&!baasConnected&&<p className="permission-note">Mercado Pago conectado para receber cobranças. O envio de Pix usa o produto Payouts do Mercado Pago e precisa ser habilitado separadamente antes de movimentar saldo.</p>}
-                {!financialProviderConnected&&<p className="permission-note">Nenhum dinheiro será movimentado enquanto uma instituição financeira não estiver conectada.</p>}
+                <button className="primaryBtn" disabled={!baasConnected||busy||!canManageFinance}><Send size={16}/> Enviar Pix pelo Asaas</button>
+                {!baasConnected&&<p className="permission-note">Ative a Conta Digital Asaas acima para habilitar transferências Pix.</p>}
                 {!canManageFinance&&<p className="permission-note">Seu perfil é somente leitura para operações financeiras.</p>}
               </form>
             </section>
 
             <section className="card receive-pix-card">
-              <div className="cardHead digital-card-head"><div><h2>Receber dinheiro</h2><p>Dados para centralizar os recebimentos.</p></div><ArrowDownLeft size={20}/></div>
+              <div className="cardHead digital-card-head"><div><h2>Recebimentos</h2><p>Onde o dinheiro fica e como ele aparece no JP.</p></div><ArrowDownLeft size={20}/></div>
               <div className="digital-receive-info">
-                <div><span>Conta JP</span><strong>{wallet?.account_number??'—'}</strong></div>
-                <div><span>Identificador interno</span><strong>{wallet?.pix_key??'—'}</strong></div>
-                <div><span>Status financeiro</span><strong>{mercadoPagoConnected?'Mercado Pago conectado':baasConnected?'BaaS ativo':'Aguardando conexão'}</strong></div>
+                <div><span>Conta Digital</span><strong>{baasConnected?'Asaas ativa':'Aguardando ativação'}</strong></div>
+                <div><span>Saldo real</span><strong>{baasConnected?brl(accountBalanceCents):'—'}</strong></div>
+                <div><span>Mercado Pago</span><strong>{mercadoPagoConnected?'Conectado separadamente':'Não conectado'}</strong></div>
               </div>
               <div className="provider-note">
-                <ShieldCheck size={18}/><p>{mercadoPagoConnected?'O Mercado Pago já está conectado ao JP para recebimentos. A próxima etapa é habilitar Payouts para permitir transferências Pix de saída pelo sistema.':'As operações financeiras reais serão executadas pelo provedor conectado, enquanto você continuará operando pela tela do JP Sistema.'}</p>
+                <ShieldCheck size={18}/><p>{baasConnected?'O saldo desta Conta Digital vem do Asaas. Valores recebidos pelo Mercado Pago continuam no Mercado Pago e não são transferidos automaticamente para o Asaas.':'Depois de ativar o Asaas, podemos também emitir cobranças Asaas para que os recebimentos caiam diretamente neste saldo.'}</p>
               </div>
             </section>
           </div>
 
           <section className="card tableCard">
-            <div className="cardHead"><div><h2>Extrato</h2><p>Entradas e saídas registradas na conta da empresa.</p></div><span className="wallet-count">{walletTransactions.length} movimentações</span></div>
+            <div className="cardHead"><div><h2>Extrato do JP</h2><p>Movimentações registradas no sistema.</p></div><span className="wallet-count">{walletTransactions.length} movimentações</span></div>
             <div className="tableWrap"><table><thead><tr><th>Data</th><th>Movimento</th><th>Descrição</th><th>Origem / destino</th><th>Valor</th></tr></thead><tbody>
               {walletTransactions.map(tx=><tr key={tx.id}>
                 <td>{new Date(tx.created_at).toLocaleString('pt-BR')}</td>
@@ -1759,12 +1796,12 @@ export default function Home(){
                 <td>{tx.description}</td><td>{tx.counterpart||'—'}</td>
                 <td className={tx.direction==='credit'?'wallet-value credit':'wallet-value debit'}>{tx.direction==='credit'?'+ ':'- '}{brl(Number(tx.amount_cents))}</td>
               </tr>)}
-              {!walletTransactions.length&&<tr><td colSpan={5} className="empty">Ainda não há movimentações na conta.</td></tr>}
+              {!walletTransactions.length&&<tr><td colSpan={5} className="empty">Ainda não há movimentações registradas.</td></tr>}
             </tbody></table></div>
           </section>
 
           <section className="card tableCard">
-            <div className="cardHead"><div><h2>Transferências Pix</h2><p>Histórico das transferências enviadas pela conta digital.</p></div></div>
+            <div className="cardHead"><div><h2>Transferências Pix</h2><p>Histórico das transferências enviadas pela Conta Digital Asaas.</p></div></div>
             <div className="tableWrap"><table><thead><tr><th>Data</th><th>Destinatário</th><th>Chave</th><th>Status</th><th>Valor</th></tr></thead><tbody>
               {walletTransfers.map(t=><tr key={t.id}>
                 <td>{new Date(t.created_at).toLocaleString('pt-BR')}</td><td>{t.recipient_name}</td><td>{t.destination_key}</td>
