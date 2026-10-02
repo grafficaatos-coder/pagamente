@@ -19,7 +19,7 @@ type Client = {
 };
 type Charge = {
   id:string; description:string; amount_cents:number; due_date:string; status:string;
-  provider:string; provider_charge_id?:string|null; created_at:string; boleto_url?:string|null; digitable_line?:string|null;
+  provider:string; payment_method?:'boleto'|'pix'|null; provider_charge_id?:string|null; created_at:string; boleto_url?:string|null; digitable_line?:string|null;
   clients?:{name?:string}|null
 };
 type RecurringRule = { id:string; description:string; amount_cents:number; frequency:string; generation_day:number; due_day:number; status:string; clients?:{name?:string}|null };
@@ -267,7 +267,7 @@ export default function Home(){
         supabase.from('organizations').select('id,name,status').eq('id',orgId).single(),
         supabase.from('wallet_accounts').select('id,account_number,pix_key,balance_cents').eq('organization_id',orgId).single(),
         supabase.from('clients').select('id,name,document,email,whatsapp,address,status').eq('organization_id',orgId).order('created_at',{ascending:false}),
-        supabase.from('charges').select('id,description,amount_cents,due_date,status,provider,provider_charge_id,created_at,boleto_url,digitable_line,clients(name)').eq('organization_id',orgId).order('created_at',{ascending:false}).limit(250),
+        supabase.from('charges').select('id,description,amount_cents,due_date,status,provider,payment_method,provider_charge_id,created_at,boleto_url,digitable_line,clients(name)').eq('organization_id',orgId).order('created_at',{ascending:false}).limit(250),
         supabase.from('recurring_rules').select('id,description,amount_cents,frequency,generation_day,due_day,status,clients(name)').eq('organization_id',orgId).order('created_at',{ascending:false}),
         supabase.from('subscriptions').select('status,trial_ends_at,current_period_end,chosen_plan_at,plans(name,billing_model,monthly_price_cents,boleto_fee_cents,max_clients,max_users)').eq('organization_id',orgId).maybeSingle(),
         supabase.from('platform_invoices').select('id,status,total_cents,due_date,reference_month').eq('organization_id',orgId).order('created_at',{ascending:false}).limit(1).maybeSingle(),
@@ -510,12 +510,12 @@ export default function Home(){
     finally{setBusy(false)}
   }
 
-  async function generateMercadoPagoBoleto(chargeId:string){
+  async function generateMercadoPagoPayment(chargeId:string,method:'boleto'|'pix'){
     const response=await authenticatedFetch('/api/charges/mercadopago',{
-      method:'POST',body:JSON.stringify({chargeId})
+      method:'POST',body:JSON.stringify({chargeId,method})
     });
     const data=await response.json();
-    if(!response.ok)throw new Error(data.error||'Não foi possível gerar o boleto.');
+    if(!response.ok)throw new Error(data.error||(method==='pix'?'Não foi possível gerar o Pix.':'Não foi possível gerar o boleto.'));
     return data;
   }
 
@@ -523,27 +523,31 @@ export default function Home(){
     e.preventDefault();if(!supabase||!org)return;
     const amount=parseBRL(chargeForm.amount);
     if(amount<=0){setMsg('Informe um valor válido.');return}
-    const isMercadoPago=chargeForm.paymentMethod==='mercadopago';
+    const isMercadoPagoBoleto=chargeForm.paymentMethod==='mercadopago';
+    const isMercadoPagoPix=chargeForm.paymentMethod==='mercadopago_pix';
+    const isMercadoPago=isMercadoPagoBoleto||isMercadoPagoPix;
     if(isMercadoPago&&mercadoPago?.status!=='connected'){
-      setMsg('Conecte o Mercado Pago em Integrações antes de gerar boletos.');
+      setMsg('Conecte o Mercado Pago em Integrações antes de gerar pagamentos.');
       return;
     }
     if(isMercadoPago){
       const selectedClient=clients.find(c=>c.id===chargeForm.clientId);
-      const document=String(selectedClient?.document||'').replace(/\D/g,'');
-      if(![11,14].includes(document.length)){
-        setMsg('Cadastre um CPF ou CNPJ válido no cliente antes de gerar o boleto.');
-        return;
-      }
       if(!selectedClient?.email){
-        setMsg('Cadastre o e-mail do cliente antes de gerar o boleto.');
+        setMsg('Cadastre o e-mail do cliente antes de gerar o pagamento.');
         return;
       }
-      const address:any=selectedClient?.address||{};
-      const requiredAddress=['zip_code','street_name','street_number','neighborhood','city','state'];
-      if(requiredAddress.some(key=>!String(address[key]||'').trim())){
-        setMsg('Complete o endereço do cliente: CEP, rua, número, bairro, cidade e UF.');
-        return;
+      if(isMercadoPagoBoleto){
+        const document=String(selectedClient?.document||'').replace(/\D/g,'');
+        if(![11,14].includes(document.length)){
+          setMsg('Cadastre um CPF ou CNPJ válido no cliente antes de gerar o boleto.');
+          return;
+        }
+        const address:any=selectedClient?.address||{};
+        const requiredAddress=['zip_code','street_name','street_number','neighborhood','city','state'];
+        if(requiredAddress.some(key=>!String(address[key]||'').trim())){
+          setMsg('Complete o endereço do cliente: CEP, rua, número, bairro, cidade e UF.');
+          return;
+        }
       }
     }
     setBusy(true);setMsg('');
@@ -551,6 +555,7 @@ export default function Home(){
       organization_id:org.id,client_id:chargeForm.clientId,description:chargeForm.description,
       amount_cents:amount,due_date:chargeForm.dueDate,
       provider:isMercadoPago?'mercadopago':'mock',
+      payment_method:isMercadoPagoPix?'pix':isMercadoPagoBoleto?'boleto':null,
       status:isMercadoPago?'draft':'pending',
       send_email:false,send_whatsapp:false
     }).select('id').single();
@@ -558,11 +563,11 @@ export default function Home(){
     if(error)setMsg(error.message);
     else{
       try{
-        if(isMercadoPago)await generateMercadoPagoBoleto(created.id);
+        if(isMercadoPago)await generateMercadoPagoPayment(created.id,isMercadoPagoPix?'pix':'boleto');
         setChargeForm(f=>({...f,description:'',amount:'',dueDate:''}));
-        setMsg(isMercadoPago?'Boleto Mercado Pago gerado com sucesso.':'Cobrança criada com sucesso.');
+        setMsg(isMercadoPagoPix?'Pix Mercado Pago gerado com sucesso.':isMercadoPagoBoleto?'Boleto Mercado Pago gerado com sucesso.':'Cobrança criada com sucesso.');
       }catch(e){
-        setMsg('Cobrança salva como rascunho. '+(e instanceof Error?e.message:'Não foi possível gerar o boleto.'));
+        setMsg('Cobrança salva como rascunho. '+(e instanceof Error?e.message:'Não foi possível gerar o pagamento.'));
       }
       await load();setTenantTab('cobrancas')
     }
@@ -648,8 +653,8 @@ export default function Home(){
   async function retryMercadoPagoBoleto(charge:Charge){
     setBusy(true);setMsg('');
     try{
-      await generateMercadoPagoBoleto(charge.id);
-      setMsg('Boleto Mercado Pago gerado com sucesso.');
+      await generateMercadoPagoPayment(charge.id,charge.payment_method==='pix'?'pix':'boleto');
+      setMsg(charge.payment_method==='pix'?'Pix Mercado Pago gerado com sucesso.':'Boleto Mercado Pago gerado com sucesso.');
       await load();
     }catch(e){setMsg(e instanceof Error?e.message:'Não foi possível gerar o boleto.')}
     finally{setBusy(false)}
@@ -1307,9 +1312,11 @@ export default function Home(){
                 <label>Forma de cobrança<select value={chargeForm.paymentMethod} onChange={e=>setChargeForm({...chargeForm,paymentMethod:e.target.value})}>
                   <option value="internal">Registro interno</option>
                   <option value="mercadopago" disabled={mercadoPago?.status!=='connected'}>Boleto Mercado Pago{mercadoPago?.status==='connected'?'':' — conectar primeiro'}</option>
+                  <option value="mercadopago_pix" disabled={mercadoPago?.status!=='connected'}>Pix Mercado Pago{mercadoPago?.status==='connected'?'':' — conectar primeiro'}</option>
                 </select></label>
-                {chargeForm.paymentMethod==='mercadopago'&&<p className="permission-note">O Mercado Pago permite vencimento entre 1 e 30 dias após a emissão. O cliente precisa ter CPF/CNPJ, e-mail e endereço completo.</p>}
-                <button className="primaryBtn" disabled={busy||!clients.some(c=>c.status==='active')||!canManageFinance}><Plus size={16}/> {chargeForm.paymentMethod==='mercadopago'?'Gerar boleto':'Criar cobrança'}</button>
+                {chargeForm.paymentMethod==='mercadopago'&&<p className="permission-note">O boleto pode vencer entre 1 e 30 dias após a emissão. O cliente precisa ter CPF/CNPJ, e-mail e endereço completo.</p>}
+                {chargeForm.paymentMethod==='mercadopago_pix'&&<p className="permission-note">O Pix gera QR Code e código Copia e Cola pelo Mercado Pago. O cliente precisa ter e-mail cadastrado.</p>}
+                <button className="primaryBtn" disabled={busy||!clients.some(c=>c.status==='active')||!canManageFinance}><Plus size={16}/> {chargeForm.paymentMethod==='mercadopago_pix'?'Gerar Pix':chargeForm.paymentMethod==='mercadopago'?'Gerar boleto':'Criar cobrança'}</button>
                 {!canManageFinance&&<p className="permission-note">Seu perfil é somente leitura para operações financeiras.</p>}
               </form>}
             </section>
@@ -1333,11 +1340,11 @@ export default function Home(){
                   <td>{clientName(charge.clients)||'Cliente'}</td><td>{charge.description}</td><td>{dateBR(charge.due_date)}</td>
                   <td><span className={'status '+computedStatus}>{statusLabel[computedStatus]||computedStatus}</span></td><td><strong>{brl(Number(charge.amount_cents))}</strong></td>
                   <td><div className="row-actions">
-                    {charge.provider==='mercadopago'&&!charge.boleto_url&&['draft','pending'].includes(computedStatus)&&<button disabled={!canManageFinance||busy||mercadoPago?.status!=='connected'} onClick={()=>retryMercadoPagoBoleto(charge)}><ReceiptText size={13}/> Gerar boleto</button>}
+                    {charge.provider==='mercadopago'&&!charge.boleto_url&&['draft','pending'].includes(computedStatus)&&<button disabled={!canManageFinance||busy||mercadoPago?.status!=='connected'} onClick={()=>retryMercadoPagoBoleto(charge)}><ReceiptText size={13}/> {charge.payment_method==='pix'?'Gerar Pix':'Gerar boleto'}</button>}
                     {['pending','draft','overdue'].includes(computedStatus)&&<button disabled={!canManageFinance||busy} onClick={()=>setChargeEdit({id:charge.id,description:charge.description,due_date:charge.due_date})}><Pencil size={13}/> Editar</button>}
                     {['pending','draft','overdue'].includes(computedStatus)&&<button disabled={!canManageFinance||busy} onClick={()=>cancelChargeAction(charge)}><XCircle size={13}/> Cancelar</button>}
-                    {charge.boleto_url&&<a className="table-link" href={charge.boleto_url} target="_blank" rel="noreferrer">Abrir boleto</a>}
-                    {charge.digitable_line&&<button onClick={()=>navigator.clipboard.writeText(charge.digitable_line||'')}>Copiar linha</button>}
+                    {charge.boleto_url&&<a className="table-link" href={charge.boleto_url} target="_blank" rel="noreferrer">{charge.payment_method==='pix'?'Abrir Pix':'Abrir boleto'}</a>}
+                    {charge.digitable_line&&<button onClick={()=>navigator.clipboard.writeText(charge.digitable_line||'')}>{charge.payment_method==='pix'?'Copiar Pix':'Copiar linha'}</button>}
                   </div></td>
                 </tr>
               })}
@@ -1434,8 +1441,8 @@ export default function Home(){
             <h2>Como funciona o boleto Mercado Pago</h2>
             <div className="integration-steps">
               <div><b>1</b><span>Cadastre o cliente com CPF/CNPJ, e-mail e endereço completo.</span></div>
-              <div><b>2</b><span>Crie a cobrança escolhendo “Boleto Mercado Pago”.</span></div>
-              <div><b>3</b><span>O sistema recebe o link do boleto e a linha digitável.</span></div>
+              <div><b>2</b><span>Escolha “Boleto Mercado Pago” ou “Pix Mercado Pago”.</span></div>
+              <div><b>3</b><span>No boleto, o sistema recebe link e linha digitável; no Pix, recebe QR Code e Copia e Cola.</span></div>
               <div><b>4</b><span>Quando o Mercado Pago confirmar o pagamento, a cobrança muda para “Pago” automaticamente.</span></div>
             </div>
           </section>
