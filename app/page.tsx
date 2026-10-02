@@ -1208,6 +1208,9 @@ export default function Home(){
   const canManageFinance=['owner','admin','finance'].includes(membership?.role);
   const canManageTeam=['owner','admin'].includes(membership?.role);
   const baasConnected=baasConnection?.status==='connected';
+  const mercadoPagoConnected=mercadoPago?.status==='connected';
+  const financialProviderConnected=mercadoPagoConnected||baasConnected;
+  const financialProviderName=mercadoPagoConnected?'Mercado Pago':baasConnected?'BaaS':'Nenhum';
   const planMaxClients=planObj?.max_clients??null;
   const planMaxUsers=planObj?.max_users??null;
   const filteredClients=clients.filter(client=>{
@@ -1628,20 +1631,20 @@ export default function Home(){
 
         {!tenantAccessBlocked&&tenantTab==='conta_digital'&&<>
           <div className="tenant-heading digital-account-heading">
-            <div><span className="eyebrow">CONTA DIGITAL</span><h1>Conta digital JP</h1><p>Centralize recebimentos, acompanhe o saldo e, após conectar uma instituição BaaS, envie Pix para qualquer banco sem sair do sistema.</p></div>
-            <span className={'status '+(baasConnected?'active':'pending')}>{baasConnected?'Conta bancária conectada':'Preparando conexão bancária'}</span>
+            <div><span className="eyebrow">CONTA DIGITAL</span><h1>Conta digital JP</h1><p>Centralize recebimentos, acompanhe o saldo e gerencie pagamentos sem sair do sistema.</p></div>
+            <span className={'status '+(financialProviderConnected?'active':'pending')}>{financialProviderConnected?financialProviderName+' conectado':'Preparando conexão bancária'}</span>
           </div>
 
           <section className="digital-wallet-hero">
             <div className="digital-wallet-balance">
               <span>Saldo interno disponível</span>
               <strong>{brl(Number(wallet?.balance_cents??0))}</strong>
-              <small>{baasConnected?'Saldo sincronizado com a conta digital conectada.':'Este saldo é o controle interno do sistema até a conexão com uma instituição financeira.'}</small>
+              <small>{mercadoPagoConnected?'O Mercado Pago já está conectado para recebimentos. O Pix de saída será liberado após ativarmos o produto Payouts.':baasConnected?'Saldo sincronizado com a conta digital conectada.':'Este saldo é o controle interno do sistema até a conexão com uma instituição financeira.'}</small>
             </div>
             <div className="digital-wallet-identity">
               <div><span>Número da conta JP</span><strong>{wallet?.account_number??'—'}</strong></div>
               <div><span>Chave interna</span><strong>{wallet?.pix_key??'—'}</strong>{wallet?.pix_key&&<button type="button" className="wallet-copy" onClick={()=>navigator.clipboard.writeText(wallet.pix_key)}>Copiar</button>}</div>
-              <p>{baasConnected?'A conta está habilitada para operações bancárias pelo provedor conectado.':'A chave acima ainda não é uma chave Pix bancária registrada. Ela será vinculada quando conectarmos o BaaS.'}</p>
+              <p>{mercadoPagoConnected?'Sua conta Mercado Pago já está vinculada ao JP para cobranças. Para enviar Pix pelo próprio JP, falta habilitar a API Payouts do Mercado Pago.':baasConnected?'A conta está habilitada para operações bancárias pelo provedor conectado.':'A chave acima ainda não é uma chave Pix bancária registrada.'}</p>
             </div>
           </section>
 
@@ -1660,8 +1663,11 @@ export default function Home(){
                 </div>
                 {baasConnected
                   ?<button className="primaryBtn" disabled={busy||!canManageFinance}><Send size={16}/> Enviar Pix</button>
-                  :<button type="button" className="primaryBtn" onClick={()=>setTenantTab('integracoes')}><Landmark size={16}/> Conectar instituição financeira</button>}
-                {!baasConnected&&<p className="permission-note">Nenhum dinheiro será movimentado enquanto a conta BaaS não estiver conectada. O sistema está preparado, mas não simula transferências bancárias.</p>}
+                  :mercadoPagoConnected
+                    ?<button type="button" className="primaryBtn" onClick={()=>setTenantTab('integracoes')}><Landmark size={16}/> Ativar Pix de saída do Mercado Pago</button>
+                    :<button type="button" className="primaryBtn" onClick={()=>setTenantTab('integracoes')}><Landmark size={16}/> Conectar instituição financeira</button>}
+                {mercadoPagoConnected&&!baasConnected&&<p className="permission-note">Mercado Pago conectado para receber cobranças. O envio de Pix usa o produto Payouts do Mercado Pago e precisa ser habilitado separadamente antes de movimentar saldo.</p>}
+                {!financialProviderConnected&&<p className="permission-note">Nenhum dinheiro será movimentado enquanto uma instituição financeira não estiver conectada.</p>}
                 {!canManageFinance&&<p className="permission-note">Seu perfil é somente leitura para operações financeiras.</p>}
               </form>
             </section>
@@ -1671,10 +1677,10 @@ export default function Home(){
               <div className="digital-receive-info">
                 <div><span>Conta JP</span><strong>{wallet?.account_number??'—'}</strong></div>
                 <div><span>Identificador interno</span><strong>{wallet?.pix_key??'—'}</strong></div>
-                <div><span>Status bancário</span><strong>{baasConnected?'Ativo':'Aguardando BaaS'}</strong></div>
+                <div><span>Status financeiro</span><strong>{mercadoPagoConnected?'Mercado Pago conectado':baasConnected?'BaaS ativo':'Aguardando conexão'}</strong></div>
               </div>
               <div className="provider-note">
-                <ShieldCheck size={18}/><p>Quando conectarmos o BaaS, os recebimentos Pix e as transferências serão feitos por uma instituição financeira regulada, enquanto você continuará operando pela tela do JP Sistema.</p>
+                <ShieldCheck size={18}/><p>{mercadoPagoConnected?'O Mercado Pago já está conectado ao JP para recebimentos. A próxima etapa é habilitar Payouts para permitir transferências Pix de saída pelo sistema.':'As operações financeiras reais serão executadas pelo provedor conectado, enquanto você continuará operando pela tela do JP Sistema.'}</p>
               </div>
             </section>
           </div>
@@ -1711,15 +1717,15 @@ export default function Home(){
             <div className="provider-card-head">
               <div className="provider-logo digital-bank"><WalletCards size={20}/></div>
               <div><h2>Conta Digital (BaaS)</h2><p>Conta de pagamento integrada ao JP Sistema para receber, consultar saldo e enviar Pix sem entrar no site do banco.</p></div>
-              <span className={'status '+(baasConnected?'active':'pending')}>{baasConnected?'Conectada':'Estrutura pronta'}</span>
+              <span className={'status '+(financialProviderConnected?'active':'pending')}>{mercadoPagoConnected?'Mercado Pago conectado':baasConnected?'Conectada':'Estrutura pronta'}</span>
             </div>
             <div className="provider-details">
               <div><span>Modelo</span><strong>Banking as a Service</strong></div>
               <div><span>Conta JP</span><strong>{wallet?.account_number??'—'}</strong></div>
-              <div><span>Próxima etapa</span><strong>{baasConnected?'Operação bancária ativa':'Escolher e homologar o provedor BaaS'}</strong></div>
+              <div><span>Próxima etapa</span><strong>{mercadoPagoConnected?'Habilitar Payouts para Pix de saída':baasConnected?'Operação bancária ativa':'Conectar um provedor financeiro'}</strong></div>
             </div>
             <div className="provider-note">
-              <ShieldCheck size={18}/><p>A interface da conta digital já está preparada. Para movimentar dinheiro de verdade, precisamos conectar uma instituição financeira parceira e concluir a homologação da conta.</p>
+              <ShieldCheck size={18}/><p>{mercadoPagoConnected?'A conta Mercado Pago já está conectada para cobranças. Para usar o saldo em transferências Pix dentro do JP, vamos configurar a API Payouts do Mercado Pago.':'A interface da conta digital já está preparada. Para movimentar dinheiro de verdade, precisamos conectar uma instituição financeira parceira.'}</p>
             </div>
             <div className="provider-actions">
               <button className="primaryBtn" onClick={()=>setTenantTab('conta_digital')}><WalletCards size={16}/> Abrir Conta Digital</button>
