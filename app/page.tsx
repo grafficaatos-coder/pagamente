@@ -1818,16 +1818,16 @@ export default function Home(){
           <section className="card provider-card digital-provider-card">
             <div className="provider-card-head">
               <div className="provider-logo digital-bank"><WalletCards size={20}/></div>
-              <div><h2>Conta Digital (BaaS)</h2><p>Conta de pagamento integrada ao JP Sistema para receber, consultar saldo e enviar Pix sem entrar no site do banco.</p></div>
-              <span className={'status '+(financialProviderConnected?'active':'pending')}>{mercadoPagoConnected?'Mercado Pago conectado':baasConnected?'Conectada':'Estrutura pronta'}</span>
+              <div><h2>Conta Digital Asaas (BaaS)</h2><p>Conta separada por empresa para consultar saldo e enviar Pix sem sair do JP Sistema.</p></div>
+              <span className={'status '+(baasConnected?'active':'pending')}>{baasConnected?'Conectada':'Pronta para ativar'}</span>
             </div>
             <div className="provider-details">
-              <div><span>Modelo</span><strong>Banking as a Service</strong></div>
-              <div><span>Conta JP</span><strong>{wallet?.account_number??'—'}</strong></div>
-              <div><span>Próxima etapa</span><strong>{mercadoPagoConnected?'Habilitar Payouts para Pix de saída':baasConnected?'Operação bancária ativa':'Conectar um provedor financeiro'}</strong></div>
+              <div><span>Modelo</span><strong>Asaas Banking as a Service</strong></div>
+              <div><span>Wallet ID</span><strong>{asaasWalletId||'—'}</strong></div>
+              <div><span>Situação</span><strong>{baasConnected?'Conta digital ativa':'Ative a subconta no menu Conta digital'}</strong></div>
             </div>
             <div className="provider-note">
-              <ShieldCheck size={18}/><p>{mercadoPagoConnected?'A conta Mercado Pago já está conectada para cobranças. Para usar o saldo em transferências Pix dentro do JP, vamos configurar a API Payouts do Mercado Pago.':'A interface da conta digital já está preparada. Para movimentar dinheiro de verdade, precisamos conectar uma instituição financeira parceira.'}</p>
+              <ShieldCheck size={18}/><p>{baasConnected?'A subconta Asaas está conectada ao JP. O saldo real pode ser consultado e usado em transferências Pix pelo sistema.':'A integração com o Sandbox do Asaas está preparada. Abra Conta digital para criar a subconta desta empresa.'}</p>
             </div>
             <div className="provider-actions">
               <button className="primaryBtn" onClick={()=>setTenantTab('conta_digital')}><WalletCards size={16}/> Abrir Conta Digital</button>
