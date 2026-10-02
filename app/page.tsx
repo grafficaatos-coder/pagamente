@@ -1625,6 +1625,85 @@ export default function Home(){
           </tbody></table></div></section>
         </>}
 
+        {!tenantAccessBlocked&&tenantTab==='conta_digital'&&<>
+          <div className="tenant-heading digital-account-heading">
+            <div><span className="eyebrow">CONTA DIGITAL</span><h1>Conta digital JP</h1><p>Centralize recebimentos, acompanhe o saldo e, após conectar uma instituição BaaS, envie Pix para qualquer banco sem sair do sistema.</p></div>
+            <span className={'status '+(baasConnected?'active':'pending')}>{baasConnected?'Conta bancária conectada':'Preparando conexão bancária'}</span>
+          </div>
+
+          <section className="digital-wallet-hero">
+            <div className="digital-wallet-balance">
+              <span>Saldo interno disponível</span>
+              <strong>{brl(Number(wallet?.balance_cents??0))}</strong>
+              <small>{baasConnected?'Saldo sincronizado com a conta digital conectada.':'Este saldo é o controle interno do sistema até a conexão com uma instituição financeira.'}</small>
+            </div>
+            <div className="digital-wallet-identity">
+              <div><span>Número da conta JP</span><strong>{wallet?.account_number??'—'}</strong></div>
+              <div><span>Chave interna</span><strong>{wallet?.pix_key??'—'}</strong>{wallet?.pix_key&&<button type="button" className="wallet-copy" onClick={()=>navigator.clipboard.writeText(wallet.pix_key)}>Copiar</button>}</div>
+              <p>{baasConnected?'A conta está habilitada para operações bancárias pelo provedor conectado.':'A chave acima ainda não é uma chave Pix bancária registrada. Ela será vinculada quando conectarmos o BaaS.'}</p>
+            </div>
+          </section>
+
+          <div className="grid digital-account-grid">
+            <section className="card pix-transfer-card">
+              <div className="cardHead digital-card-head">
+                <div><h2>Fazer Pix</h2><p>Envie para uma chave Pix de qualquer banco.</p></div>
+                <Send size={20}/>
+              </div>
+              <form onSubmit={submitPixTransfer}>
+                <label>Nome do destinatário<input required disabled={!baasConnected||!canManageFinance} value={pixTransferForm.recipientName} onChange={e=>setPixTransferForm({...pixTransferForm,recipientName:e.target.value})} placeholder="Nome de quem vai receber"/></label>
+                <label>Chave Pix<input required disabled={!baasConnected||!canManageFinance} value={pixTransferForm.destinationKey} onChange={e=>setPixTransferForm({...pixTransferForm,destinationKey:e.target.value})} placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória"/></label>
+                <div className="cols">
+                  <label>Valor<input required disabled={!baasConnected||!canManageFinance} value={pixTransferForm.amount} onChange={e=>setPixTransferForm({...pixTransferForm,amount:e.target.value})} placeholder="0,00"/></label>
+                  <label>Descrição<input disabled={!baasConnected||!canManageFinance} value={pixTransferForm.description} onChange={e=>setPixTransferForm({...pixTransferForm,description:e.target.value})} placeholder="Opcional"/></label>
+                </div>
+                {baasConnected
+                  ?<button className="primaryBtn" disabled={busy||!canManageFinance}><Send size={16}/> Enviar Pix</button>
+                  :<button type="button" className="primaryBtn" onClick={()=>setTenantTab('integracoes')}><Landmark size={16}/> Conectar instituição financeira</button>}
+                {!baasConnected&&<p className="permission-note">Nenhum dinheiro será movimentado enquanto a conta BaaS não estiver conectada. O sistema está preparado, mas não simula transferências bancárias.</p>}
+                {!canManageFinance&&<p className="permission-note">Seu perfil é somente leitura para operações financeiras.</p>}
+              </form>
+            </section>
+
+            <section className="card receive-pix-card">
+              <div className="cardHead digital-card-head"><div><h2>Receber dinheiro</h2><p>Dados para centralizar os recebimentos.</p></div><ArrowDownLeft size={20}/></div>
+              <div className="digital-receive-info">
+                <div><span>Conta JP</span><strong>{wallet?.account_number??'—'}</strong></div>
+                <div><span>Identificador interno</span><strong>{wallet?.pix_key??'—'}</strong></div>
+                <div><span>Status bancário</span><strong>{baasConnected?'Ativo':'Aguardando BaaS'}</strong></div>
+              </div>
+              <div className="provider-note">
+                <ShieldCheck size={18}/><p>Quando conectarmos o BaaS, os recebimentos Pix e as transferências serão feitos por uma instituição financeira regulada, enquanto você continuará operando pela tela do JP Sistema.</p>
+              </div>
+            </section>
+          </div>
+
+          <section className="card tableCard">
+            <div className="cardHead"><div><h2>Extrato</h2><p>Entradas e saídas registradas na conta da empresa.</p></div><span className="wallet-count">{walletTransactions.length} movimentações</span></div>
+            <div className="tableWrap"><table><thead><tr><th>Data</th><th>Movimento</th><th>Descrição</th><th>Origem / destino</th><th>Valor</th></tr></thead><tbody>
+              {walletTransactions.map(tx=><tr key={tx.id}>
+                <td>{new Date(tx.created_at).toLocaleString('pt-BR')}</td>
+                <td><span className={'wallet-direction '+tx.direction}>{tx.direction==='credit'?<><ArrowDownLeft size={13}/> Entrada</>:<><ArrowUpRight size={13}/> Saída</>}</span></td>
+                <td>{tx.description}</td><td>{tx.counterpart||'—'}</td>
+                <td className={tx.direction==='credit'?'wallet-value credit':'wallet-value debit'}>{tx.direction==='credit'?'+ ':'- '}{brl(Number(tx.amount_cents))}</td>
+              </tr>)}
+              {!walletTransactions.length&&<tr><td colSpan={5} className="empty">Ainda não há movimentações na conta.</td></tr>}
+            </tbody></table></div>
+          </section>
+
+          <section className="card tableCard">
+            <div className="cardHead"><div><h2>Transferências Pix</h2><p>Histórico das transferências enviadas pela conta digital.</p></div></div>
+            <div className="tableWrap"><table><thead><tr><th>Data</th><th>Destinatário</th><th>Chave</th><th>Status</th><th>Valor</th></tr></thead><tbody>
+              {walletTransfers.map(t=><tr key={t.id}>
+                <td>{new Date(t.created_at).toLocaleString('pt-BR')}</td><td>{t.recipient_name}</td><td>{t.destination_key}</td>
+                <td><span className={'status '+(t.status==='completed'?'active':t.status)}>{t.status==='completed'?'Concluída':statusLabel[t.status]||t.status}</span></td>
+                <td><strong>{brl(Number(t.amount_cents)+Number(t.fee_cents||0))}</strong></td>
+              </tr>)}
+              {!walletTransfers.length&&<tr><td colSpan={5} className="empty">Nenhuma transferência Pix realizada.</td></tr>}
+            </tbody></table></div>
+          </section>
+        </>}
+
         {!tenantAccessBlocked&&tenantTab==='integracoes'&&<>
           <div className="tenant-heading"><div><span className="eyebrow">PAGAMENTOS</span><h1>Integrações</h1><p>Conecte os meios de recebimento usados pela sua empresa.</p></div></div>
           <section className="card provider-card">
