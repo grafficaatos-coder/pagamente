@@ -1206,6 +1206,7 @@ export default function Home(){
   const trialDaysLeft=trialEnd?Math.max(0,Math.ceil((trialEnd.getTime()-Date.now())/86400000)):0;
   const canManageFinance=['owner','admin','finance'].includes(membership?.role);
   const canManageTeam=['owner','admin'].includes(membership?.role);
+  const baasConnected=baasConnection?.status==='connected';
   const planMaxClients=planObj?.max_clients??null;
   const planMaxUsers=planObj?.max_users??null;
   const filteredClients=clients.filter(client=>{
@@ -1227,7 +1228,7 @@ export default function Home(){
 
   const tenantNav=[
     ['inicio','Início',LayoutDashboard],['clientes','Clientes',UsersRound],['cobrancas','Cobranças',ReceiptText],
-    ['recorrencias','Recorrências',CalendarClock],['integracoes','Integrações',Landmark],['equipe','Equipe',UserCog],['atividade','Atividade',History],
+    ['recorrencias','Recorrências',CalendarClock],['conta_digital','Conta digital',WalletCards],['integracoes','Integrações',Landmark],['equipe','Equipe',UserCog],['atividade','Atividade',History],
     ['relatorios','Relatórios',BarChart3],['assinatura','Assinatura',WalletCards],['conta','Minha conta',UserCircle2]
   ] as const;
 
