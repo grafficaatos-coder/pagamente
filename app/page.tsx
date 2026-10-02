@@ -563,6 +563,37 @@ export default function Home(){
     return data;
   }
 
+  async function submitPixTransfer(e:React.FormEvent){
+    e.preventDefault();
+    const amountCents=parseBRL(pixTransferForm.amount);
+    if(amountCents<=0){setMsg('Informe um valor válido para o Pix.');return}
+    if(baasConnection?.status!=='connected'){
+      setMsg('Para enviar Pix para outros bancos, primeiro precisamos conectar uma instituição financeira BaaS.');
+      return;
+    }
+    setBusy(true);setMsg('');
+    try{
+      const response=await authenticatedFetch('/api/wallet/pix',{
+        method:'POST',
+        body:JSON.stringify({
+          recipientName:pixTransferForm.recipientName,
+          destinationKey:pixTransferForm.destinationKey,
+          amountCents,
+          description:pixTransferForm.description
+        })
+      });
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error||'Não foi possível enviar o Pix.');
+      setPixTransferForm({recipientName:'',destinationKey:'',amount:'',description:''});
+      setMsg('Pix enviado com sucesso.');
+      await load();
+    }catch(e){
+      setMsg(e instanceof Error?e.message:'Não foi possível enviar o Pix.');
+    }finally{
+      setBusy(false);
+    }
+  }
+
   async function addCharge(e:React.FormEvent){
     e.preventDefault();if(!supabase||!org)return;
     const amount=parseBRL(chargeForm.amount);
