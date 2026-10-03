@@ -336,9 +336,17 @@ export default function Home(){
       ]);
       if(oe||we||ce||che||rre||se||ine||tme||tae||pre||bae||txe||tre)throw oe||we||ce||che||rre||se||ine||tme||tae||pre||bae||txe||tre;
 
+      let verifiedMercadoPago:any=provider;
+      try{
+        const mpStatusResponse=await authenticatedFetch('/api/integrations/mercadopago/status',{method:'GET'});
+        if(mpStatusResponse.ok) verifiedMercadoPago=await mpStatusResponse.json();
+      }catch{
+        // Mantém o status público se a verificação do servidor estiver temporariamente indisponível.
+      }
+
       setOrg(o);setWallet(w);setClients((c??[]) as any);setCharges((ch??[]) as any);
       setRecurring((rr??[]) as any);setSubscription(sub);setPlatformInvoice(invoice);
-      setTeamMembers((members??[]) as any);setTenantAudit((auditRows??[]) as any);setMercadoPago(provider);
+      setTeamMembers((members??[]) as any);setTenantAudit((auditRows??[]) as any);setMercadoPago(verifiedMercadoPago);
       setBaasConnection(baas);setWalletTransactions((txRows??[]) as any);setWalletTransfers((transferRows??[]) as any);
       setAsaasAccountForm(form=>({
         ...form,
@@ -2051,7 +2059,7 @@ export default function Home(){
             <div className="provider-card-head">
               <div className="provider-logo mp">MP</div>
               <div><h2>Mercado Pago</h2><p>Emita boletos registrados e receba a confirmação de pagamento automaticamente.</p></div>
-              <span className={'status '+(mercadoPago?.status==='connected'?'active':'inactive')}>{mercadoPago?.status==='connected'?'Conectado':'Não conectado'}</span>
+              <span className={'status '+(mercadoPago?.status==='connected'?'active':mercadoPago?.status==='error'?'failed':'inactive')}>{mercadoPago?.status==='connected'?'Conectado':mercadoPago?.status==='error'?'Reconectar':'Não conectado'}</span>
             </div>
             <div className="provider-details">
               <div><span>Modelo</span><strong>Conta própria da empresa</strong></div>
@@ -2064,7 +2072,7 @@ export default function Home(){
             <div className="provider-actions">
               {mercadoPago?.status==='connected'
                 ?<button className="secondaryBtn" disabled={!canManageTeam||busy} onClick={disconnectMercadoPago}>Desconectar Mercado Pago</button>
-                :<button className="primaryBtn" disabled={!canManageTeam||busy} onClick={connectMercadoPago}>Conectar Mercado Pago</button>}
+                :<button className="primaryBtn" disabled={!canManageTeam||busy} onClick={connectMercadoPago}>{mercadoPago?.status==='error'?'Reconectar Mercado Pago':'Conectar Mercado Pago'}</button>}
             </div>
             {!canManageTeam&&<p className="permission-note">Somente Proprietário ou Administrador pode conectar ou desconectar integrações.</p>}
           </section>
