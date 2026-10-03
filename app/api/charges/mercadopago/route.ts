@@ -1,6 +1,7 @@
 import { apiError, requireTenant } from '@/lib/server/supabaseAdmin';
-import { createBoletoOrder, createPixOrder, getMercadoPagoAccessToken, mapMercadoPagoOrderStatus, paymentFields } from '@/lib/server/mercadopago';
+import { createBoletoOrder, createPixOrder, createCardCheckoutPreference, getMercadoPagoAccessToken, mapMercadoPagoOrderStatus, paymentFields } from '@/lib/server/mercadopago';
 import { sendChargeEmail } from '@/lib/server/email';
+import { sendChargeWhatsApp } from '@/lib/server/whatsapp';
 
 export const runtime='nodejs';
 
@@ -27,7 +28,7 @@ export async function POST(request:Request){
     if(!chargeId) throw new Error('Cobrança não informada.');
 
     const {data:charge,error:chargeError}=await admin.from('charges')
-      .select('id,organization_id,client_id,description,amount_cents,due_date,status,provider,payment_method,provider_charge_id,provider_payment_id,boleto_url,digitable_line,barcode_content,pix_provider_charge_id,pix_provider_payment_id,pix_url,pix_code,pix_qr_base64,send_email,email_sent_at,clients(id,name,document,email,address,status)')
+      .select('id,organization_id,client_id,description,amount_cents,due_date,status,provider,payment_method,provider_charge_id,provider_payment_id,boleto_url,digitable_line,barcode_content,pix_provider_charge_id,pix_provider_payment_id,pix_url,pix_code,pix_qr_base64,send_email,email_sent_at,send_whatsapp,whatsapp_sent_at,clients(id,name,document,email,whatsapp,address,status)')
       .eq('id',chargeId)
       .eq('organization_id',member.organization_id)
       .single();
@@ -36,7 +37,7 @@ export async function POST(request:Request){
     const emailCharge=charge;
 
     if(charge.status==='paid'||charge.status==='cancelled') throw new Error('Esta cobrança não pode gerar um novo pagamento.');
-    const requestedMethod=body?.method==='pix'?'pix':body?.method==='boleto'?'boleto':body?.method==='both'?'boleto_pix':null;
+    const requestedMethod=body?.method==='pix'?'pix':body?.method==='boleto'?'boleto':body?.method==='both'?'boleto_pix':body?.method==='card'?'card':null;
     const paymentMethod=requestedMethod||charge.payment_method||'boleto';
 
     const client:any=Array.isArray(charge.clients)?charge.clients[0]:charge.clients;
@@ -84,6 +85,49 @@ export async function POST(request:Request){
       }
     }
 
+    async function sendWhatsAppIfNeeded(input:{
+      method:string|null;
+      paymentUrl?:string|null;
+      paymentLine?:string|null;
+      boletoUrl?:string|null;
+      boletoLine?:string|null;
+      pixUrl?:string|null;
+      pixCode?:string|null;
+    }){
+      if(!emailCharge.send_whatsapp||emailCharge.whatsapp_sent_at||!client?.whatsapp)return {sent:false,skipped:true};
+      try{
+        const result=await sendChargeWhatsApp({
+          to:client.whatsapp,
+          clientName:client.name,
+          organizationName:organization.name,
+          description:emailCharge.description,
+          amountCents:Number(emailCharge.amount_cents),
+          dueDate:emailCharge.due_date,
+          paymentMethod:input.method,
+          paymentUrl:input.paymentUrl,
+          digitableLine:input.paymentLine,
+          boletoUrl:input.boletoUrl,
+          boletoLine:input.boletoLine,
+          pixUrl:input.pixUrl,
+          pixCode:input.pixCode
+        });
+        await admin.from('charges').update({
+          whatsapp_sent_at:new Date().toISOString(),
+          whatsapp_delivery_id:result.id||null,
+          whatsapp_delivery_error:null,
+          updated_at:new Date().toISOString()
+        }).eq('id',emailCharge.id);
+        return {sent:true,skipped:false};
+      }catch(error){
+        const message=error instanceof Error?error.message:'Falha ao enviar WhatsApp.';
+        await admin.from('charges').update({
+          whatsapp_delivery_error:message,
+          updated_at:new Date().toISOString()
+        }).eq('id',emailCharge.id);
+        return {sent:false,skipped:false,error:message};
+      }
+    }
+
     const hasExistingSingle=charge.provider==='mercadopago'&&charge.payment_method!=='boleto_pix'&&charge.provider_charge_id&&charge.boleto_url;
     const hasExistingBoth=charge.provider==='mercadopago'&&charge.payment_method==='boleto_pix'&&charge.provider_charge_id&&charge.boleto_url&&charge.pix_provider_charge_id&&charge.pix_url;
 
@@ -95,34 +139,38 @@ export async function POST(request:Request){
           updated_at:new Date().toISOString()
         }).eq('id',charge.id);
       }
-      const email=await sendEmailIfNeeded({
+      const deliveryInput={
         method:'boleto_pix',
         boletoUrl:charge.boleto_url,
         boletoLine:charge.digitable_line,
         pixUrl:charge.pix_url,
         pixCode:charge.pix_code
-      });
+      };
+      const email=await sendEmailIfNeeded(deliveryInput);
+      const whatsapp=await sendWhatsAppIfNeeded(deliveryInput);
       return Response.json({
         ok:true,existing:true,paymentMethod:'boleto_pix',
         boletoUrl:charge.boleto_url,digitableLine:charge.digitable_line,
         pixUrl:charge.pix_url,pixCode:charge.pix_code,
         orderId:charge.provider_charge_id,pixOrderId:charge.pix_provider_charge_id,
-        email
+        email,whatsapp
       });
     }
 
     if(hasExistingSingle){
-      const email=await sendEmailIfNeeded({
+      const deliveryInput={
         method:charge.payment_method||paymentMethod,
         paymentUrl:charge.boleto_url,
         paymentLine:charge.digitable_line
-      });
+      };
+      const email=await sendEmailIfNeeded(deliveryInput);
+      const whatsapp=await sendWhatsAppIfNeeded(deliveryInput);
       return Response.json({
         ok:true,existing:true,paymentMethod:charge.payment_method||paymentMethod,
         paymentUrl:charge.boleto_url,boletoUrl:charge.boleto_url,
         copyPaste:charge.digitable_line,digitableLine:charge.digitable_line,
         barcodeContent:charge.barcode_content,orderId:charge.provider_charge_id,
-        email
+        email,whatsapp
       });
     }
 
@@ -130,7 +178,7 @@ export async function POST(request:Request){
     if(!client.email) throw new Error('Cadastre o e-mail do cliente antes de gerar o pagamento.');
 
     const expirationDays=daysUntil(charge.due_date);
-    if(expirationDays<1||expirationDays>30){
+    if(paymentMethod!=='card'&&(expirationDays<1||expirationDays>30)){
       throw new Error('No Mercado Pago, o vencimento deve ficar entre 1 e 30 dias após a emissão.');
     }
 
@@ -183,6 +231,45 @@ export async function POST(request:Request){
       if(!fields.orderId||!fields.boletoUrl) throw new Error('Mercado Pago não retornou os dados do Pix.');
       return {order,fields,mapped:mapMercadoPagoOrderStatus(order)};
     };
+
+    if(paymentMethod==='card'){
+      const preference=await createCardCheckoutPreference(accessToken,{
+        chargeId:charge.id,
+        amountCents,
+        description:emailCharge.description,
+        payer:{email:client.email}
+      });
+      const paymentUrl=String(preference?.init_point||preference?.sandbox_init_point||'');
+      const preferenceId=String(preference?.id||'');
+      if(!paymentUrl||!preferenceId) throw new Error('Mercado Pago não retornou o link para pagamento com cartão.');
+
+      const {error:cardUpdateError}=await admin.from('charges').update({
+        provider:'mercadopago',
+        payment_method:'card',
+        provider_charge_id:preferenceId,
+        boleto_url:paymentUrl,
+        digitable_line:null,
+        barcode_content:null,
+        provider_status_detail:'waiting_card_payment',
+        status:'pending',
+        updated_at:new Date().toISOString()
+      }).eq('id',emailCharge.id);
+      if(cardUpdateError) throw cardUpdateError;
+
+      const deliveryInput={method:'card',paymentUrl,paymentLine:null};
+      const email=await sendEmailIfNeeded(deliveryInput);
+      const whatsapp=await sendWhatsAppIfNeeded(deliveryInput);
+
+      return Response.json({
+        ok:true,
+        paymentMethod:'card',
+        paymentUrl,
+        preferenceId,
+        status:'pending',
+        email,
+        whatsapp
+      });
+    }
 
     if(paymentMethod==='boleto_pix'){
       let boleto:any;
@@ -261,20 +348,22 @@ export async function POST(request:Request){
       }).eq('id',emailCharge.id);
       if(updateError) throw updateError;
 
-      const email=await sendEmailIfNeeded({
+      const deliveryInput={
         method:'boleto_pix',
         boletoUrl:boleto.fields.boletoUrl,
         boletoLine:boleto.fields.digitableLine,
         pixUrl:pix.fields.boletoUrl,
         pixCode:pix.fields.digitableLine
-      });
+      };
+      const email=await sendEmailIfNeeded(deliveryInput);
+      const whatsapp=await sendWhatsAppIfNeeded(deliveryInput);
 
       return Response.json({
         ok:true,paymentMethod:'boleto_pix',
         boletoUrl:boleto.fields.boletoUrl,digitableLine:boleto.fields.digitableLine,
         pixUrl:pix.fields.boletoUrl,pixCode:pix.fields.digitableLine,
         orderId:boleto.fields.orderId,pixOrderId:pix.fields.orderId,
-        status:finalStatus,email
+        status:finalStatus,email,whatsapp
       });
     }
 
@@ -295,11 +384,13 @@ export async function POST(request:Request){
     }).eq('id',emailCharge.id);
     if(updateError) throw updateError;
 
-    const email=await sendEmailIfNeeded({
+    const deliveryInput={
       method:fields.paymentMethod||paymentMethod,
       paymentUrl:fields.boletoUrl,
       paymentLine:fields.digitableLine
-    });
+    };
+    const email=await sendEmailIfNeeded(deliveryInput);
+    const whatsapp=await sendWhatsAppIfNeeded(deliveryInput);
 
     return Response.json({
       ok:true,
@@ -312,7 +403,8 @@ export async function POST(request:Request){
       digitableLine:fields.digitableLine,
       barcodeContent:fields.barcodeContent,
       status:result.mapped.status,
-      email
+      email,
+      whatsapp
     });
   }catch(error){
     const message=error instanceof Error?error.message:'Erro inesperado ao gerar cobrança Mercado Pago.';
