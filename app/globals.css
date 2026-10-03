@@ -11,15 +11,15 @@
 
 /* Área do cliente da plataforma */
 .tenant-shell{min-height:100vh;display:flex;background:#f5f7fa}
-.tenant-sidebar{width:252px;position:fixed;inset:0 auto 0 0;background:#101c2e;color:#c7d2e2;padding:20px 14px;display:flex;flex-direction:column;z-index:5}
+.tenant-sidebar{width:252px;position:fixed;inset:0 auto 0 0;background:#101c2e;color:#c7d2e2;padding:20px 14px;display:flex;flex-direction:column;z-index:5;overflow:hidden}
 .tenant-brand{display:flex;align-items:center;gap:10px;padding:2px 8px 20px;color:#fff}
 .tenant-brand strong,.tenant-brand span{display:block}.tenant-brand strong{font-size:15px}.tenant-brand span{font-size:9px;color:#75859c;margin-top:2px}
 .company-card{display:flex;align-items:center;gap:10px;background:#17263c;border:1px solid #253750;border-radius:11px;padding:12px;margin:0 2px 18px}
 .company-card strong,.company-card span{display:block}.company-card strong{font-size:11px;color:#fff}.company-card span{font-size:9px;color:#7f8ea4;margin-top:3px}
-.tenant-nav{display:grid;gap:4px}
+.tenant-nav{display:grid;gap:4px;flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding-right:4px;scrollbar-width:thin;overscroll-behavior:contain}
 .tenant-nav button{border:0;background:transparent;color:#aebbd0;border-radius:9px;padding:11px 12px;display:flex;align-items:center;gap:10px;text-align:left;font-size:12px;font-weight:700;cursor:pointer}
 .tenant-nav button:hover{background:#16263d;color:#fff}.tenant-nav button.active{background:#0e8a70;color:#fff;box-shadow:0 8px 18px rgba(14,138,112,.2)}
-.tenant-side-bottom{margin-top:auto;border-top:1px solid #253349;padding-top:14px}
+.tenant-side-bottom{margin-top:auto;border-top:1px solid #253349;padding-top:14px;flex-shrink:0}
 .tenant-user{display:flex;align-items:center;gap:9px;padding:8px}.tenant-user .avatar{width:34px;height:34px;border-radius:50%;background:#263a56;display:grid;place-items:center;color:#fff;font-weight:800;font-size:12px}
 .tenant-user strong,.tenant-user span{display:block}.tenant-user strong{font-size:10px;color:#fff}.tenant-user span{font-size:9px;color:#75859c;margin-top:2px}
 .tenant-logout{width:100%;margin-top:8px;border:1px solid #2e4059;background:#16243a;color:#cbd5e4;border-radius:9px;padding:9px 11px;display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer}
@@ -583,3 +583,5 @@ input:focus,select:focus{border-color:#0e9878!important;box-shadow:0 0 0 3px rgb
 .asaas-form-error{margin-top:10px;padding:10px 12px;border:1px solid #f1b7b2;background:#fff2f1;color:#a23f37;border-radius:9px;font-size:10px;font-weight:800;line-height:1.45}
 
 .charge-action-feedback{display:inline-block;max-width:340px;padding:6px 9px;border-radius:8px;background:#eef8f5;color:#166c59;font-size:11px;font-weight:700;line-height:1.35;white-space:normal}.charge-action-feedback.error{background:#fff1f0;color:#a13d35}
+
+.tenant-nav::-webkit-scrollbar{width:6px}.tenant-nav::-webkit-scrollbar-thumb{background:rgba(112,128,150,.45);border-radius:999px}.tenant-nav::-webkit-scrollbar-track{background:transparent}
