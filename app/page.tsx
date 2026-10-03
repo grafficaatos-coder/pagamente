@@ -1,8 +1,6 @@
-import { redirect } from 'next/navigation';
+import SitePage from './site/page';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
 
-export default function HomePage(){
-  redirect('/site');
-}
+export default SitePage;
