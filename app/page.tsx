@@ -738,8 +738,8 @@ export default function Home(){
       setMsg('Conecte o Mercado Pago em Integrações antes de gerar pagamentos.');
       return;
     }
-    if(isAsaas&&(!baasConnected||!asaasDirect)){
-      setMsg('Conecte sua conta principal Asaas em Conta digital antes de gerar cobranças.');
+    if(isAsaas&&!baasConnected){
+      setMsg('Ative a Conta Digital Asaas desta empresa antes de gerar cobranças.');
       return;
     }
 
@@ -1852,15 +1852,39 @@ export default function Home(){
 
           {!baasConnected&&<section className="card asaas-onboarding-card">
             <div className="cardHead digital-card-head">
-              <div><h2>Conectar minha conta Asaas</h2><p>Use a conta Asaas principal já configurada no JP, sem criar uma segunda conta ou subconta.</p></div>
+              <div><h2>Ativar Conta Digital própria</h2><p>Crie uma conta Asaas exclusiva para esta empresa. Saldo, cobranças e Pix ficam separados das demais empresas do JP Sistema.</p></div>
               <Landmark size={21}/>
             </div>
             <div className="provider-note">
-              <ShieldCheck size={18}/><p>O JP vai usar a chave Asaas que já está salva com segurança na Vercel. O dinheiro continua na sua própria conta Asaas e o sistema apenas consulta o saldo e envia as ordens de Pix pela API.</p>
+              <ShieldCheck size={18}/><p>Cada empresa recebe credenciais próprias e criptografadas. Outra empresa do sistema não acessa este saldo, extrato ou operações financeiras.</p>
             </div>
-            {canManageTeam
-              ?<button className="primaryBtn" disabled={busy} onClick={connectPrincipalAsaas}><Landmark size={16}/> {busy?'Conectando...':'Usar minha conta principal Asaas'}</button>
-              :<p className="permission-note">Somente Proprietário ou Administrador pode conectar a Conta Digital Asaas.</p>}
+            {canManageTeam?<form onSubmit={createAsaasAccount} className="asaas-account-form">
+              <div className="cols">
+                <label>Nome / Razão social<input required value={asaasAccountForm.name} onChange={e=>setAsaasAccountForm({...asaasAccountForm,name:e.target.value})}/></label>
+                <label>E-mail<input required type="email" value={asaasAccountForm.email} onChange={e=>setAsaasAccountForm({...asaasAccountForm,email:e.target.value})}/></label>
+              </div>
+              <div className="cols">
+                <label>CPF ou CNPJ<input required value={asaasAccountForm.cpfCnpj} onChange={e=>setAsaasAccountForm({...asaasAccountForm,cpfCnpj:e.target.value})} placeholder="Somente números ou formatado"/></label>
+                <label>Celular<input required value={asaasAccountForm.mobilePhone} onChange={e=>setAsaasAccountForm({...asaasAccountForm,mobilePhone:e.target.value})} placeholder="DDD + número"/></label>
+              </div>
+              {asaasAccountForm.cpfCnpj.replace(/\D/g,'').length===14&&<div className="cols">
+                <label>Tipo de empresa<select value={asaasAccountForm.companyType} onChange={e=>setAsaasAccountForm({...asaasAccountForm,companyType:e.target.value})}><option value="MEI">MEI</option><option value="LIMITED">Limitada</option><option value="INDIVIDUAL">Individual</option><option value="ASSOCIATION">Associação</option></select></label>
+                <label>Regime tributário<select value={asaasAccountForm.taxRegime} onChange={e=>setAsaasAccountForm({...asaasAccountForm,taxRegime:e.target.value})}><option value="UNKNOWN">Não informado</option><option value="MEI">MEI</option><option value="NATIONAL_SIMPLE">Simples Nacional</option><option value="NORMAL_REGIME">Regime normal</option></select></label>
+              </div>}
+              {asaasAccountForm.cpfCnpj.replace(/\D/g,'').length===11&&<label>Data de nascimento<input type="date" required value={asaasAccountForm.birthDate} onChange={e=>setAsaasAccountForm({...asaasAccountForm,birthDate:e.target.value})}/></label>}
+              <label>Faturamento / renda mensal<input required value={asaasAccountForm.incomeValue} onChange={e=>setAsaasAccountForm({...asaasAccountForm,incomeValue:e.target.value})} placeholder="0,00"/></label>
+              <div className="cols">
+                <label>Endereço<input required value={asaasAccountForm.address} onChange={e=>setAsaasAccountForm({...asaasAccountForm,address:e.target.value})} placeholder="Rua / Avenida"/></label>
+                <label>Número<input required value={asaasAccountForm.addressNumber} onChange={e=>setAsaasAccountForm({...asaasAccountForm,addressNumber:e.target.value})}/></label>
+              </div>
+              <div className="cols">
+                <label>Bairro<input required value={asaasAccountForm.province} onChange={e=>setAsaasAccountForm({...asaasAccountForm,province:e.target.value})}/></label>
+                <label>CEP<input required value={asaasAccountForm.postalCode} onChange={e=>setAsaasAccountForm({...asaasAccountForm,postalCode:e.target.value})} placeholder="00000-000"/></label>
+              </div>
+              <label>Complemento<input value={asaasAccountForm.complement} onChange={e=>setAsaasAccountForm({...asaasAccountForm,complement:e.target.value})} placeholder="Opcional"/></label>
+              {asaasFormError&&<div className="charge-action-feedback error">{asaasFormError}</div>}
+              <button className="primaryBtn" disabled={busy}><Landmark size={16}/> {busy?'Ativando...':'Ativar Conta Digital desta empresa'}</button>
+            </form>:<p className="permission-note">Somente Proprietário ou Administrador pode ativar a Conta Digital Asaas.</p>}
           </section>}
 
           <section className="digital-wallet-hero">
@@ -1874,7 +1898,7 @@ export default function Home(){
               <div><span>Provedor financeiro</span><strong>{baasConnected?'Asaas':'Ainda não conectado'}</strong></div>
               <div><span>Conta Asaas</span><strong>{asaasDirect?'Conta principal':asaasWalletId||'—'}</strong>{asaasWalletId&&!asaasDirect&&<button type="button" className="wallet-copy" onClick={()=>navigator.clipboard.writeText(String(asaasWalletId))}>Copiar</button>}</div>
               <div><span>Conta JP</span><strong>{wallet?.account_number??'—'}</strong></div>
-              <p>{baasConnected?'O dinheiro real permanece na sua conta Asaas. O JP consulta o saldo e envia as ordens de Pix pela API.':'Conecte sua conta Asaas principal para ativar saldo e Pix no JP Sistema.'}</p>
+              <p>{baasConnected?(asaasDirect?'Esta empresa usa a conta Asaas principal já vinculada ao JP.':'Esta empresa possui uma Conta Digital Asaas exclusiva, separada das demais empresas.'):'Ative uma Conta Digital própria para esta empresa receber e movimentar valores com separação financeira.'}</p>
             </div>
           </section>
 
@@ -1941,7 +1965,7 @@ export default function Home(){
           <section className="card provider-card digital-provider-card">
             <div className="provider-card-head">
               <div className="provider-logo digital-bank"><WalletCards size={20}/></div>
-              <div><h2>Conta Digital Asaas</h2><p>Use sua própria conta Asaas para consultar saldo e enviar Pix sem sair do JP Sistema.</p></div>
+              <div><h2>Conta Digital Asaas</h2><p>Cada empresa opera com sua própria conta financeira, saldo e credenciais separados.</p></div>
               <span className={'status '+(baasConnected?'active':'pending')}>{baasConnected?'Conectada':'Pronta para ativar'}</span>
             </div>
             <div className="provider-details">
