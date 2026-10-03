@@ -16,7 +16,7 @@ export async function POST(request:Request){
     const {error:connectionError}=await admin.from('provider_connections').upsert({
       organization_id:orgId,
       provider:'mercadopago',
-      status:'disconnected',
+      status:'not_configured',
       external_account_id:null,
       metadata:{oauth:true},
       connected_at:null,
