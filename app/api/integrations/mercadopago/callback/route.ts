@@ -14,7 +14,7 @@ export async function GET(request:Request){
   const oauthError=requestUrl.searchParams.get('error');
   const admin=getSupabaseAdmin();
 
-  if(oauthError) return Response.redirect(appUrl(request)+'/?mp=error&reason='+encodeURIComponent(oauthError));
+  if(oauthError) return Response.redirect(appUrl(request)+'/sistema?mp=error&reason='+encodeURIComponent(oauthError));
   if(!code||!state) return Response.redirect(appUrl(request)+'/?mp=error&reason=callback_invalido');
 
   try{
@@ -32,9 +32,9 @@ export async function GET(request:Request){
     const tokens=await exchangeAuthorizationCode(code,stored.code_verifier);
     await saveMercadoPagoTokens(stored.organization_id,tokens);
 
-    return Response.redirect(appUrl(request)+'/?mp=connected');
+    return Response.redirect(appUrl(request)+'/sistema?mp=connected');
   }catch(error){
     const message=error instanceof Error?error.message:'Falha ao conectar Mercado Pago.';
-    return Response.redirect(appUrl(request)+'/?mp=error&reason='+encodeURIComponent(message));
+    return Response.redirect(appUrl(request)+'/sistema?mp=error&reason='+encodeURIComponent(message));
   }
 }
