@@ -85,6 +85,8 @@
 .switch-label input,.check-line input{width:auto}
 .plan-price-preview{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;padding:12px;border-radius:10px;background:#f6f8fb;border:1px solid #e8edf3}
 .plan-price-preview strong{font-size:10px;color:#536174}.plan-price-preview span{font-size:11px;font-weight:800;text-align:right}
+.billing-rule-note{margin:-3px 0 0;color:#6e7a8c;font-size:9px;line-height:1.45}
+.plan-admin-card input:disabled,.create-plan-card input:disabled{background:#f1f4f7;color:#9aa5b1;cursor:not-allowed}
 .invoice-action{display:flex;gap:8px;align-items:center}.invoice-action input{width:160px}
 .row-actions{display:flex;gap:6px;flex-wrap:wrap}.row-actions button{border:1px solid #d8dfe8;background:#fff;border-radius:7px;padding:6px 8px;font-size:9px;font-weight:800;cursor:pointer}
 .row-actions button:hover{border-color:#0e8a70;color:#0e8a70}
