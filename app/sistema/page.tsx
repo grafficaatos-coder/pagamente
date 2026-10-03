@@ -810,10 +810,39 @@ export default function Home(){
       const data=await response.json();
       if(!response.ok)throw new Error(data.error||'Não foi possível enviar o Pix.');
       setPixTransferForm({recipientName:'',destinationKey:'',destinationKeyType:'PHONE',amount:'',description:''});
-      setMsg('Pix enviado com sucesso.');
+      const transferMessage=data.status==='completed'
+        ?'Pix enviado e concluído com sucesso.'
+        :data.status==='failed'
+          ?'O Asaas recusou a transferência Pix'+(data.failReason?': '+data.failReason:'')+'.'
+          :'A transferência foi criada no Asaas, mas ainda está pendente. O JP vai atualizar o status pelo webhook; você também pode usar "Atualizar status".';
       await load();
+      setMsg(transferMessage);
     }catch(e){
       setMsg(e instanceof Error?e.message:'Não foi possível enviar o Pix.');
+    }finally{
+      setBusy(false);
+    }
+  }
+
+  async function refreshPixTransfers(){
+    setBusy(true);setMsg('');
+    try{
+      const response=await authenticatedFetch('/api/wallet/pix',{method:'GET'});
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error||'Não foi possível consultar as transferências no Asaas.');
+      const updates=Array.isArray(data.updates)?data.updates:[];
+      await load();
+      const completed=updates.filter((item:any)=>item.status==='completed').length;
+      const failed=updates.filter((item:any)=>item.status==='failed'||item.status==='cancelled').length;
+      const pending=updates.filter((item:any)=>item.status==='pending').length;
+      const firstError=updates.find((item:any)=>item.error)?.error;
+      if(firstError)setMsg('Não foi possível atualizar uma transferência: '+firstError);
+      else if(completed)setMsg(completed+' transferência'+(completed>1?'s':'')+' Pix confirmada'+(completed>1?'s':'')+' pelo Asaas.');
+      else if(failed)setMsg('O Asaas informou falha ou cancelamento em '+failed+' transferência'+(failed>1?'s':'')+'.');
+      else if(pending)setMsg('A transferência continua pendente no Asaas. Verifique se há validação de transferência por Token APP/SMS na conta Asaas.');
+      else setMsg('Nenhuma transferência pendente para atualizar.');
+    }catch(e){
+      setMsg(e instanceof Error?e.message:'Não foi possível atualizar as transferências Pix.');
     }finally{
       setBusy(false);
     }
@@ -2072,7 +2101,7 @@ export default function Home(){
           </section>
 
           <section className="card tableCard">
-            <div className="cardHead"><div><h2>Transferências Pix</h2><p>Histórico das transferências enviadas pela Conta Digital Asaas.</p></div></div>
+            <div className="cardHead"><div><h2>Transferências Pix</h2><p>Histórico das transferências enviadas pela Conta Digital Asaas.</p></div><button className="secondaryBtn" disabled={busy} onClick={refreshPixTransfers}><RefreshCw size={15}/> Atualizar status</button></div>
             <div className="tableWrap"><table><thead><tr><th>Data</th><th>Destinatário</th><th>Chave</th><th>Status</th><th>Valor</th></tr></thead><tbody>
               {walletTransfers.map(t=><tr key={t.id}>
                 <td>{new Date(t.created_at).toLocaleString('pt-BR')}</td><td>{t.recipient_name}</td><td>{t.destination_key}</td>
