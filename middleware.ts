@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export function middleware(request: NextRequest) {
   const host = (request.headers.get('host') || '').toLowerCase();
+
   const isVercelHost =
     host === 'pagamente.vercel.app' ||
     host === 'pagamente-iucw.vercel.app' ||
     host.endsWith('.vercel.app');
 
-  if (isVercelHost && !request.nextUrl.pathname.startsWith('/api/')) {
+  const isWwwHost = host === 'www.jpsistemadecobranca.com.br';
+
+  if ((isVercelHost || isWwwHost) && !request.nextUrl.pathname.startsWith('/api/')) {
     const url = request.nextUrl.clone();
     url.protocol = 'https:';
     url.host = 'jpsistemadecobranca.com.br';
