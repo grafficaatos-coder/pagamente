@@ -1,5 +1,5 @@
 import { apiError, requireTenant } from '@/lib/server/supabaseAdmin';
-import { asaasRequest, getParentAsaasApiKey } from '@/lib/server/asaas';
+import { asaasRequest, getOrganizationAsaasApiKey } from '@/lib/server/asaas';
 import { sendChargeEmail } from '@/lib/server/email';
 
 export const runtime='nodejs';
@@ -56,7 +56,7 @@ export async function POST(request:Request){
     const cpfCnpj=digits(client.document);
     if(![11,14].includes(cpfCnpj.length)) throw new Error('Cadastre um CPF ou CNPJ válido no cliente.');
 
-    const apiKey=getParentAsaasApiKey();
+    const apiKey=await getOrganizationAsaasApiKey(admin,member.organization_id);
 
     let customerId='';
     const byExternal=await asaasRequest<any>(apiKey,'/customers?externalReference='+encodeURIComponent(client.id)+'&limit=1',{method:'GET'});
