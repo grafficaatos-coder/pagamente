@@ -585,3 +585,17 @@ input:focus,select:focus{border-color:#0e9878!important;box-shadow:0 0 0 3px rgb
 .charge-action-feedback{display:inline-block;max-width:340px;padding:6px 9px;border-radius:8px;background:#eef8f5;color:#166c59;font-size:11px;font-weight:700;line-height:1.35;white-space:normal}.charge-action-feedback.error{background:#fff1f0;color:#a13d35}
 
 .tenant-nav::-webkit-scrollbar{width:6px}.tenant-nav::-webkit-scrollbar-thumb{background:rgba(112,128,150,.45);border-radius:999px}.tenant-nav::-webkit-scrollbar-track{background:transparent}
+
+
+/* Exclusão de conta */
+.account-danger-card{margin-top:15px;border-color:#efc7cc;background:linear-gradient(180deg,#fff,#fffafb)}
+.account-danger-head{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:8px}
+.account-danger-head h2{margin:4px 0 0;font-size:18px;color:#8f2532}
+.danger-eyebrow{color:#b53a49}
+.account-danger-icon{width:40px;height:40px;border-radius:11px;display:grid;place-items:center;background:#fff0f2;color:#b53a49;border:1px solid #f0c4ca}
+.account-danger-card>p{margin:0;color:#5f6877;font-size:11px;line-height:1.6}
+.account-danger-rules{margin-top:13px;padding:12px 13px;border-radius:10px;background:#fff6f7;border:1px solid #f2d2d6;display:grid;gap:4px}
+.account-danger-rules strong{font-size:10px;color:#8f2532}.account-danger-rules span{font-size:10px;color:#6b5660;line-height:1.55}
+.account-danger-card>small{display:block;margin-top:10px;color:#8b7780;font-size:9px;line-height:1.55}
+.account-delete-button{width:max-content;margin-top:14px}
+@media(max-width:700px){.account-delete-button{width:100%}}
