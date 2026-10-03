@@ -38,8 +38,8 @@ export async function POST(request:Request){
       .eq('provider','baas')
       .maybeSingle();
     if(connectionError) throw connectionError;
-    if(connection?.status!=='connected'||connection?.metadata?.mode!=='direct'){
-      throw new Error('Conecte sua conta principal Asaas em Conta digital antes de gerar cobranças.');
+    if(connection?.status!=='connected'){
+      throw new Error('Ative a Conta Digital Asaas desta empresa antes de gerar cobranças.');
     }
 
     const {data:charge,error:chargeError}=await admin.from('charges')
