@@ -220,6 +220,12 @@ export async function getMercadoPagoPayment(accessToken:string,paymentId:string)
   });
 }
 
+export async function searchMercadoPagoPayments(accessToken:string,externalReference:string){
+  return mpFetch('/v1/payments/search?external_reference='+encodeURIComponent(externalReference),{
+    headers:{accept:'application/json',authorization:'Bearer '+accessToken}
+  });
+}
+
 export async function createCardCheckoutPreference(accessToken:string,input:{
   chargeId:string;
   amountCents:number;
