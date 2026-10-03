@@ -184,6 +184,7 @@ export default function Home(){
 
   const [busy,setBusy]=useState(false);
   const [msg,setMsg]=useState('');
+  const [chargeFeedback,setChargeFeedback]=useState<Record<string,string>>({});
 
   const [clientForm,setClientForm]=useState({
     name:'',document:'',email:'',whatsapp:'',deliveryPreference:'manual',
@@ -934,21 +935,37 @@ export default function Home(){
 
   async function retryAsaasPayment(charge:Charge){
     setBusy(true);setMsg('');
+    setChargeFeedback(current=>({...current,[charge.id]:'Gerando pagamento no Asaas...'}));
     try{
       const method=charge.payment_method==='pix'?'pix':charge.payment_method==='boleto_pix'?'both':'boleto';
-      await generateAsaasPayment(charge.id,method);
-      setMsg(charge.payment_method==='pix'
+      const controller=new AbortController();
+      const timeout=setTimeout(()=>controller.abort(),30000);
+      let response:any;
+      try{
+        response=await authenticatedFetch('/api/charges/asaas',{
+          method:'POST',
+          body:JSON.stringify({chargeId:charge.id,method}),
+          signal:controller.signal
+        });
+      }finally{
+        clearTimeout(timeout);
+      }
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error||'Não foi possível gerar a cobrança Asaas.');
+      const success=charge.payment_method==='pix'
         ?'Pix Asaas gerado com sucesso.'
         :charge.payment_method==='boleto_pix'
           ?'Cobrança Asaas gerada. Agora você pode abrir, enviar por e-mail ou WhatsApp.'
-          :'Boleto Asaas gerado com sucesso.');
+          :'Boleto Asaas gerado com sucesso.';
+      setMsg(success);
+      setChargeFeedback(current=>({...current,[charge.id]:success}));
       await load();
     }catch(e){
-      const message=e instanceof Error?e.message:'Não foi possível gerar a cobrança Asaas.';
+      const message=e instanceof DOMException&&e.name==='AbortError'
+        ?'O Asaas demorou mais de 30 segundos para responder. Tente novamente.'
+        :e instanceof Error?e.message:'Não foi possível gerar a cobrança Asaas.';
       setMsg(message);
-      if(supabase){
-        await supabase.from('charges').update({provider_status_detail:'Erro ao gerar: '+message}).eq('id',charge.id);
-      }
+      setChargeFeedback(current=>({...current,[charge.id]:message}));
       await load();
     }finally{
       setBusy(false);
@@ -1792,6 +1809,8 @@ export default function Home(){
                     {charge.payment_method==='boleto_pix'&&charge.pix_code&&<button onClick={()=>navigator.clipboard.writeText(charge.pix_code||'')}>Copiar Pix</button>}
                     {(charge.boleto_url||charge.pix_url)&&chargeClient(charge)?.email&&<button disabled={busy} onClick={()=>openEmailCharge(charge)}><Mail size={13}/> Enviar e-mail</button>}
                     {(charge.boleto_url||charge.pix_url)&&chargeClient(charge)?.whatsapp&&<button onClick={()=>openWhatsAppCharge(charge)}><MessageCircle size={13}/> WhatsApp</button>}
+                    {chargeFeedback[charge.id]&&<span className="charge-action-feedback">{chargeFeedback[charge.id]}</span>}
+                    {!chargeFeedback[charge.id]&&charge.provider_status_detail?.startsWith('Erro ao gerar')&&<span className="charge-action-feedback error">{charge.provider_status_detail}</span>}
                   </div></td>
                 </tr>
               })}
