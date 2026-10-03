@@ -7,6 +7,16 @@ export async function POST(request:Request){
   try{
     const {admin,member,organization}=await requireTenant(request,['owner','admin']);
 
+    const {data:existing,error:existingError}=await admin.from('provider_connections')
+      .select('status,metadata')
+      .eq('organization_id',member.organization_id)
+      .eq('provider','baas')
+      .maybeSingle();
+    if(existingError) throw existingError;
+    if(existing?.metadata?.mode!=='direct'){
+      throw new Error('A conta Asaas principal é reservada à empresa que já foi vinculada. Outras empresas devem ativar uma Conta Digital própria.');
+    }
+
     const apiKey=getParentAsaasApiKey();
     const balance=await getAsaasBalance(apiKey);
     const now=new Date().toISOString();
