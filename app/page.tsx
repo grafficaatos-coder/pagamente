@@ -211,7 +211,7 @@ export default function Home(){
   const [chargeEdit,setChargeEdit]=useState<{id:string;description:string;due_date:string}|null>(null);
   const [inviteForm,setInviteForm]=useState({email:'',role:'viewer'});
   const [pixTransferForm,setPixTransferForm]=useState({
-    recipientName:'',destinationKey:'',amount:'',description:''
+    recipientName:'',destinationKey:'',destinationKeyType:'PHONE',amount:'',description:''
   });
   const [asaasAccountForm,setAsaasAccountForm]=useState({
     name:'',email:'',cpfCnpj:'',companyType:'LIMITED',taxRegime:'UNKNOWN',
@@ -693,13 +693,14 @@ export default function Home(){
         body:JSON.stringify({
           recipientName:pixTransferForm.recipientName,
           destinationKey:pixTransferForm.destinationKey,
+          destinationKeyType:pixTransferForm.destinationKeyType,
           amountCents,
           description:pixTransferForm.description
         })
       });
       const data=await response.json();
       if(!response.ok)throw new Error(data.error||'Não foi possível enviar o Pix.');
-      setPixTransferForm({recipientName:'',destinationKey:'',amount:'',description:''});
+      setPixTransferForm({recipientName:'',destinationKey:'',destinationKeyType:'PHONE',amount:'',description:''});
       setMsg('Pix enviado com sucesso.');
       await load();
     }catch(e){
@@ -1910,7 +1911,16 @@ export default function Home(){
               </div>
               <form onSubmit={submitPixTransfer}>
                 <label>Nome do destinatário<input required disabled={!baasConnected||!canManageFinance} value={pixTransferForm.recipientName} onChange={e=>setPixTransferForm({...pixTransferForm,recipientName:e.target.value})} placeholder="Nome de quem vai receber"/></label>
-                <label>Chave Pix<input required disabled={!baasConnected||!canManageFinance} value={pixTransferForm.destinationKey} onChange={e=>setPixTransferForm({...pixTransferForm,destinationKey:e.target.value})} placeholder="CPF, CNPJ, e-mail, telefone ou chave aleatória"/></label>
+                <div className="cols">
+                  <label>Tipo da chave Pix<select disabled={!baasConnected||!canManageFinance} value={pixTransferForm.destinationKeyType} onChange={e=>setPixTransferForm({...pixTransferForm,destinationKeyType:e.target.value})}>
+                    <option value="PHONE">Telefone</option>
+                    <option value="CPF">CPF</option>
+                    <option value="CNPJ">CNPJ</option>
+                    <option value="EMAIL">E-mail</option>
+                    <option value="EVP">Chave aleatória</option>
+                  </select></label>
+                  <label>Chave Pix<input required disabled={!baasConnected||!canManageFinance} value={pixTransferForm.destinationKey} onChange={e=>setPixTransferForm({...pixTransferForm,destinationKey:e.target.value})} placeholder={pixTransferForm.destinationKeyType==='PHONE'?'DDD + número, ex.: 41999999999':pixTransferForm.destinationKeyType==='CPF'?'Somente números':pixTransferForm.destinationKeyType==='CNPJ'?'Somente números':pixTransferForm.destinationKeyType==='EMAIL'?'email@exemplo.com':'Chave aleatória'}/></label>
+                </div>
                 <div className="cols">
                   <label>Valor<input required disabled={!baasConnected||!canManageFinance} value={pixTransferForm.amount} onChange={e=>setPixTransferForm({...pixTransferForm,amount:e.target.value})} placeholder="0,00"/></label>
                   <label>Descrição<input disabled={!baasConnected||!canManageFinance} value={pixTransferForm.description} onChange={e=>setPixTransferForm({...pixTransferForm,description:e.target.value})} placeholder="Opcional"/></label>
