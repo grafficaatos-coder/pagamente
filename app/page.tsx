@@ -623,6 +623,42 @@ export default function Home(){
     });
   }
 
+  async function deleteAccount(){
+    if(membership?.role!=='owner'){
+      setMsg('Somente o Proprietário pode excluir a conta da empresa.');
+      return;
+    }
+
+    const ok=window.confirm(
+      'Excluir a conta da empresa "'+(org?.name||'')+'"?\n\n'+
+      'Esta ação encerra o acesso ao JP Sistema, cancela a assinatura e remove os acessos da equipe. '+
+      'Contas externas do Asaas e Mercado Pago não são encerradas automaticamente.'
+    );
+    if(!ok)return;
+
+    const confirmation=window.prompt('Para confirmar a exclusão, digite EXCLUIR:');
+    if(String(confirmation||'').trim().toUpperCase()!=='EXCLUIR'){
+      setMsg('Exclusão cancelada.');
+      return;
+    }
+
+    setBusy(true);setMsg('');
+    try{
+      const response=await authenticatedFetch('/api/account/delete',{
+        method:'POST',
+        body:JSON.stringify({confirmation:'EXCLUIR'})
+      });
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error||'Não foi possível excluir a conta.');
+
+      try{await signOut()}catch{}
+      if(typeof window!=='undefined') window.location.href='/';
+    }catch(e){
+      setMsg(e instanceof Error?e.message:'Não foi possível excluir a conta.');
+      setBusy(false);
+    }
+  }
+
   async function createAsaasAccount(e:React.FormEvent){
     e.preventDefault();
     setAsaasFormError('');
@@ -2190,7 +2226,39 @@ export default function Home(){
 
         {!tenantAccessBlocked&&tenantTab==='conta'&&<>
           <div className="tenant-heading"><div><span className="eyebrow">CONTA</span><h1>Minha conta</h1><p>Informações da empresa e do seu acesso.</p></div></div>
-          <div className="grid"><section className="card account-card"><Settings size={24}/><h2>{org?.name}</h2><div className="summary-row"><span>E-mail</span><strong>{user?.email}</strong></div><div className="summary-row"><span>Perfil</span><strong>{roleLabel(membership?.role)}</strong></div><div className="summary-row"><span>Plano</span><strong>{planName??'—'}</strong></div><div className="summary-row"><span>Status</span><span className={'status '+(subscription?.status??org?.status??'active')}>{statusLabel[subscription?.status??org?.status??'active']||'Ativo'}</span></div></section><section className="card account-card"><WalletCards size={24}/><h2>Conta digital</h2><div className="summary-row"><span>Número da conta</span><strong>{wallet?.account_number??'—'}</strong></div><div className="summary-row"><span>Chave interna</span><strong>{wallet?.pix_key??'—'}</strong></div><div className="summary-row"><span>Saldo</span><strong>{brl(Number(wallet?.balance_cents??0))}</strong></div></section></div>
+          <div className="grid">
+            <section className="card account-card">
+              <Settings size={24}/>
+              <h2>{org?.name}</h2>
+              <div className="summary-row"><span>E-mail</span><strong>{user?.email}</strong></div>
+              <div className="summary-row"><span>Perfil</span><strong>{roleLabel(membership?.role)}</strong></div>
+              <div className="summary-row"><span>Plano</span><strong>{planName??'—'}</strong></div>
+              <div className="summary-row"><span>Status</span><span className={'status '+(subscription?.status??org?.status??'active')}>{statusLabel[subscription?.status??org?.status??'active']||'Ativo'}</span></div>
+            </section>
+            <section className="card account-card">
+              <WalletCards size={24}/>
+              <h2>Conta digital</h2>
+              <div className="summary-row"><span>Número da conta</span><strong>{wallet?.account_number??'—'}</strong></div>
+              <div className="summary-row"><span>Chave interna</span><strong>{wallet?.pix_key??'—'}</strong></div>
+              <div className="summary-row"><span>Saldo</span><strong>{brl(Number(wallet?.balance_cents??0))}</strong></div>
+            </section>
+          </div>
+
+          {membership?.role==='owner'&&<section className="card account-danger-card">
+            <div className="account-danger-head">
+              <div><span className="eyebrow danger-eyebrow">ZONA DE PERIGO</span><h2>Excluir conta</h2></div>
+              <div className="account-danger-icon"><Trash2 size={20}/></div>
+            </div>
+            <p>Encerra permanentemente o acesso desta empresa ao JP Sistema, cancela a assinatura e remove os acessos da equipe.</p>
+            <div className="account-danger-rules">
+              <strong>Antes de excluir:</strong>
+              <span>o saldo da Conta Digital deve estar zerado, não pode haver cobranças em aberto nem Pix em processamento. Recorrências serão canceladas automaticamente.</span>
+            </div>
+            <small>As contas externas do Asaas e do Mercado Pago não são encerradas automaticamente. Registros financeiros necessários para histórico e conciliação podem permanecer armazenados.</small>
+            <button type="button" className="dangerBtn account-delete-button" disabled={busy} onClick={deleteAccount}>
+              <Trash2 size={16}/> {busy?'Processando...':'Excluir conta da empresa'}
+            </button>
+          </section>}
         </>}
       </main>
     </section>
