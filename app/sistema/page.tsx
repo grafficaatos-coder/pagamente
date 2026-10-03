@@ -21,7 +21,7 @@ type Client = {
 };
 type Charge = {
   id:string; description:string; amount_cents:number; due_date:string; status:string;
-  provider:string; payment_method?:'boleto'|'pix'|'boleto_pix'|null; provider_charge_id?:string|null; provider_status_detail?:string|null; created_at:string; boleto_url?:string|null; digitable_line?:string|null;
+  provider:string; payment_method?:'boleto'|'pix'|'boleto_pix'|'card'|null; provider_charge_id?:string|null; provider_status_detail?:string|null; created_at:string; boleto_url?:string|null; digitable_line?:string|null;
   pix_provider_charge_id?:string|null; pix_url?:string|null; pix_code?:string|null;
   clients?:{name?:string;email?:string|null;whatsapp?:string|null}|null
 };
@@ -194,6 +194,7 @@ export default function Home(){
   const [msg,setMsg]=useState('');
   const [chargeFeedback,setChargeFeedback]=useState<Record<string,string>>({});
   const autoGenerationAttempted=useRef<Set<string>>(new Set());
+  const mercadoPagoStatusSynced=useRef(false);
 
   const [clientForm,setClientForm]=useState({
     name:'',document:'',email:'',whatsapp:'',deliveryPreference:'manual',
@@ -446,7 +447,7 @@ export default function Home(){
         autoGenerationAttempted.current.add(charge.id);
         setChargeFeedback(current=>({...current,[charge.id]:'Gerando pagamento automaticamente...'}));
         try{
-          const method=charge.payment_method==='pix'?'pix':charge.payment_method==='boleto_pix'?'both':'boleto';
+          const method=charge.payment_method==='pix'?'pix':charge.payment_method==='boleto_pix'?'both':charge.payment_method==='card'?'card':'boleto';
           if(charge.provider==='mercadopago') await generateMercadoPagoPayment(charge.id,method);
           if(charge.provider==='asaas') await generateAsaasPayment(charge.id,method);
           generated=true;
@@ -461,6 +462,40 @@ export default function Home(){
 
     return ()=>{cancelled=true};
   },[org?.id,busy,charges,mercadoPago?.status,baasConnection?.status]);
+
+  useEffect(()=>{
+    if(!org?.id||mercadoPago?.status!=='connected'||mercadoPagoStatusSynced.current)return;
+    const hasPendingMp=charges.some(charge=>charge.provider==='mercadopago'&&['draft','pending','overdue'].includes(charge.status));
+    if(!hasPendingMp)return;
+    mercadoPagoStatusSynced.current=true;
+    authenticatedFetch('/api/charges/mercadopago/status',{method:'GET'})
+      .then(async response=>{
+        const data=await response.json().catch(()=>({}));
+        if(!response.ok)throw new Error(data.error||'Falha ao atualizar Mercado Pago.');
+        if((data.updates||[]).some((item:any)=>item.status==='paid')) await load();
+      })
+      .catch(()=>{ mercadoPagoStatusSynced.current=false; });
+  },[org?.id,mercadoPago?.status]);
+
+  async function refreshMercadoPagoStatuses(){
+    setBusy(true);setMsg('');
+    try{
+      const response=await authenticatedFetch('/api/charges/mercadopago/status',{method:'GET'});
+      const data=await response.json();
+      if(!response.ok)throw new Error(data.error||'Não foi possível consultar o Mercado Pago.');
+      const updates=Array.isArray(data.updates)?data.updates:[];
+      const paid=updates.filter((item:any)=>item.status==='paid').length;
+      const errors=updates.filter((item:any)=>item.error).length;
+      await load();
+      if(paid)setMsg(paid+' cobrança'+(paid>1?'s':'')+' atualizada'+(paid>1?'s':'')+' como paga pelo Mercado Pago.');
+      else if(errors)setMsg('Algumas cobranças não puderam ser consultadas no Mercado Pago.');
+      else setMsg('Status do Mercado Pago atualizado.');
+    }catch(e){
+      setMsg(e instanceof Error?e.message:'Não foi possível atualizar o Mercado Pago.');
+    }finally{
+      setBusy(false);
+    }
+  }
 
   async function runOwnerAction(action:()=>Promise<any>,success:string){
     setBusy(true);setMsg('');
@@ -769,12 +804,12 @@ export default function Home(){
     finally{setBusy(false)}
   }
 
-  async function generateMercadoPagoPayment(chargeId:string,method:'boleto'|'pix'|'both'){
+  async function generateMercadoPagoPayment(chargeId:string,method:'boleto'|'pix'|'both'|'card'){
     const response=await authenticatedFetch('/api/charges/mercadopago',{
       method:'POST',body:JSON.stringify({chargeId,method})
     });
     const data=await response.json();
-    if(!response.ok)throw new Error(data.error||(method==='pix'?'Não foi possível gerar o Pix.':method==='both'?'Não foi possível gerar boleto e Pix.':'Não foi possível gerar o boleto.'));
+    if(!response.ok)throw new Error(data.error||(method==='pix'?'Não foi possível gerar o Pix.':method==='both'?'Não foi possível gerar boleto e Pix.':method==='card'?'Não foi possível gerar o pagamento com cartão.':'Não foi possível gerar o boleto.'));
     return data;
   }
 
@@ -866,7 +901,8 @@ export default function Home(){
     const isMercadoPagoBoleto=chargeForm.paymentMethod==='mercadopago';
     const isMercadoPagoPix=chargeForm.paymentMethod==='mercadopago_pix';
     const isMercadoPagoBoth=chargeForm.paymentMethod==='mercadopago_both';
-    const isMercadoPago=isMercadoPagoBoleto||isMercadoPagoPix||isMercadoPagoBoth;
+    const isMercadoPagoCard=chargeForm.paymentMethod==='mercadopago_card';
+    const isMercadoPago=isMercadoPagoBoleto||isMercadoPagoPix||isMercadoPagoBoth||isMercadoPagoCard;
 
     const isAsaasBoleto=chargeForm.paymentMethod==='asaas';
     const isAsaasPix=chargeForm.paymentMethod==='asaas_pix';
@@ -915,7 +951,7 @@ export default function Home(){
 
     setBusy(true);setMsg('');
     const provider=isAsaas?'asaas':isMercadoPago?'mercadopago':'mock';
-    const paymentMethod=isAsaasPix||isMercadoPagoPix?'pix':isAsaasBoth||isMercadoPagoBoth?'boleto_pix':isAsaasBoleto||isMercadoPagoBoleto?'boleto':null;
+    const paymentMethod=isMercadoPagoCard?'card':isAsaasPix||isMercadoPagoPix?'pix':isAsaasBoth||isMercadoPagoBoth?'boleto_pix':isAsaasBoleto||isMercadoPagoBoleto?'boleto':null;
     const externalProvider=isAsaas||isMercadoPago;
 
     const {data:created,error}=await supabase.from('charges').insert({
@@ -940,7 +976,7 @@ export default function Home(){
     else{
       try{
         let paymentResult:any=null;
-        if(isMercadoPago) paymentResult=await generateMercadoPagoPayment(created.id,isMercadoPagoPix?'pix':isMercadoPagoBoth?'both':'boleto');
+        if(isMercadoPago) paymentResult=await generateMercadoPagoPayment(created.id,isMercadoPagoPix?'pix':isMercadoPagoBoth?'both':isMercadoPagoCard?'card':'boleto');
         if(isAsaas) paymentResult=await generateAsaasPayment(created.id,isAsaasPix?'pix':isAsaasBoth?'both':'boleto');
 
         setChargeForm(f=>({
@@ -950,6 +986,7 @@ export default function Home(){
         }));
 
         const sentByEmail=Boolean(paymentResult?.email?.sent);
+        const sentByWhatsApp=Boolean(paymentResult?.whatsapp?.sent);
         if(isAsaas){
           setMsg(
             isAsaasPix
@@ -959,14 +996,23 @@ export default function Home(){
                 : (sentByEmail?'Boleto Asaas gerado e enviado por e-mail. O pagamento ficará no saldo da Conta Digital Asaas.':'Boleto Asaas gerado. O pagamento ficará no saldo da Conta Digital Asaas.')
           );
         }else{
+          const automaticDelivery=sentByEmail&&sentByWhatsApp
+            ?' e enviado automaticamente por e-mail e WhatsApp.'
+            :sentByEmail
+              ?' e enviado automaticamente por e-mail.'
+              :sentByWhatsApp
+                ?' e enviado automaticamente por WhatsApp.'
+                :'';
           setMsg(
-            isMercadoPagoPix
-              ? (sentByEmail?'Pix gerado e enviado por e-mail automaticamente.':'Pix Mercado Pago gerado com sucesso.')
-              : isMercadoPagoBoth
-                ? (sentByEmail?'Boleto e Pix gerados e enviados por e-mail para o cliente escolher.':'Boleto e Pix Mercado Pago gerados com sucesso.')
-                : isMercadoPagoBoleto
-                  ? (sentByEmail?'Boleto gerado e enviado por e-mail automaticamente.':'Boleto Mercado Pago gerado com sucesso.')
-                  : 'Cobrança criada com sucesso.'
+            isMercadoPagoCard
+              ? 'Link para cartão Mercado Pago gerado'+automaticDelivery
+              : isMercadoPagoPix
+                ? 'Pix Mercado Pago gerado'+automaticDelivery
+                : isMercadoPagoBoth
+                  ? 'Boleto e Pix Mercado Pago gerados'+automaticDelivery
+                  : isMercadoPagoBoleto
+                    ? 'Boleto Mercado Pago gerado'+automaticDelivery
+                    : 'Cobrança criada com sucesso.'
           );
         }
       }catch(e){
@@ -1064,9 +1110,9 @@ export default function Home(){
   async function retryMercadoPagoBoleto(charge:Charge){
     setBusy(true);setMsg('');
     try{
-      const method=charge.payment_method==='pix'?'pix':charge.payment_method==='boleto_pix'?'both':'boleto';
+      const method=charge.payment_method==='pix'?'pix':charge.payment_method==='boleto_pix'?'both':charge.payment_method==='card'?'card':'boleto';
       await generateMercadoPagoPayment(charge.id,method);
-      setMsg(charge.payment_method==='pix'?'Pix Mercado Pago gerado com sucesso.':charge.payment_method==='boleto_pix'?'Boleto e Pix Mercado Pago gerados com sucesso.':'Boleto Mercado Pago gerado com sucesso.');
+      setMsg(charge.payment_method==='pix'?'Pix Mercado Pago gerado com sucesso.':charge.payment_method==='boleto_pix'?'Boleto e Pix Mercado Pago gerados com sucesso.':charge.payment_method==='card'?'Link para cartão Mercado Pago gerado com sucesso.':'Boleto Mercado Pago gerado com sucesso.');
       await load();
     }catch(e){setMsg(e instanceof Error?e.message:'Não foi possível gerar o pagamento.')}
     finally{setBusy(false)}
@@ -1117,7 +1163,7 @@ export default function Home(){
 
   function paymentShareText(charge:Charge){
     const client=chargeClient(charge);
-    const method=charge.payment_method==='pix'?'Pix':charge.payment_method==='boleto_pix'?'boleto ou Pix':'boleto';
+    const method=charge.payment_method==='pix'?'Pix':charge.payment_method==='boleto_pix'?'boleto ou Pix':charge.payment_method==='card'?'cartão de crédito':'boleto';
     const lines=[
       'Olá '+(client?.name||'')+',',
       '',
@@ -1897,6 +1943,7 @@ export default function Home(){
                   <option value="asaas_both" disabled={!baasConnected||!asaasDirect}>Boleto ou Pix Asaas — dinheiro fica na Conta Digital{baasConnected&&asaasDirect?'':' — conectar conta Asaas'}</option>
                   <option value="asaas" disabled={!baasConnected||!asaasDirect}>Somente boleto Asaas{baasConnected&&asaasDirect?'':' — conectar conta Asaas'}</option>
                   <option value="asaas_pix" disabled={!baasConnected||!asaasDirect}>Somente Pix Asaas{baasConnected&&asaasDirect?'':' — conectar conta Asaas'}</option>
+                  <option value="mercadopago_card" disabled={mercadoPago?.status!=='connected'}>Cartão de crédito Mercado Pago{mercadoPago?.status==='connected'?'':' — conectar primeiro'}</option>
                   <option value="mercadopago_both" disabled={mercadoPago?.status!=='connected'}>Boleto + Pix Mercado Pago — cliente escolhe{mercadoPago?.status==='connected'?'':' — conectar primeiro'}</option>
                   <option value="mercadopago" disabled={mercadoPago?.status!=='connected'}>Somente boleto Mercado Pago{mercadoPago?.status==='connected'?'':' — conectar primeiro'}</option>
                   <option value="mercadopago_pix" disabled={mercadoPago?.status!=='connected'}>Somente Pix Mercado Pago{mercadoPago?.status==='connected'?'':' — conectar primeiro'}</option>
@@ -1904,6 +1951,7 @@ export default function Home(){
                 {chargeForm.paymentMethod==='asaas_both'&&<p className="permission-note">O cliente abre a fatura Asaas e escolhe boleto ou Pix. Depois do recebimento, o dinheiro permanece no saldo da Conta Digital Asaas até você transferir para outro banco.</p>}
                 {chargeForm.paymentMethod==='asaas'&&<p className="permission-note">O boleto é emitido pelo Asaas e, quando recebido, o valor fica na sua Conta Digital Asaas.</p>}
                 {chargeForm.paymentMethod==='asaas_pix'&&<p className="permission-note">O Pix é emitido pelo Asaas e, quando recebido, o valor fica na sua Conta Digital Asaas.</p>}
+                {chargeForm.paymentMethod==='mercadopago_card'&&<p className="permission-note">Será gerado um link seguro do Mercado Pago para o cliente pagar com cartão de crédito, com parcelamento disponível conforme a conta Mercado Pago.</p>}
                 {chargeForm.paymentMethod==='mercadopago_both'&&<p className="permission-note">Serão gerados boleto e Pix para a mesma cobrança. O cliente receberá as duas opções e escolherá como pagar. Para o boleto, mantenha CPF/CNPJ, e-mail e endereço completos.</p>}
                 {chargeForm.paymentMethod==='mercadopago'&&<p className="permission-note">O boleto pode vencer entre 1 e 30 dias após a emissão. O cliente precisa ter CPF/CNPJ, e-mail e endereço completo.</p>}
                 {chargeForm.paymentMethod==='mercadopago_pix'&&<p className="permission-note">O Pix gera QR Code e código Copia e Cola pelo Mercado Pago. O cliente precisa ter e-mail cadastrado.</p>}
@@ -1911,6 +1959,7 @@ export default function Home(){
                   chargeForm.paymentMethod==='asaas_both'?'Gerar cobrança Asaas':
                   chargeForm.paymentMethod==='asaas_pix'?'Gerar Pix Asaas':
                   chargeForm.paymentMethod==='asaas'?'Gerar boleto Asaas':
+                  chargeForm.paymentMethod==='mercadopago_card'?'Gerar link de cartão':
                   chargeForm.paymentMethod==='mercadopago_both'?'Gerar boleto + Pix':
                   chargeForm.paymentMethod==='mercadopago_pix'?'Gerar Pix':
                   chargeForm.paymentMethod==='mercadopago'?'Gerar boleto':'Criar cobrança'
@@ -1925,6 +1974,7 @@ export default function Home(){
             <div className="cardHead operational-table-head">
               <div><h2>Todas as cobranças</h2><p>{filteredCharges.length} cobranças encontradas</p></div>
               <div className="table-filters">
+                {mercadoPago?.status==='connected'&&<button className="secondaryBtn" disabled={busy} onClick={refreshMercadoPagoStatuses}><RefreshCw size={14}/> Atualizar Mercado Pago</button>}
                 <div className="table-search"><Search size={15}/><input value={chargeSearch} onChange={e=>setChargeSearch(e.target.value)} placeholder="Buscar cobrança..."/></div>
                 <select value={chargeStatusFilter} onChange={e=>setChargeStatusFilter(e.target.value)}>
                   <option value="all">Todos os status</option><option value="pending">Pendentes</option><option value="paid">Pagas</option><option value="overdue">Vencidas</option><option value="cancelled">Canceladas</option><option value="draft">Rascunhos</option>
@@ -1943,11 +1993,11 @@ export default function Home(){
                   <td>{clientName(charge.clients)||'Cliente'}</td><td>{charge.description}</td><td>{dateBR(charge.due_date)}</td>
                   <td><span className={'status '+computedStatus}>{statusLabel[computedStatus]||computedStatus}</span></td><td><strong>{brl(Number(charge.amount_cents))}</strong></td>
                   <td><div className="row-actions">
-                    {mercadoPagoIncomplete&&<button disabled={!canManageFinance||busy||mercadoPago?.status!=='connected'} onClick={()=>retryMercadoPagoBoleto(charge)}><ReceiptText size={13}/> {charge.payment_method==='pix'?'Gerar Pix':charge.payment_method==='boleto_pix'?'Gerar boleto + Pix':'Gerar boleto'}</button>}
+                    {mercadoPagoIncomplete&&<button disabled={!canManageFinance||busy||mercadoPago?.status!=='connected'} onClick={()=>retryMercadoPagoBoleto(charge)}><ReceiptText size={13}/> {charge.payment_method==='pix'?'Gerar Pix':charge.payment_method==='boleto_pix'?'Gerar boleto + Pix':charge.payment_method==='card'?'Gerar cartão':'Gerar boleto'}</button>}
                     {charge.provider==='asaas'&&computedStatus==='draft'&&!charge.provider_charge_id&&<button disabled={!canManageFinance||busy} onClick={()=>retryAsaasPayment(charge)}><ReceiptText size={13}/> Gerar pagamento</button>}
                     {['pending','draft','overdue'].includes(computedStatus)&&<button disabled={!canManageFinance||busy} onClick={()=>setChargeEdit({id:charge.id,description:charge.description,due_date:charge.due_date})}><Pencil size={13}/> Editar</button>}
                     {['pending','draft','overdue'].includes(computedStatus)&&<button disabled={!canManageFinance||busy} onClick={()=>cancelChargeAction(charge)}><XCircle size={13}/> Cancelar</button>}
-                    {charge.boleto_url&&<a className="table-link" href={charge.boleto_url} target="_blank" rel="noreferrer">{charge.payment_method==='pix'?'Abrir Pix':charge.payment_method==='boleto_pix'?'Abrir cobrança':'Abrir boleto'}</a>}
+                    {charge.boleto_url&&<a className="table-link" href={charge.boleto_url} target="_blank" rel="noreferrer">{charge.payment_method==='pix'?'Abrir Pix':charge.payment_method==='boleto_pix'?'Abrir cobrança':charge.payment_method==='card'?'Pagar com cartão':'Abrir boleto'}</a>}
                     {charge.digitable_line&&<button onClick={()=>navigator.clipboard.writeText(charge.digitable_line||'')}>{charge.payment_method==='pix'?'Copiar Pix':'Copiar linha'}</button>}
                     {charge.payment_method==='boleto_pix'&&charge.pix_url&&<a className="table-link" href={charge.pix_url} target="_blank" rel="noreferrer">Abrir Pix</a>}
                     {charge.payment_method==='boleto_pix'&&charge.pix_code&&<button onClick={()=>navigator.clipboard.writeText(charge.pix_code||'')}>Copiar Pix</button>}
