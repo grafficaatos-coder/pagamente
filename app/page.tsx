@@ -54,6 +54,7 @@ type Plan = {
   max_clients:number|null;
   max_users:number|null;
   active:boolean;
+  visible_to_clients:boolean;
 };
 
 type PlatformOrg = {
@@ -250,7 +251,7 @@ export default function Home(){
         ]=await Promise.all([
           supabase.from('organizations').select('id,name,status,created_at').order('created_at',{ascending:false}).limit(250),
           supabase.from('subscriptions').select('organization_id,plan_id,status,trial_ends_at,plans(id,name)').limit(250),
-          supabase.from('plans').select('id,code,name,billing_model,monthly_price_cents,boleto_fee_cents,max_clients,max_users,active').order('monthly_price_cents',{ascending:true}),
+          supabase.from('plans').select('id,code,name,billing_model,monthly_price_cents,boleto_fee_cents,max_clients,max_users,active,visible_to_clients').order('monthly_price_cents',{ascending:true}),
           supabase.from('platform_settings').select('platform_name,trial_days,signup_enabled,default_plan_id,support_email').eq('id',true).maybeSingle(),
           supabase.from('platform_invoices').select('id,organization_id,reference_month,total_cents,status,due_date,boleto_count,monthly_fee_cents,boleto_fee_cents,organizations(name),plans(name)').order('reference_month',{ascending:false}).limit(200),
           supabase.from('charges').select('organization_id,created_at').gte('created_at',monthStartISO()).neq('status','cancelled'),
@@ -386,7 +387,7 @@ export default function Home(){
         setOrgInvites([]);
       }
 
-      const {data:tenantPlans,error:tpe}=await supabase.from('plans').select('id,code,name,billing_model,monthly_price_cents,boleto_fee_cents,max_clients,max_users,active').eq('active',true).order('monthly_price_cents',{ascending:true});
+      const {data:tenantPlans,error:tpe}=await supabase.from('plans').select('id,code,name,billing_model,monthly_price_cents,boleto_fee_cents,max_clients,max_users,active,visible_to_clients').eq('active',true).eq('visible_to_clients',true).order('monthly_price_cents',{ascending:true});
       if(tpe)throw tpe;
       setPlans((tenantPlans??[]) as any);
 
@@ -488,6 +489,11 @@ export default function Home(){
         p_active:plan.active
       });
       if(error)throw error;
+      const {error:visibilityError}=await supabase.rpc('platform_set_plan_visibility',{
+        p_plan_id:plan.id,
+        p_visible_to_clients:plan.visible_to_clients
+      });
+      if(visibilityError)throw visibilityError;
     },'Plano atualizado com sucesso.');
   }
 
@@ -1370,7 +1376,7 @@ export default function Home(){
 
             <div className="plan-admin-grid">
               {plans.map((p,index)=><section className="card plan-admin-card" key={p.id}>
-                <div className="plan-card-head"><div><span className="eyebrow">{p.code}</span><h2>{p.name}</h2></div><label className="switch-label"><input type="checkbox" checked={p.active} onChange={e=>setPlans(rows=>rows.map((x,i)=>i===index?{...x,active:e.target.checked}:x))}/> Ativo</label></div>
+                <div className="plan-card-head"><div><span className="eyebrow">{p.code}</span><h2>{p.name}</h2></div><div className="plan-card-toggles"><label className="switch-label"><input type="checkbox" checked={p.active} onChange={e=>setPlans(rows=>rows.map((x,i)=>i===index?{...x,active:e.target.checked}:x))}/> Ativo</label><label className="switch-label client-visibility"><input type="checkbox" checked={p.visible_to_clients!==false} onChange={e=>setPlans(rows=>rows.map((x,i)=>i===index?{...x,visible_to_clients:e.target.checked}:x))}/> Mostrar aos clientes</label></div></div>
                 <label>Nome<input value={p.name} onChange={e=>setPlans(rows=>rows.map((x,i)=>i===index?{...x,name:e.target.value}:x))}/></label>
                 <label>Modelo de cobrança<select value={p.billing_model} onChange={e=>setPlans(rows=>rows.map((x,i)=>i===index?{...x,billing_model:e.target.value as any}:x))}><option value="monthly">Mensal</option><option value="per_boleto">Por boleto emitido</option><option value="hybrid">Mensal + por boleto</option></select></label>
                 <div className="cols">
