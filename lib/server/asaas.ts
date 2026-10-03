@@ -1,3 +1,4 @@
+import { decryptSecret } from '@/lib/server/secretCrypto';
 function baseUrl(){
   return (process.env.ASAAS_BASE_URL||'https://api-sandbox.asaas.com/v3').replace(/\/$/,'');
 }
@@ -70,4 +71,28 @@ export function inferPixKey(value:string){
 
 export function asaasEnvironment(){
   return baseUrl().includes('sandbox')?'sandbox':'production';
+}
+
+
+export async function getOrganizationAsaasApiKey(admin:any,organizationId:string){
+  const {data:connection,error:connectionError}=await admin.from('provider_connections')
+    .select('status,metadata')
+    .eq('organization_id',organizationId)
+    .eq('provider','baas')
+    .maybeSingle();
+  if(connectionError) throw connectionError;
+  if(connection?.status!=='connected') throw new Error('Conta Digital Asaas ainda não está conectada.');
+
+  if(connection?.metadata?.mode==='direct'){
+    return getParentAsaasApiKey();
+  }
+
+  const {data:secret,error:secretError}=await admin.from('provider_secrets')
+    .select('access_token_cipher')
+    .eq('organization_id',organizationId)
+    .eq('provider','baas')
+    .maybeSingle();
+  if(secretError) throw secretError;
+  if(!secret?.access_token_cipher) throw new Error('Credencial exclusiva da Conta Digital Asaas não encontrada.');
+  return decryptSecret(secret.access_token_cipher);
 }
