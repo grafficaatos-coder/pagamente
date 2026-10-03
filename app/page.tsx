@@ -1,7 +1,7 @@
 // Conta digital JP integrada ao BaaS - build Pro
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowDownLeft, ArrowUpRight, BarChart3, Building2, CalendarClock, CheckCircle2, CircleDollarSign, Clock3, CreditCard, Crown,
   History, Landmark, LayoutDashboard, LogOut, Mail, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, ReceiptText, RefreshCw,
@@ -185,6 +185,7 @@ export default function Home(){
   const [busy,setBusy]=useState(false);
   const [msg,setMsg]=useState('');
   const [chargeFeedback,setChargeFeedback]=useState<Record<string,string>>({});
+  const autoGenerationAttempted=useRef<Set<string>>(new Set());
 
   const [clientForm,setClientForm]=useState({
     name:'',document:'',email:'',whatsapp:'',deliveryPreference:'manual',
@@ -393,6 +394,56 @@ export default function Home(){
       if(mp) window.history.replaceState({},'',window.location.pathname);
     });
   },[user?.id]);
+
+  useEffect(()=>{
+    if(!org||busy)return;
+
+    const cutoff=Date.now()-24*60*60*1000;
+    const pendingAutomatic=charges.filter(charge=>{
+      if(autoGenerationAttempted.current.has(charge.id))return false;
+      if(new Date(charge.created_at).getTime()<cutoff)return false;
+      if(!['draft','pending'].includes(charge.status))return false;
+
+      if(charge.provider==='mercadopago'){
+        if(mercadoPago?.status!=='connected')return false;
+        return charge.payment_method==='boleto_pix'
+          ? !charge.boleto_url||!charge.pix_url
+          : !charge.boleto_url;
+      }
+
+      if(charge.provider==='asaas'){
+        if(baasConnection?.status!=='connected')return false;
+        return charge.status==='draft'&&!charge.provider_charge_id;
+      }
+
+      return false;
+    });
+
+    if(!pendingAutomatic.length)return;
+
+    let cancelled=false;
+    (async()=>{
+      let generated=false;
+      for(const charge of pendingAutomatic){
+        if(cancelled)break;
+        autoGenerationAttempted.current.add(charge.id);
+        setChargeFeedback(current=>({...current,[charge.id]:'Gerando pagamento automaticamente...'}));
+        try{
+          const method=charge.payment_method==='pix'?'pix':charge.payment_method==='boleto_pix'?'both':'boleto';
+          if(charge.provider==='mercadopago') await generateMercadoPagoPayment(charge.id,method);
+          if(charge.provider==='asaas') await generateAsaasPayment(charge.id,method);
+          generated=true;
+          setChargeFeedback(current=>({...current,[charge.id]:'Pagamento gerado automaticamente.'}));
+        }catch(e){
+          const message=e instanceof Error?e.message:'Não foi possível gerar o pagamento automaticamente.';
+          setChargeFeedback(current=>({...current,[charge.id]:message}));
+        }
+      }
+      if(generated&&!cancelled)await load();
+    })();
+
+    return ()=>{cancelled=true};
+  },[org?.id,busy,charges,mercadoPago?.status,baasConnection?.status]);
 
   async function runOwnerAction(action:()=>Promise<any>,success:string){
     setBusy(true);setMsg('');
@@ -1795,13 +1846,17 @@ export default function Home(){
             <div className="tableWrap"><table><thead><tr><th>Cliente</th><th>Descrição</th><th>Vencimento</th><th>Status</th><th>Valor</th><th>Ações</th></tr></thead><tbody>
               {filteredCharges.map(charge=>{
                 const computedStatus=isComputedOverdue(charge)?'overdue':charge.status;
+                const mercadoPagoIncomplete=charge.provider==='mercadopago'
+                  &&['draft','pending'].includes(computedStatus)
+                  &&(charge.payment_method==='boleto_pix'
+                    ? !charge.boleto_url||!charge.pix_url
+                    : !charge.boleto_url);
                 return <tr key={charge.id}>
                   <td>{clientName(charge.clients)||'Cliente'}</td><td>{charge.description}</td><td>{dateBR(charge.due_date)}</td>
                   <td><span className={'status '+computedStatus}>{statusLabel[computedStatus]||computedStatus}</span></td><td><strong>{brl(Number(charge.amount_cents))}</strong></td>
                   <td><div className="row-actions">
-                    {charge.provider==='mercadopago'&&!charge.boleto_url&&['draft','pending'].includes(computedStatus)&&<button disabled={!canManageFinance||busy||mercadoPago?.status!=='connected'} onClick={()=>retryMercadoPagoBoleto(charge)}><ReceiptText size={13}/> {charge.payment_method==='pix'?'Gerar Pix':charge.payment_method==='boleto_pix'?'Gerar boleto + Pix':'Gerar boleto'}</button>}
+                    {mercadoPagoIncomplete&&<button disabled={!canManageFinance||busy||mercadoPago?.status!=='connected'} onClick={()=>retryMercadoPagoBoleto(charge)}><ReceiptText size={13}/> {charge.payment_method==='pix'?'Gerar Pix':charge.payment_method==='boleto_pix'?'Gerar boleto + Pix':'Gerar boleto'}</button>}
                     {charge.provider==='asaas'&&computedStatus==='draft'&&!charge.provider_charge_id&&<button disabled={!canManageFinance||busy} onClick={()=>retryAsaasPayment(charge)}><ReceiptText size={13}/> Gerar pagamento</button>}
-                    {charge.provider==='mercadopago'&&computedStatus==='draft'&&!charge.provider_charge_id&&<button disabled={!canManageFinance||busy} onClick={()=>retryMercadoPagoBoleto(charge)}><ReceiptText size={13}/> Gerar pagamento</button>}
                     {['pending','draft','overdue'].includes(computedStatus)&&<button disabled={!canManageFinance||busy} onClick={()=>setChargeEdit({id:charge.id,description:charge.description,due_date:charge.due_date})}><Pencil size={13}/> Editar</button>}
                     {['pending','draft','overdue'].includes(computedStatus)&&<button disabled={!canManageFinance||busy} onClick={()=>cancelChargeAction(charge)}><XCircle size={13}/> Cancelar</button>}
                     {charge.boleto_url&&<a className="table-link" href={charge.boleto_url} target="_blank" rel="noreferrer">{charge.payment_method==='pix'?'Abrir Pix':charge.payment_method==='boleto_pix'?'Abrir cobrança':'Abrir boleto'}</a>}

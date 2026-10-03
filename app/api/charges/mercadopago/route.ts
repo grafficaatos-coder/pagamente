@@ -12,14 +12,18 @@ function daysUntil(dateValue:string){
 }
 
 export async function POST(request:Request){
+  let admin:any=null;
+  let chargeId='';
   try{
-    const {admin,member,organization,subscription}=await requireTenant(request,['owner','admin','finance']);
+    const tenant=await requireTenant(request,['owner','admin','finance']);
+    admin=tenant.admin;
+    const {member,organization,subscription}=tenant;
     if(!['active','trialing'].includes(organization.status)||!['active','trialing'].includes(subscription?.status||'')){
       throw new Error('A conta da empresa não está liberada para emitir cobranças.');
     }
 
     const body=await request.json();
-    const chargeId=String(body?.chargeId||'');
+    chargeId=String(body?.chargeId||'');
     if(!chargeId) throw new Error('Cobrança não informada.');
 
     const {data:charge,error:chargeError}=await admin.from('charges')
@@ -84,6 +88,13 @@ export async function POST(request:Request){
     const hasExistingBoth=charge.provider==='mercadopago'&&charge.payment_method==='boleto_pix'&&charge.provider_charge_id&&charge.boleto_url&&charge.pix_provider_charge_id&&charge.pix_url;
 
     if(hasExistingBoth){
+      if(charge.status==='draft'){
+        await admin.from('charges').update({
+          status:'pending',
+          provider_status_detail:charge.provider_status_detail||'waiting_payment',
+          updated_at:new Date().toISOString()
+        }).eq('id',charge.id);
+      }
       const email=await sendEmailIfNeeded({
         method:'boleto_pix',
         boletoUrl:charge.boleto_url,
@@ -174,24 +185,78 @@ export async function POST(request:Request){
     };
 
     if(paymentMethod==='boleto_pix'){
-      const boleto=await createBoleto();
-      const pix=await createPix();
+      let boleto:any;
+      let pix:any;
+
+      if(charge.provider_charge_id&&charge.boleto_url){
+        boleto={
+          fields:{
+            orderId:charge.provider_charge_id,
+            paymentId:charge.provider_payment_id,
+            boletoUrl:charge.boleto_url,
+            digitableLine:charge.digitable_line,
+            barcodeContent:charge.barcode_content,
+            providerStatusDetail:charge.provider_status_detail,
+            paymentMethod:'boleto'
+          },
+          mapped:{status:charge.status==='paid'?'paid':'pending'}
+        };
+      }else{
+        boleto=await createBoleto();
+        const {error:boletoUpdateError}=await admin.from('charges').update({
+          provider:'mercadopago',
+          payment_method:'boleto_pix',
+          provider_charge_id:boleto.fields.orderId,
+          provider_payment_id:boleto.fields.paymentId,
+          boleto_url:boleto.fields.boletoUrl,
+          digitable_line:boleto.fields.digitableLine,
+          barcode_content:boleto.fields.barcodeContent,
+          provider_status_detail:boleto.fields.providerStatusDetail,
+          status:boleto.mapped.status==='paid'?'paid':'draft',
+          updated_at:new Date().toISOString()
+        }).eq('id',emailCharge.id);
+        if(boletoUpdateError) throw boletoUpdateError;
+      }
+
+      if(charge.pix_provider_charge_id&&charge.pix_url){
+        pix={
+          fields:{
+            orderId:charge.pix_provider_charge_id,
+            paymentId:charge.pix_provider_payment_id,
+            boletoUrl:charge.pix_url,
+            digitableLine:charge.pix_code,
+            barcodeContent:charge.pix_qr_base64,
+            providerStatusDetail:charge.provider_status_detail,
+            paymentMethod:'pix'
+          },
+          mapped:{status:charge.status==='paid'?'paid':'pending'}
+        };
+      }else{
+        pix=await createPix();
+        const {error:pixUpdateError}=await admin.from('charges').update({
+          provider:'mercadopago',
+          payment_method:'boleto_pix',
+          pix_provider_charge_id:pix.fields.orderId,
+          pix_provider_payment_id:pix.fields.paymentId,
+          pix_url:pix.fields.boletoUrl,
+          pix_code:pix.fields.digitableLine,
+          pix_qr_base64:pix.fields.barcodeContent,
+          provider_status_detail:pix.fields.providerStatusDetail||boleto.fields.providerStatusDetail,
+          status:pix.mapped.status==='paid'||boleto.mapped.status==='paid'?'paid':'draft',
+          updated_at:new Date().toISOString()
+        }).eq('id',emailCharge.id);
+        if(pixUpdateError) throw pixUpdateError;
+      }
+
+      const finalStatus=(
+        boleto.mapped.status==='paid'||pix.mapped.status==='paid'
+      )?'paid':'pending';
 
       const {error:updateError}=await admin.from('charges').update({
         provider:'mercadopago',
         payment_method:'boleto_pix',
-        provider_charge_id:boleto.fields.orderId,
-        provider_payment_id:boleto.fields.paymentId,
-        boleto_url:boleto.fields.boletoUrl,
-        digitable_line:boleto.fields.digitableLine,
-        barcode_content:boleto.fields.barcodeContent,
-        pix_provider_charge_id:pix.fields.orderId,
-        pix_provider_payment_id:pix.fields.paymentId,
-        pix_url:pix.fields.boletoUrl,
-        pix_code:pix.fields.digitableLine,
-        pix_qr_base64:pix.fields.barcodeContent,
-        provider_status_detail:boleto.fields.providerStatusDetail||pix.fields.providerStatusDetail,
-        status:boleto.mapped.status==='paid'||pix.mapped.status==='paid'?'paid':'pending',
+        provider_status_detail:pix.fields.providerStatusDetail||boleto.fields.providerStatusDetail,
+        status:finalStatus,
         updated_at:new Date().toISOString()
       }).eq('id',emailCharge.id);
       if(updateError) throw updateError;
@@ -209,7 +274,7 @@ export async function POST(request:Request){
         boletoUrl:boleto.fields.boletoUrl,digitableLine:boleto.fields.digitableLine,
         pixUrl:pix.fields.boletoUrl,pixCode:pix.fields.digitableLine,
         orderId:boleto.fields.orderId,pixOrderId:pix.fields.orderId,
-        status:'pending',email
+        status:finalStatus,email
       });
     }
 
@@ -250,6 +315,16 @@ export async function POST(request:Request){
       email
     });
   }catch(error){
+    const message=error instanceof Error?error.message:'Erro inesperado ao gerar cobrança Mercado Pago.';
+    if(admin&&chargeId){
+      try{
+        await admin.from('charges').update({
+          provider_status_detail:'Erro ao gerar no Mercado Pago: '+message,
+          updated_at:new Date().toISOString()
+        }).eq('id',chargeId);
+      }catch{}
+    }
+    console.error('[mercadopago-charge]',message);
     return apiError(error);
   }
 }
