@@ -1,6 +1,7 @@
 import { apiError, requireTenant } from '@/lib/server/supabaseAdmin';
 import { asaasRequest, getOrganizationAsaasApiKey } from '@/lib/server/asaas';
 import { sendChargeEmail } from '@/lib/server/email';
+import { sendChargeWhatsApp } from '@/lib/server/whatsapp';
 
 export const runtime='nodejs';
 
@@ -43,7 +44,7 @@ export async function POST(request:Request){
     }
 
     const {data:charge,error:chargeError}=await admin.from('charges')
-      .select('id,organization_id,client_id,description,amount_cents,due_date,status,provider,payment_method,provider_charge_id,boleto_url,digitable_line,pix_url,pix_code,send_email,email_sent_at,interest_monthly_percent,fine_type,fine_percent,fine_amount_cents,discount_type,discount_percent,discount_amount_cents,discount_deadline_days,clients(id,name,document,email,whatsapp,address,status)')
+      .select('id,organization_id,client_id,description,amount_cents,due_date,status,provider,payment_method,provider_charge_id,boleto_url,digitable_line,pix_url,pix_code,send_email,email_sent_at,send_whatsapp,whatsapp_sent_at,interest_monthly_percent,fine_type,fine_percent,fine_amount_cents,discount_type,discount_percent,discount_amount_cents,discount_deadline_days,clients(id,name,document,email,whatsapp,address,status)')
       .eq('id',chargeId)
       .eq('organization_id',member.organization_id)
       .single();
@@ -203,6 +204,43 @@ export async function POST(request:Request){
       }
     }
 
+    let whatsapp:any={sent:false,skipped:true};
+    if(charge.send_whatsapp&&!charge.whatsapp_sent_at&&client.whatsapp){
+      try{
+        const whatsappInput:any={
+          to:client.whatsapp,
+          clientName:client.name,
+          organizationName:organization.name,
+          description:charge.description,
+          amountCents:Number(charge.amount_cents),
+          dueDate:charge.due_date,
+          paymentMethod:requestedMethod
+        };
+        if(requestedMethod==='boleto_pix'){
+          whatsappInput.boletoUrl=paymentUrl;
+          whatsappInput.pixUrl=paymentUrl;
+        }else{
+          whatsappInput.paymentUrl=paymentUrl;
+          whatsappInput.digitableLine=requestedMethod==='pix'?pixCode:digitableLine;
+        }
+        const result=await sendChargeWhatsApp(whatsappInput);
+        await admin.from('charges').update({
+          whatsapp_sent_at:new Date().toISOString(),
+          whatsapp_delivery_id:result.id||null,
+          whatsapp_delivery_error:null,
+          updated_at:new Date().toISOString()
+        }).eq('id',charge.id);
+        whatsapp={sent:true,skipped:false};
+      }catch(error){
+        const message=error instanceof Error?error.message:'Falha ao enviar WhatsApp.';
+        await admin.from('charges').update({
+          whatsapp_delivery_error:message,
+          updated_at:new Date().toISOString()
+        }).eq('id',charge.id);
+        whatsapp={sent:false,skipped:false,error:message};
+      }
+    }
+
     return Response.json({
       ok:true,
       provider:'asaas',
@@ -213,7 +251,8 @@ export async function POST(request:Request){
       pixCode,
       status:mappedStatus,
       providerStatus:payment?.status||null,
-      email
+      email,
+      whatsapp
     });
   }catch(error){
     const message=error instanceof Error?error.message:'Erro inesperado ao gerar cobrança Asaas.';
