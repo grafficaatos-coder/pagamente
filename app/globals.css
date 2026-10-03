@@ -581,3 +581,5 @@ input:focus,select:focus{border-color:#0e9878!important;box-shadow:0 0 0 3px rgb
 .wallet-refresh{margin-top:14px;width:max-content;display:inline-flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.38);background:rgba(255,255,255,.12);color:#fff;border-radius:9px;padding:8px 11px;font-size:9px;font-weight:900;cursor:pointer}.wallet-refresh:disabled{opacity:.55;cursor:not-allowed}
 
 .asaas-form-error{margin-top:10px;padding:10px 12px;border:1px solid #f1b7b2;background:#fff2f1;color:#a23f37;border-radius:9px;font-size:10px;font-weight:800;line-height:1.45}
+
+.charge-action-feedback{display:inline-block;max-width:340px;padding:6px 9px;border-radius:8px;background:#eef8f5;color:#166c59;font-size:11px;font-weight:700;line-height:1.35;white-space:normal}.charge-action-feedback.error{background:#fff1f0;color:#a13d35}
