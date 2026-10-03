@@ -69,6 +69,7 @@ export async function POST(request:Request){
     const now=new Date().toISOString();
     const metadata={
       platform:'asaas',
+      mode:'subaccount',
       walletId:created.walletId,
       environment:asaasEnvironment(),
       accountName:created.name||name,
