@@ -1,5 +1,5 @@
 import { apiError, requireTenant } from '@/lib/server/supabaseAdmin';
-import { asaasEnvironment, createAsaasSubaccount } from '@/lib/server/asaas';
+import { asaasEnvironment, asaasRequest, createAsaasSubaccount } from '@/lib/server/asaas';
 import { encryptSecret } from '@/lib/server/secretCrypto';
 
 export const runtime='nodejs';
@@ -65,6 +65,24 @@ export async function POST(request:Request){
     if(!created?.apiKey||!created?.walletId||!created?.id){
       throw new Error('O Asaas não retornou as credenciais completas da subconta.');
     }
+
+    const webhookToken=String(process.env.ASAAS_WEBHOOK_TOKEN||'').trim();
+    if(webhookToken.length<32) throw new Error('Token do webhook Asaas não configurado corretamente.');
+    const appUrl=String(process.env.NEXT_PUBLIC_APP_URL||'https://jpsistemadecobranca.com.br').replace(/\/$/,'');
+    await asaasRequest<any>(created.apiKey,'/webhooks',{
+      method:'POST',
+      body:JSON.stringify({
+        name:'JP Sistema - Cobrancas',
+        url:appUrl+'/api/webhooks/asaas',
+        email,
+        enabled:true,
+        interrupted:false,
+        apiVersion:3,
+        authToken:webhookToken,
+        sendType:'SEQUENTIALLY',
+        events:['PAYMENT_RECEIVED','PAYMENT_CONFIRMED','PAYMENT_OVERDUE','PAYMENT_REFUNDED','PAYMENT_DELETED']
+      })
+    });
 
     const now=new Date().toISOString();
     const metadata={
