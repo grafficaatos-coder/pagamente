@@ -18,6 +18,7 @@ export async function POST(request:Request){
     const body=await request.json().catch(()=>({}));
     const recipientName=String(body?.recipientName||'').trim();
     const destinationKey=String(body?.destinationKey||'').trim();
+    const destinationKeyType=String(body?.destinationKeyType||'').trim().toUpperCase();
     const amountCents=Number(body?.amountCents||0);
     const description=String(body?.description||'Transferência Pix').trim()||'Transferência Pix';
 
@@ -37,7 +38,29 @@ export async function POST(request:Request){
     const balance=await getAsaasBalance(apiKey);
     if(balance.balanceCents<amountCents) throw new Error('Saldo insuficiente na conta Asaas.');
 
-    const pix=inferPixKey(destinationKey);
+    let pix:{key:string;type:string};
+    if(destinationKeyType){
+      const digits=destinationKey.replace(/\D/g,'');
+      if(destinationKeyType==='PHONE'){
+        if(digits.length!==11) throw new Error('Telefone Pix deve ter 11 dígitos, incluindo o DDD.');
+        pix={key:digits,type:'PHONE'};
+      }else if(destinationKeyType==='CPF'){
+        if(digits.length!==11) throw new Error('CPF Pix deve ter 11 dígitos.');
+        pix={key:digits,type:'CPF'};
+      }else if(destinationKeyType==='CNPJ'){
+        if(digits.length!==14) throw new Error('CNPJ Pix deve ter 14 dígitos.');
+        pix={key:digits,type:'CNPJ'};
+      }else if(destinationKeyType==='EMAIL'){
+        if(!destinationKey.includes('@')) throw new Error('Informe um e-mail válido como chave Pix.');
+        pix={key:destinationKey.toLowerCase(),type:'EMAIL'};
+      }else if(destinationKeyType==='EVP'){
+        pix={key:destinationKey,type:'EVP'};
+      }else{
+        throw new Error('Tipo de chave Pix inválido.');
+      }
+    }else{
+      pix=inferPixKey(destinationKey);
+    }
     const transfer=await asaasRequest<any>(apiKey,'/transfers',{
       method:'POST',
       body:JSON.stringify({
