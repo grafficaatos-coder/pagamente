@@ -470,9 +470,14 @@ export default function Home(){
         autoGenerationAttempted.current.add(charge.id);
         setChargeFeedback(current=>({...current,[charge.id]:'Gerando pagamento automaticamente...'}));
         try{
-          const method=charge.payment_method==='pix'?'pix':charge.payment_method==='boleto_pix'?'both':charge.payment_method==='card'?'card':'boleto';
-          if(charge.provider==='mercadopago') await generateMercadoPagoPayment(charge.id,method);
-          if(charge.provider==='asaas') await generateAsaasPayment(charge.id,method);
+          if(charge.provider==='mercadopago'){
+            const method=charge.payment_method==='pix'?'pix':charge.payment_method==='boleto_pix'?'both':charge.payment_method==='card'?'card':'boleto';
+            await generateMercadoPagoPayment(charge.id,method);
+          }
+          if(charge.provider==='asaas'){
+            const method=charge.payment_method==='pix'?'pix':charge.payment_method==='boleto_pix'?'both':'boleto';
+            await generateAsaasPayment(charge.id,method);
+          }
           generated=true;
           setChargeFeedback(current=>({...current,[charge.id]:'Pagamento gerado automaticamente.'}));
         }catch(e){
