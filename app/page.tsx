@@ -21,7 +21,7 @@ type Client = {
 };
 type Charge = {
   id:string; description:string; amount_cents:number; due_date:string; status:string;
-  provider:string; payment_method?:'boleto'|'pix'|'boleto_pix'|null; provider_charge_id?:string|null; created_at:string; boleto_url?:string|null; digitable_line?:string|null;
+  provider:string; payment_method?:'boleto'|'pix'|'boleto_pix'|null; provider_charge_id?:string|null; provider_status_detail?:string|null; created_at:string; boleto_url?:string|null; digitable_line?:string|null;
   pix_provider_charge_id?:string|null; pix_url?:string|null; pix_code?:string|null;
   clients?:{name?:string;email?:string|null;whatsapp?:string|null}|null
 };
@@ -303,7 +303,7 @@ export default function Home(){
         supabase.from('organizations').select('id,name,status').eq('id',orgId).single(),
         supabase.from('wallet_accounts').select('id,account_number,pix_key,balance_cents').eq('organization_id',orgId).single(),
         supabase.from('clients').select('id,name,document,email,whatsapp,delivery_preference,address,status').eq('organization_id',orgId).order('created_at',{ascending:false}),
-        supabase.from('charges').select('id,description,amount_cents,due_date,status,provider,payment_method,provider_charge_id,pix_provider_charge_id,created_at,boleto_url,digitable_line,pix_url,pix_code,clients(name,email,whatsapp)').eq('organization_id',orgId).order('created_at',{ascending:false}).limit(250),
+        supabase.from('charges').select('id,description,amount_cents,due_date,status,provider,payment_method,provider_charge_id,pix_provider_charge_id,provider_status_detail,created_at,boleto_url,digitable_line,pix_url,pix_code,clients(name,email,whatsapp)').eq('organization_id',orgId).order('created_at',{ascending:false}).limit(250),
         supabase.from('recurring_rules').select('id,description,amount_cents,frequency,generation_day,due_day,status,clients(name)').eq('organization_id',orgId).order('created_at',{ascending:false}),
         supabase.from('subscriptions').select('status,trial_ends_at,current_period_end,chosen_plan_at,plans(name,billing_model,monthly_price_cents,boleto_fee_cents,max_clients,max_users)').eq('organization_id',orgId).maybeSingle(),
         supabase.from('platform_invoices').select('id,status,total_cents,due_date,reference_month').eq('organization_id',orgId).order('created_at',{ascending:false}).limit(1).maybeSingle(),
@@ -830,7 +830,11 @@ export default function Home(){
           );
         }
       }catch(e){
-        setMsg('Cobrança salva como rascunho. '+(e instanceof Error?e.message:'Não foi possível gerar o pagamento.'));
+        const message=e instanceof Error?e.message:'Não foi possível gerar o pagamento.';
+        if(created?.id){
+          await supabase.from('charges').update({provider_status_detail:'Erro ao gerar: '+message}).eq('id',created.id);
+        }
+        setMsg('Cobrança salva como rascunho. '+message+' Use o botão "Gerar pagamento" para tentar novamente.');
       }
       await load();setTenantTab('cobrancas')
     }
@@ -926,6 +930,29 @@ export default function Home(){
       await load();
     }catch(e){setMsg(e instanceof Error?e.message:'Não foi possível gerar o pagamento.')}
     finally{setBusy(false)}
+  }
+
+  async function retryAsaasPayment(charge:Charge){
+    setBusy(true);setMsg('');
+    try{
+      const method=charge.payment_method==='pix'?'pix':charge.payment_method==='boleto_pix'?'both':'boleto';
+      await generateAsaasPayment(charge.id,method);
+      setMsg(charge.payment_method==='pix'
+        ?'Pix Asaas gerado com sucesso.'
+        :charge.payment_method==='boleto_pix'
+          ?'Cobrança Asaas gerada. Agora você pode abrir, enviar por e-mail ou WhatsApp.'
+          :'Boleto Asaas gerado com sucesso.');
+      await load();
+    }catch(e){
+      const message=e instanceof Error?e.message:'Não foi possível gerar a cobrança Asaas.';
+      setMsg(message);
+      if(supabase){
+        await supabase.from('charges').update({provider_status_detail:'Erro ao gerar: '+message}).eq('id',charge.id);
+      }
+      await load();
+    }finally{
+      setBusy(false);
+    }
   }
 
   function chargeClient(charge:Charge){
@@ -1755,9 +1782,11 @@ export default function Home(){
                   <td><span className={'status '+computedStatus}>{statusLabel[computedStatus]||computedStatus}</span></td><td><strong>{brl(Number(charge.amount_cents))}</strong></td>
                   <td><div className="row-actions">
                     {charge.provider==='mercadopago'&&!charge.boleto_url&&['draft','pending'].includes(computedStatus)&&<button disabled={!canManageFinance||busy||mercadoPago?.status!=='connected'} onClick={()=>retryMercadoPagoBoleto(charge)}><ReceiptText size={13}/> {charge.payment_method==='pix'?'Gerar Pix':charge.payment_method==='boleto_pix'?'Gerar boleto + Pix':'Gerar boleto'}</button>}
+                    {charge.provider==='asaas'&&computedStatus==='draft'&&!charge.provider_charge_id&&<button disabled={!canManageFinance||busy} onClick={()=>retryAsaasPayment(charge)}><ReceiptText size={13}/> Gerar pagamento</button>}
+                    {charge.provider==='mercadopago'&&computedStatus==='draft'&&!charge.provider_charge_id&&<button disabled={!canManageFinance||busy} onClick={()=>retryMercadoPagoBoleto(charge)}><ReceiptText size={13}/> Gerar pagamento</button>}
                     {['pending','draft','overdue'].includes(computedStatus)&&<button disabled={!canManageFinance||busy} onClick={()=>setChargeEdit({id:charge.id,description:charge.description,due_date:charge.due_date})}><Pencil size={13}/> Editar</button>}
                     {['pending','draft','overdue'].includes(computedStatus)&&<button disabled={!canManageFinance||busy} onClick={()=>cancelChargeAction(charge)}><XCircle size={13}/> Cancelar</button>}
-                    {charge.boleto_url&&<a className="table-link" href={charge.boleto_url} target="_blank" rel="noreferrer">{charge.payment_method==='pix'?'Abrir Pix':'Abrir boleto'}</a>}
+                    {charge.boleto_url&&<a className="table-link" href={charge.boleto_url} target="_blank" rel="noreferrer">{charge.payment_method==='pix'?'Abrir Pix':charge.payment_method==='boleto_pix'?'Abrir cobrança':'Abrir boleto'}</a>}
                     {charge.digitable_line&&<button onClick={()=>navigator.clipboard.writeText(charge.digitable_line||'')}>{charge.payment_method==='pix'?'Copiar Pix':'Copiar linha'}</button>}
                     {charge.payment_method==='boleto_pix'&&charge.pix_url&&<a className="table-link" href={charge.pix_url} target="_blank" rel="noreferrer">Abrir Pix</a>}
                     {charge.payment_method==='boleto_pix'&&charge.pix_code&&<button onClick={()=>navigator.clipboard.writeText(charge.pix_code||'')}>Copiar Pix</button>}
