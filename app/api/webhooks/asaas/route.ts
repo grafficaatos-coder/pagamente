@@ -49,7 +49,10 @@ export async function POST(request:Request){
   const event=String(body?.event||'');
   const payment=body?.payment||{};
   const paymentId=String(payment?.id||'');
-  if(!event||!paymentId){
+  const transfer=body?.transfer||{};
+  const transferId=String(transfer?.id||'');
+
+  if(!event){
     return Response.json({ok:true,ignored:true});
   }
 
@@ -62,6 +65,58 @@ export async function POST(request:Request){
     .eq('event_id',id)
     .maybeSingle();
   if(existing) return Response.json({ok:true,duplicate:true});
+
+  if(event.startsWith('TRANSFER_')&&transferId){
+    const mappedTransferStatus=
+      event==='TRANSFER_DONE'||String(transfer?.status||'').toUpperCase()==='DONE'?'completed':
+      event==='TRANSFER_FAILED'||String(transfer?.status||'').toUpperCase()==='FAILED'?'failed':
+      event==='TRANSFER_CANCELLED'||String(transfer?.status||'').toUpperCase()==='CANCELLED'?'cancelled':
+      'pending';
+
+    const {data:localTransfer,error:transferLookupError}=await admin
+      .from('transfers')
+      .select('id,status')
+      .eq('provider','asaas')
+      .eq('provider_transfer_id',transferId)
+      .maybeSingle();
+    if(transferLookupError) return Response.json({error:transferLookupError.message},{status:500});
+
+    if(localTransfer){
+      const now=new Date().toISOString();
+      const patch:any={status:mappedTransferStatus};
+      if(mappedTransferStatus==='completed') patch.completed_at=localTransfer.status==='completed'?undefined:now;
+      if(mappedTransferStatus==='failed') patch.failed_at=localTransfer.status==='failed'?undefined:now;
+      if(patch.completed_at===undefined) delete patch.completed_at;
+      if(patch.failed_at===undefined) delete patch.failed_at;
+
+      const {error:updateTransferError}=await admin
+        .from('transfers')
+        .update(patch)
+        .eq('id',localTransfer.id);
+      if(updateTransferError) return Response.json({error:updateTransferError.message},{status:500});
+    }
+
+    const {error:transferEventError}=await admin.from('asaas_webhook_events').insert({
+      event_id:id,
+      event_type:event,
+      payment_id:null,
+      charge_id:null,
+      payload:body
+    });
+    if(transferEventError&&transferEventError.code!=='23505'){
+      return Response.json({error:transferEventError.message},{status:500});
+    }
+
+    return Response.json({
+      ok:true,
+      matched:Boolean(localTransfer),
+      transferStatus:mappedTransferStatus
+    });
+  }
+
+  if(!paymentId){
+    return Response.json({ok:true,ignored:true});
+  }
 
   const {data:charge,error:chargeError}=await admin
     .from('charges')
