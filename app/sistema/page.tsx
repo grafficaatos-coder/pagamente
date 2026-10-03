@@ -190,6 +190,23 @@ export default function Home(){
     support_email:''
   });
 
+  const [notificationSettings,setNotificationSettings]=useState<any>({
+    notify_changes_email:true,
+    notify_changes_whatsapp:false,
+    send_before_days:5,
+    send_before_email:true,
+    send_before_whatsapp:false,
+    due_pending_email:true,
+    due_pending_whatsapp:false,
+    due_line_email:true,
+    due_line_whatsapp:false,
+    overdue_email:true,
+    overdue_whatsapp:false,
+    resend_after_days:1,
+    resend_email:true,
+    resend_whatsapp:false
+  });
+
   const [busy,setBusy]=useState(false);
   const [msg,setMsg]=useState('');
   const [chargeFeedback,setChargeFeedback]=useState<Record<string,string>>({});
@@ -356,6 +373,12 @@ export default function Home(){
       setRecurring((rr??[]) as any);setSubscription(sub);setPlatformInvoice(invoice);
       setTeamMembers((members??[]) as any);setTenantAudit((auditRows??[]) as any);setMercadoPago(verifiedMercadoPago);
       setBaasConnection(baas);setWalletTransactions((txRows??[]) as any);setWalletTransfers((transferRows??[]) as any);
+      const {data:notificationRow,error:notificationError}=await supabase.from('notification_settings')
+        .select('notify_changes_email,notify_changes_whatsapp,send_before_days,send_before_email,send_before_whatsapp,due_pending_email,due_pending_whatsapp,due_line_email,due_line_whatsapp,overdue_email,overdue_whatsapp,resend_after_days,resend_email,resend_whatsapp')
+        .eq('organization_id',orgId)
+        .maybeSingle();
+      if(notificationError)throw notificationError;
+      if(notificationRow)setNotificationSettings(notificationRow);
       setAsaasAccountForm(form=>({
         ...form,
         name:form.name||o?.name||'',
@@ -1207,6 +1230,29 @@ export default function Home(){
     }finally{
       setBusy(false);
     }
+  }
+
+  async function saveNotificationSettings(e:React.FormEvent){
+    e.preventDefault();
+    if(!supabase||!org)return;
+    setBusy(true);setMsg('');
+    try{
+      const {error}=await supabase.from('notification_settings').upsert({
+        organization_id:org.id,
+        ...notificationSettings,
+        updated_at:new Date().toISOString()
+      },{onConflict:'organization_id'});
+      if(error)throw error;
+      setMsg('Preferências de avisos salvas.');
+    }catch(e){
+      setMsg(e instanceof Error?e.message:'Não foi possível salvar os avisos.');
+    }finally{
+      setBusy(false);
+    }
+  }
+
+  function toggleNotification(key:string){
+    setNotificationSettings((current:any)=>({...current,[key]:!current[key]}));
   }
 
   async function setRecurringStatusAction(id:string,status:string){
@@ -2329,6 +2375,71 @@ export default function Home(){
               <div className="summary-row"><span>Saldo</span><strong>{brl(Number(wallet?.balance_cents??0))}</strong></div>
             </section>
           </div>
+
+          <section className="card notification-settings-card">
+            <div className="cardHead">
+              <div><h2>Avisos automáticos de cobrança</h2><p>Defina quando avisar seus clientes e por qual canal.</p></div>
+            </div>
+            <form onSubmit={saveNotificationSettings} className="notification-settings-form">
+              <div className="notification-row">
+                <div><strong>Avisar alterações no valor ou data de vencimento das cobranças.</strong></div>
+                <div className="notification-channels">
+                  <button type="button" className={notificationSettings.notify_changes_whatsapp?'channel active':'channel'} onClick={()=>toggleNotification('notify_changes_whatsapp')}><MessageCircle size={17}/> WhatsApp</button>
+                  <button type="button" className={notificationSettings.notify_changes_email?'channel active':'channel'} onClick={()=>toggleNotification('notify_changes_email')}><Mail size={17}/> E-mail</button>
+                  <button type="button" className="channel" disabled title="SMS será integrado depois">SMS</button>
+                </div>
+              </div>
+
+              <div className="notification-row">
+                <div className="notification-inline"><strong>Enviar as cobranças</strong><select value={notificationSettings.send_before_days} onChange={e=>setNotificationSettings((s:any)=>({...s,send_before_days:Number(e.target.value)}))}><option value={1}>1 dia antes do vencimento</option><option value={3}>3 dias antes do vencimento</option><option value={5}>5 dias antes do vencimento</option><option value={7}>7 dias antes do vencimento</option><option value={10}>10 dias antes do vencimento</option></select></div>
+                <div className="notification-channels">
+                  <button type="button" className={notificationSettings.send_before_whatsapp?'channel active':'channel'} onClick={()=>toggleNotification('send_before_whatsapp')}><MessageCircle size={17}/> WhatsApp</button>
+                  <button type="button" className={notificationSettings.send_before_email?'channel active':'channel'} onClick={()=>toggleNotification('send_before_email')}><Mail size={17}/> E-mail</button>
+                  <button type="button" className="channel" disabled>SMS</button>
+                </div>
+              </div>
+
+              <div className="notification-row">
+                <div><strong>Enviar cobranças pendentes no dia do vencimento.</strong></div>
+                <div className="notification-channels">
+                  <button type="button" className={notificationSettings.due_pending_whatsapp?'channel active':'channel'} onClick={()=>toggleNotification('due_pending_whatsapp')}><MessageCircle size={17}/> WhatsApp</button>
+                  <button type="button" className={notificationSettings.due_pending_email?'channel active':'channel'} onClick={()=>toggleNotification('due_pending_email')}><Mail size={17}/> E-mail</button>
+                  <button type="button" className="channel" disabled>SMS</button>
+                </div>
+              </div>
+
+              <div className="notification-row">
+                <div><strong>Enviar linha digitável do boleto no dia do vencimento.</strong></div>
+                <div className="notification-channels">
+                  <button type="button" className={notificationSettings.due_line_whatsapp?'channel active':'channel'} onClick={()=>toggleNotification('due_line_whatsapp')}><MessageCircle size={17}/> WhatsApp</button>
+                  <button type="button" className={notificationSettings.due_line_email?'channel active':'channel'} onClick={()=>toggleNotification('due_line_email')}><Mail size={17}/> E-mail</button>
+                  <button type="button" className="channel" disabled>SMS</button>
+                </div>
+              </div>
+
+              <h3>Após o vencimento (Opcional)</h3>
+              <div className="notification-row">
+                <div><strong>Avisar sobre atrasos e falhas nos pagamentos.</strong></div>
+                <div className="notification-channels">
+                  <button type="button" className={notificationSettings.overdue_whatsapp?'channel active':'channel'} onClick={()=>toggleNotification('overdue_whatsapp')}><MessageCircle size={17}/> WhatsApp</button>
+                  <button type="button" className={notificationSettings.overdue_email?'channel active':'channel'} onClick={()=>toggleNotification('overdue_email')}><Mail size={17}/> E-mail</button>
+                  <button type="button" className="channel" disabled>SMS</button>
+                </div>
+              </div>
+
+              <div className="notification-row">
+                <div className="notification-inline"><strong>Reenviar as cobranças</strong><select value={notificationSettings.resend_after_days} onChange={e=>setNotificationSettings((s:any)=>({...s,resend_after_days:Number(e.target.value)}))}><option value={1}>a cada 1 dia após o vencimento</option><option value={2}>a cada 2 dias após o vencimento</option><option value={3}>a cada 3 dias após o vencimento</option><option value={5}>a cada 5 dias após o vencimento</option><option value={7}>a cada 7 dias após o vencimento</option></select></div>
+                <div className="notification-channels">
+                  <button type="button" className={notificationSettings.resend_whatsapp?'channel active':'channel'} onClick={()=>toggleNotification('resend_whatsapp')}><MessageCircle size={17}/> WhatsApp</button>
+                  <button type="button" className={notificationSettings.resend_email?'channel active':'channel'} onClick={()=>toggleNotification('resend_email')}><Mail size={17}/> E-mail</button>
+                  <button type="button" className="channel" disabled>SMS</button>
+                </div>
+              </div>
+
+              <p className="permission-note">O envio imediato ao gerar a cobrança segue a opção escolhida no cadastro do cliente: E-mail, WhatsApp, ambos ou manual. Para WhatsApp automático é necessário conectar a API do WhatsApp Business.</p>
+              <button className="primaryBtn" disabled={busy||!canManageFinance}><Save size={16}/> Salvar avisos</button>
+            </form>
+          </section>
 
           {membership?.role==='owner'&&<section className="card account-danger-card">
             <div className="account-danger-head">
