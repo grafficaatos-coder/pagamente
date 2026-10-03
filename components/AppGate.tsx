@@ -93,7 +93,7 @@ export default function AppGate({ children }: { children: React.ReactNode }) {
     <section className="auth-showcase">
       <div className="auth-showcase-inner">
         <div className="auth-logo jp-auth-logo">
-          <img src="/jp-sistema-cobranca.jpg" alt="JP Sistema de Cobrança"/>
+          <img src="/jp-sistema-cobranca-logo.svg" alt="JP Sistema de Cobrança"/>
           <span>Recuperação segura de acesso</span>
         </div>
         <div className="auth-pitch">
@@ -222,7 +222,7 @@ export default function AppGate({ children }: { children: React.ReactNode }) {
     <section className="auth-showcase">
       <div className="auth-showcase-inner">
         <div className="auth-logo jp-auth-logo">
-          <img src="/jp-sistema-cobranca.jpg" alt="JP Sistema de Cobrança"/>
+          <img src="/jp-sistema-cobranca-logo.svg" alt="JP Sistema de Cobrança"/>
           <span>Gestão financeira para empresas</span>
         </div>
 
@@ -244,7 +244,7 @@ export default function AppGate({ children }: { children: React.ReactNode }) {
 
     <section className="auth-form-side">
       <div className="auth-mobile-logo jp-mobile-logo">
-        <img src="/jp-sistema-cobranca.jpg" alt="JP Sistema de Cobrança"/>
+        <img src="/jp-sistema-cobranca-logo.svg" alt="JP Sistema de Cobrança"/>
       </div>
 
       {screen === 'login' ? <form className="auth-card auth-card-v2" onSubmit={handleLogin}>
