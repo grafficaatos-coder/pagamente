@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import {
   ArrowLeft, CheckCircle2, Eye, EyeOff, LockKeyhole, Phone,
   ShieldCheck, WalletCards
@@ -51,6 +52,7 @@ function formatDocument(value: string, type: 'cnpj' | 'cpf') {
 }
 
 export default function AppGate({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const { mode, user, loading, recoveryMode, signIn, signUp, resendConfirmation, resetPassword, updatePassword } = useAuth();
   const [screen, setScreen] = useState<'login' | 'signup'>('login');
   const [step, setStep] = useState<SignupStep>(1);
@@ -62,6 +64,9 @@ export default function AppGate({ children }: { children: React.ReactNode }) {
   const [busy, setBusy] = useState(false);
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+
+  const publicPage = pathname === '/' || pathname === '/site';
+  if (publicPage) return <>{children}</>;
 
   if (mode === 'demo') return <>{children}</>;
   if (loading) return <div className="auth-page auth-loading-page"><div className="auth-loading">Carregando Sistema de Cobrança…</div></div>;
