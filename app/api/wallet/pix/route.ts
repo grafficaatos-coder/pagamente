@@ -12,6 +12,87 @@ function mapStatus(value:any){
   return 'pending';
 }
 
+
+export async function GET(request:Request){
+  try{
+    const {admin,member}=await requireTenant(request,['owner','admin','finance']);
+    const url=new URL(request.url);
+    const localTransferId=String(url.searchParams.get('transferId')||'').trim();
+
+    let query=admin.from('transfers')
+      .select('id,recipient_name,amount_cents,fee_cents,status,provider_transfer_id,created_at')
+      .eq('sender_organization_id',member.organization_id)
+      .eq('provider','asaas');
+
+    if(localTransferId){
+      query=query.eq('id',localTransferId);
+    }else{
+      query=query.eq('status','pending').limit(20);
+    }
+
+    const {data:rows,error}=await query;
+    if(error) throw error;
+    const transfers=rows??[];
+    if(!transfers.length) return Response.json({ok:true,updates:[]});
+
+    const apiKey=await getOrganizationAsaasApiKey(admin,member.organization_id);
+    const updates:any[]=[];
+
+    for(const row of transfers){
+      if(!row.provider_transfer_id) continue;
+      try{
+        const providerTransfer=await asaasRequest<any>(
+          apiKey,
+          '/transfers/'+encodeURIComponent(String(row.provider_transfer_id)),
+          {method:'GET'}
+        );
+        const nextStatus=mapStatus(providerTransfer?.status);
+        const now=new Date().toISOString();
+        const patch:any={
+          status:nextStatus,
+          completed_at:nextStatus==='completed'?(row.status==='completed'?undefined:now):null,
+          failed_at:nextStatus==='failed'?(row.status==='failed'?undefined:now):null
+        };
+        if(patch.completed_at===undefined) delete patch.completed_at;
+        if(patch.failed_at===undefined) delete patch.failed_at;
+
+        const {error:updateError}=await admin.from('transfers').update(patch).eq('id',row.id);
+        if(updateError) throw updateError;
+
+        updates.push({
+          id:row.id,
+          status:nextStatus,
+          providerStatus:String(providerTransfer?.status||''),
+          failReason:providerTransfer?.failReason||null,
+          receiptUrl:providerTransfer?.transactionReceiptUrl||null
+        });
+      }catch(refreshError){
+        updates.push({
+          id:row.id,
+          status:row.status,
+          error:refreshError instanceof Error?refreshError.message:'Falha ao consultar transferência no Asaas.'
+        });
+      }
+    }
+
+    const updatedBalance=await getAsaasBalance(apiKey).catch(()=>null);
+    if(updatedBalance){
+      await admin.from('wallet_accounts').update({
+        balance_cents:updatedBalance.balanceCents,
+        updated_at:new Date().toISOString()
+      }).eq('organization_id',member.organization_id);
+    }
+
+    return Response.json({
+      ok:true,
+      updates,
+      balanceCents:updatedBalance?.balanceCents??null
+    });
+  }catch(error){
+    return apiError(error);
+  }
+}
+
 export async function POST(request:Request){
   try{
     const {admin,member,user}=await requireTenant(request,['owner','admin','finance']);
@@ -104,6 +185,8 @@ export async function POST(request:Request){
       transferId:transfer?.id||null,
       status:mappedStatus,
       providerStatus:transfer?.status||null,
+      failReason:transfer?.failReason||null,
+      receiptUrl:transfer?.transactionReceiptUrl||null,
       balanceCents:updatedBalance.balanceCents
     });
   }catch(error){
