@@ -65,7 +65,7 @@ export default function SitePage() {
     <main className={styles.page}>
       <header className={styles.header}>
         <div className={styles.headerInner}>
-          <Link href="/site" className={styles.brand} aria-label="JP Sistema de Cobrança">
+          <Link href="/" className={styles.brand} aria-label="JP Sistema de Cobrança">
             <img src="/jp-sistema-cobranca-logo.svg" alt="JP Sistema de Cobrança" />
           </Link>
 
@@ -77,8 +77,8 @@ export default function SitePage() {
           </nav>
 
           <div className={styles.headerActions}>
-            <Link href="/" className={styles.loginBtn}>Entrar</Link>
-            <Link href="/" className={styles.primaryBtn}>Começar agora <ArrowRight size={17} /></Link>
+            <Link href="/sistema" className={styles.loginBtn}>Entrar</Link>
+            <Link href="/sistema" className={styles.primaryBtn}>Começar agora <ArrowRight size={17} /></Link>
           </div>
         </div>
       </header>
@@ -97,7 +97,7 @@ export default function SitePage() {
             </p>
 
             <div className={styles.heroActions}>
-              <Link href="/" className={styles.heroPrimary}>Acessar o sistema <ArrowRight size={19} /></Link>
+              <Link href="/sistema" className={styles.heroPrimary}>Acessar o sistema <ArrowRight size={19} /></Link>
               <a href="#recursos" className={styles.heroSecondary}>Conhecer recursos</a>
             </div>
 
@@ -252,7 +252,7 @@ export default function SitePage() {
             <h2>Leve sua cobrança para um painel único.</h2>
             <p>Organize clientes, cobranças, recebimentos e equipe sem depender de controles espalhados.</p>
           </div>
-          <Link href="/" className={styles.ctaButton}>Acessar o sistema <ArrowRight size={19}/></Link>
+          <Link href="/sistema" className={styles.ctaButton}>Acessar o sistema <ArrowRight size={19}/></Link>
         </div>
       </section>
 
@@ -265,7 +265,7 @@ export default function SitePage() {
           <a href="#recursos">Recursos</a>
           <a href="#como-funciona">Como funciona</a>
           <a href="#integracoes">Integrações</a>
-          <Link href="/">Entrar</Link>
+          <Link href="/sistema">Entrar</Link>
         </div>
         <p className={styles.legal}>
           O JP Sistema de Cobrança é uma plataforma de software. Serviços financeiros e processamento de pagamentos
