@@ -17,14 +17,18 @@ function digits(value:any){
 }
 
 export async function POST(request:Request){
+  let admin:any=null;
+  let chargeId='';
   try{
-    const {admin,member,organization,subscription}=await requireTenant(request,['owner','admin','finance']);
+    const tenant=await requireTenant(request,['owner','admin','finance']);
+    admin=tenant.admin;
+    const {member,organization,subscription}=tenant;
     if(!['active','trialing'].includes(organization.status)||!['active','trialing'].includes(subscription?.status||'')){
       throw new Error('A conta da empresa não está liberada para emitir cobranças.');
     }
 
     const body=await request.json().catch(()=>({}));
-    const chargeId=String(body?.chargeId||'');
+    chargeId=String(body?.chargeId||'');
     const requestedMethod=body?.method==='pix'?'pix':body?.method==='boleto'?'boleto':body?.method==='both'?'boleto_pix':null;
     if(!chargeId||!requestedMethod) throw new Error('Cobrança ou forma de pagamento não informada.');
 
@@ -212,6 +216,16 @@ export async function POST(request:Request){
       email
     });
   }catch(error){
+    const message=error instanceof Error?error.message:'Erro inesperado ao gerar cobrança Asaas.';
+    if(admin&&chargeId){
+      try{
+        await admin.from('charges').update({
+          provider_status_detail:'Erro ao gerar no Asaas: '+message,
+          updated_at:new Date().toISOString()
+        }).eq('id',chargeId);
+      }catch{}
+    }
+    console.error('[asaas-charge]',message);
     return apiError(error);
   }
 }
