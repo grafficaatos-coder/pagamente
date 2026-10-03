@@ -521,16 +521,17 @@ input:focus,select:focus{border-color:#0e9878!important;box-shadow:0 0 0 3px rgb
   gap:6px!important;
   width:max-content;
   max-width:100%;
-  padding:9px 11px;
-  border-radius:13px;
-  background:rgba(255,255,255,.96);
-  box-shadow:0 7px 22px rgba(10,31,52,.08);
+  padding:0;
+  border-radius:0;
+  background:transparent;
+  box-shadow:none;
 }
 .jp-auth-logo img{
   width:220px;
   max-width:100%;
   height:auto;
   display:block;
+  mix-blend-mode:multiply;
 }
 .jp-auth-logo>span{
   margin-left:4px;
