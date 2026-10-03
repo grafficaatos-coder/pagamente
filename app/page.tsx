@@ -168,6 +168,7 @@ export default function Home(){
   const [ownerTab,setOwnerTab]=useState<OwnerTab>('visao');
   const [platformOrgs,setPlatformOrgs]=useState<PlatformOrg[]>([]);
   const [plans,setPlans]=useState<Plan[]>([]);
+  const [planPriceDrafts,setPlanPriceDrafts]=useState<Record<string,{monthly:string;boleto:string}>>({});
   const [platformInvoices,setPlatformInvoices]=useState<PlatformInvoice[]>([]);
   const [chargeCounts,setChargeCounts]=useState<Record<string,number>>({});
   const [platformAudit,setPlatformAudit]=useState<AuditItem[]>([]);
@@ -264,6 +265,7 @@ export default function Home(){
           };
         }));
         setPlans((planRows??[]) as any);
+        setPlanPriceDrafts({});
         if(settingsRows)setPlatformSettings(settingsRows);
         setPlatformInvoices((invoiceRows??[]) as any);
         setPlatformAudit((auditRows??[]) as any);
@@ -1322,8 +1324,8 @@ export default function Home(){
                 <label>Nome<input value={p.name} onChange={e=>setPlans(rows=>rows.map((x,i)=>i===index?{...x,name:e.target.value}:x))}/></label>
                 <label>Modelo de cobrança<select value={p.billing_model} onChange={e=>setPlans(rows=>rows.map((x,i)=>i===index?{...x,billing_model:e.target.value as any}:x))}><option value="monthly">Mensal</option><option value="per_boleto">Por boleto emitido</option><option value="hybrid">Mensal + por boleto</option></select></label>
                 <div className="cols">
-                  <label>Mensalidade<input type="number" step="0.01" min="0" value={(Number(p.monthly_price_cents)/100).toFixed(2)} onChange={e=>setPlans(rows=>rows.map((x,i)=>i===index?{...x,monthly_price_cents:Math.round(Number(e.target.value||0)*100)}:x))}/></label>
-                  <label>Por boleto<input type="number" step="0.01" min="0" value={(Number(p.boleto_fee_cents)/100).toFixed(2)} onChange={e=>setPlans(rows=>rows.map((x,i)=>i===index?{...x,boleto_fee_cents:Math.round(Number(e.target.value||0)*100)}:x))}/></label>
+                  <label>Mensalidade<input type="text" inputMode="decimal" pattern="[0-9.,]*" value={planPriceDrafts[p.id]?.monthly??(Number(p.monthly_price_cents)/100).toFixed(2).replace('.',',')} onChange={e=>{const value=e.target.value;setPlanPriceDrafts(d=>({...d,[p.id]:{monthly:value,boleto:d[p.id]?.boleto??(Number(p.boleto_fee_cents)/100).toFixed(2).replace('.',',')}}));setPlans(rows=>rows.map((x,i)=>i===index?{...x,monthly_price_cents:parseBRL(value)}:x))}}/></label>
+                  <label>Por boleto<input type="text" inputMode="decimal" pattern="[0-9.,]*" value={planPriceDrafts[p.id]?.boleto??(Number(p.boleto_fee_cents)/100).toFixed(2).replace('.',',')} onChange={e=>{const value=e.target.value;setPlanPriceDrafts(d=>({...d,[p.id]:{monthly:d[p.id]?.monthly??(Number(p.monthly_price_cents)/100).toFixed(2).replace('.',','),boleto:value}}));setPlans(rows=>rows.map((x,i)=>i===index?{...x,boleto_fee_cents:parseBRL(value)}:x))}}/></label>
                 </div>
                 <div className="cols">
                   <label>Máx. clientes<input type="number" min="0" value={p.max_clients??''} onChange={e=>setPlans(rows=>rows.map((x,i)=>i===index?{...x,max_clients:e.target.value?Number(e.target.value):null}:x))}/></label>
