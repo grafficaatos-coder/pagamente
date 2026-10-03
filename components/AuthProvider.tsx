@@ -37,7 +37,11 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 function appOrigin() {
   if (typeof window !== 'undefined') return window.location.origin;
-  return 'https://pagamente.vercel.app';
+  return 'https://jpsistemadecobranca.com.br';
+}
+
+function appEntryUrl() {
+  return appOrigin().replace(/\/$/,'') + '/sistema';
 }
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -82,7 +86,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: payload.email,
         password: payload.password,
         options: {
-          emailRedirectTo: appOrigin(),
+          emailRedirectTo: appEntryUrl(),
           data: {
             display_name: payload.contactName,
             contact_name: payload.contactName,
@@ -108,7 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const { error } = await supabase.auth.resend({
         type: 'signup',
         email,
-        options: { emailRedirectTo: appOrigin() },
+        options: { emailRedirectTo: appEntryUrl() },
       });
       if (error) throw error;
       return 'Novo e-mail de confirmação enviado. Use o link mais recente.';
@@ -117,7 +121,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!supabase) return 'Modo demonstração ativo.';
       if (!email) throw new Error('Informe seu e-mail para redefinir a senha.');
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: appOrigin(),
+        redirectTo: appEntryUrl(),
       });
       if (error) throw error;
       return 'Enviamos um link de recuperação para o seu e-mail.';
