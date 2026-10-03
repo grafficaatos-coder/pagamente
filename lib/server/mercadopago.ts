@@ -214,6 +214,57 @@ export async function getMercadoPagoOrder(accessToken:string,orderId:string){
   });
 }
 
+export async function getMercadoPagoPayment(accessToken:string,paymentId:string){
+  return mpFetch('/v1/payments/'+encodeURIComponent(paymentId),{
+    headers:{accept:'application/json',authorization:'Bearer '+accessToken}
+  });
+}
+
+export async function createCardCheckoutPreference(accessToken:string,input:{
+  chargeId:string;
+  amountCents:number;
+  description:string;
+  payer:{email:string};
+}){
+  const appUrl=(process.env.APP_URL||'https://jpsistemadecobranca.com.br').replace(/\/$/,'');
+  return mpFetch('/checkout/preferences',{
+    method:'POST',
+    headers:{
+      accept:'application/json',
+      'content-type':'application/json',
+      authorization:'Bearer '+accessToken
+    },
+    body:JSON.stringify({
+      external_reference:input.chargeId,
+      notification_url:appUrl+'/api/webhooks/mercadopago',
+      items:[{
+        id:input.chargeId,
+        title:input.description,
+        quantity:1,
+        currency_id:'BRL',
+        unit_price:Number((input.amountCents/100).toFixed(2))
+      }],
+      payer:{email:input.payer.email},
+      back_urls:{
+        success:appUrl+'/sistema?mp_payment=success',
+        pending:appUrl+'/sistema?mp_payment=pending',
+        failure:appUrl+'/sistema?mp_payment=failure'
+      },
+      auto_return:'approved',
+      payment_methods:{
+        excluded_payment_types:[
+          {id:'ticket'},
+          {id:'bank_transfer'},
+          {id:'atm'},
+          {id:'debit_card'},
+          {id:'prepaid_card'}
+        ],
+        installments:12
+      }
+    })
+  });
+}
+
 export async function cancelMercadoPagoOrder(accessToken:string,orderId:string,idempotencyKey:string){
   return mpFetch('/v1/orders/'+encodeURIComponent(orderId)+'/cancel',{
     method:'POST',
@@ -229,12 +280,21 @@ export async function cancelMercadoPagoOrder(accessToken:string,orderId:string,i
 
 export function mapMercadoPagoOrderStatus(order:any){
   const payment=order?.transactions?.payments?.[0];
-  const status=payment?.status||order?.status;
+  const status=String(payment?.status||order?.status||'').toLowerCase();
   const detail=payment?.status_detail||order?.status_detail||null;
-  if(status==='processed'&&detail==='accredited') return {status:'paid',detail};
-  if(status==='canceled'||status==='cancelled'||status==='expired'||status==='refunded') return {status:'cancelled',detail};
-  if(status==='failed') return {status:'failed',detail};
-  if(status==='action_required'||status==='created'||status==='processing'||status==='pending') return {status:'pending',detail};
+  if((status==='processed'&&detail==='accredited')||status==='approved'||status==='authorized') return {status:'paid',detail};
+  if(status==='canceled'||status==='cancelled'||status==='expired'||status==='refunded'||status==='charged_back') return {status:'cancelled',detail};
+  if(status==='failed'||status==='rejected') return {status:'failed',detail};
+  if(status==='action_required'||status==='created'||status==='processing'||status==='pending'||status==='in_process'||status==='in_mediation') return {status:'pending',detail};
+  return {status:'pending',detail};
+}
+
+export function mapMercadoPagoPaymentStatus(payment:any){
+  const status=String(payment?.status||'').toLowerCase();
+  const detail=payment?.status_detail||null;
+  if(status==='approved'||status==='authorized') return {status:'paid',detail};
+  if(status==='cancelled'||status==='canceled'||status==='refunded'||status==='charged_back') return {status:'cancelled',detail};
+  if(status==='rejected'||status==='failed') return {status:'failed',detail};
   return {status:'pending',detail};
 }
 
