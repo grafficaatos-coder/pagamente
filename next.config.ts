@@ -1,0 +1,37 @@
+import type { NextConfig } from 'next';
+
+const nextConfig: NextConfig = {
+  async redirects() {
+    return [
+      {
+        source: '/',
+        destination: '/site',
+        permanent: false,
+      },
+    ];
+  },
+  async headers() {
+    return [
+      {
+        source: '/',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0' },
+        ],
+      },
+      {
+        source: '/site',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0' },
+        ],
+      },
+      {
+        source: '/sistema',
+        headers: [
+          { key: 'Cache-Control', value: 'no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0' },
+        ],
+      },
+    ];
+  },
+};
+
+export default nextConfig;
