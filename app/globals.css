@@ -641,3 +641,211 @@ input:focus,select:focus{border-color:#0e9878!important;box-shadow:0 0 0 3px rgb
   .charge-client-picker{grid-template-columns:1fr}
   .quick-client-button{width:100%}
 }
+
+
+/* Mobile navigation drawer and responsive tenant layout */
+.tenant-mobile-menu-head,
+.tenant-menu-toggle,
+.tenant-mobile-backdrop{display:none}
+.tenant-topbar-account{min-width:0;flex:1}
+.tenant-refresh-button{flex:0 0 auto}
+
+@media(max-width:700px){
+  html,body{max-width:100%;overflow-x:hidden}
+  .tenant-shell{display:block!important;min-width:0!important}
+  .tenant-main{margin-left:0!important;width:100%!important;min-width:0!important}
+  .tenant-content{
+    width:100%!important;
+    max-width:100%!important;
+    min-width:0!important;
+    padding:16px 12px 28px!important;
+    overflow-x:hidden
+  }
+
+  .tenant-mobile-backdrop{
+    display:block;
+    position:fixed;
+    inset:0;
+    z-index:1000;
+    border:0;
+    padding:0;
+    background:rgba(14,24,40,.48);
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .22s ease
+  }
+  .tenant-mobile-backdrop.visible{opacity:1;pointer-events:auto}
+
+  .tenant-sidebar{
+    position:fixed!important;
+    top:0!important;
+    left:0!important;
+    bottom:0!important;
+    width:min(84vw,310px)!important;
+    min-height:100dvh!important;
+    max-height:100dvh!important;
+    z-index:1001!important;
+    padding:14px 12px!important;
+    overflow:hidden!important;
+    transform:translateX(-105%);
+    transition:transform .24s ease;
+    box-shadow:18px 0 40px rgba(17,32,54,.18)!important
+  }
+  .tenant-sidebar.mobile-open{transform:translateX(0)}
+
+  .tenant-mobile-menu-head{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:12px;
+    padding:2px 2px 8px
+  }
+  .tenant-mobile-menu-head strong{font-size:13px;color:#24334d}
+  .tenant-mobile-menu-head button{
+    width:38px;
+    height:38px;
+    border:1px solid #dfe6ee;
+    background:#fff;
+    color:#53647b;
+    border-radius:10px;
+    display:grid;
+    place-items:center
+  }
+
+  .tenant-brand{padding:0 4px 12px!important}
+  .jp-brand-logo{width:154px!important}
+  .jp-brand-subtitle{font-size:8px!important}
+
+  .company-card{
+    display:flex!important;
+    margin:0 0 12px!important;
+    padding:11px!important
+  }
+
+  .tenant-nav{
+    display:flex!important;
+    flex-direction:column!important;
+    gap:4px!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    padding:0 3px 8px 0!important
+  }
+  .tenant-nav button{
+    width:100%!important;
+    justify-content:flex-start!important;
+    padding:11px 12px!important;
+    min-height:44px!important
+  }
+  .tenant-nav button span{display:inline!important}
+  .tenant-side-bottom{display:block!important;padding-top:10px!important}
+  .tenant-user{display:flex!important}
+  .tenant-logout{display:flex!important}
+
+  .tenant-topbar{
+    height:58px!important;
+    padding:0 12px!important;
+    gap:10px!important;
+    position:sticky!important;
+    top:0!important;
+    z-index:50!important
+  }
+  .tenant-menu-toggle{
+    width:40px;
+    height:40px;
+    border:1px solid #dce4ed!important;
+    background:#fff!important;
+    color:#24405d!important;
+    border-radius:10px!important;
+    display:grid!important;
+    place-items:center!important;
+    padding:0!important;
+    flex:0 0 auto
+  }
+  .tenant-topbar-account{overflow:hidden}
+  .tenant-topbar-account strong,
+  .tenant-topbar-account span{
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap
+  }
+  .tenant-topbar-account strong{font-size:11px!important}
+  .tenant-topbar-account span{font-size:8px!important}
+  .tenant-refresh-button{width:40px;height:40px;padding:0!important}
+
+  .tenant-heading{
+    width:100%!important;
+    min-width:0!important;
+    gap:12px!important;
+    margin-bottom:16px!important
+  }
+  .tenant-heading>div{min-width:0}
+  .tenant-heading h1{font-size:28px!important;line-height:1.05!important}
+  .tenant-heading p{font-size:11px!important;line-height:1.45!important;max-width:100%!important}
+
+  .dashboard-heading-actions{
+    width:100%!important;
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    gap:9px!important
+  }
+  .balance-chip{
+    width:100%!important;
+    min-width:0!important;
+    padding:12px 13px!important
+  }
+  .dashboard-heading-actions .primaryBtn{
+    width:100%!important;
+    min-height:44px!important;
+    white-space:normal!important
+  }
+
+  .finance-overview-grid{
+    grid-template-columns:1fr!important;
+    gap:10px!important
+  }
+  .finance-overview-card{padding:15px!important}
+  .finance-overview-card>strong{font-size:22px!important}
+
+  .dashboard-analytics-grid{
+    grid-template-columns:minmax(0,1fr)!important;
+    gap:12px!important
+  }
+  .monthly-chart-card,
+  .month-summary-card,
+  .dashboard-recent-card,
+  .card,
+  .grid,
+  .cols,
+  .address-fields{min-width:0!important;max-width:100%!important}
+
+  .grid,.cols,.address-fields{grid-template-columns:1fr!important}
+  .card{padding:16px!important}
+  .tableCard{padding:0!important}
+  .cardHead{padding:15px 14px!important}
+  .tableWrap{
+    width:100%!important;
+    max-width:100%!important;
+    overflow-x:auto!important;
+    -webkit-overflow-scrolling:touch
+  }
+  table{min-width:680px}
+
+  .dashboard-card-head{align-items:flex-start!important}
+  .chart-legend{gap:7px!important}
+  .monthly-chart{padding:22px 8px 15px 12px!important;min-height:245px!important}
+  .chart-plot{gap:4px!important;padding-left:6px!important;padding-right:6px!important}
+  .chart-bars{gap:2px!important}
+  .chart-month>span{font-size:8px!important}
+
+  .trial-banner{
+    flex-direction:column!important;
+    align-items:flex-start!important;
+    gap:8px!important
+  }
+  .usage-pill{width:100%!important;text-align:left!important}
+  .form-actions{align-items:stretch!important}
+  .form-actions .primaryBtn,
+  .form-actions .secondaryBtn{width:100%!important}
+
+  input,select,button{max-width:100%}
+}
