@@ -2154,23 +2154,21 @@ export default function Home(){
                   <option value="asaas" disabled={!baasConnected||!asaasDirect}>Somente boleto Asaas{baasConnected&&asaasDirect?'':' — conectar conta Asaas'}</option>
                   <option value="asaas_pix" disabled={!baasConnected||!asaasDirect}>Somente Pix Asaas{baasConnected&&asaasDirect?'':' — conectar conta Asaas'}</option>
                   <option value="mercadopago_card" disabled={mercadoPago?.status!=='connected'}>Cartão de crédito Mercado Pago{mercadoPago?.status==='connected'?'':' — conectar primeiro'}</option>
-                  <option value="mercadopago_both" disabled={mercadoPago?.status!=='connected'}>Boleto + Pix Mercado Pago — cliente escolhe{mercadoPago?.status==='connected'?'':' — conectar primeiro'}</option>
-                  <option value="mercadopago" disabled={mercadoPago?.status!=='connected'}>Somente boleto Mercado Pago{mercadoPago?.status==='connected'?'':' — conectar primeiro'}</option>
+                  <option value="mercadopago_both" disabled={mercadoPago?.status!=='connected'}>Boleto + Pix Mercado Pago — juntos em 1 e-mail{mercadoPago?.status==='connected'?'':' — conectar primeiro'}</option>
                   <option value="mercadopago_pix" disabled={mercadoPago?.status!=='connected'}>Somente Pix Mercado Pago{mercadoPago?.status==='connected'?'':' — conectar primeiro'}</option>
                 </select></label>
                 {chargeForm.paymentMethod==='asaas_both'&&<p className="permission-note">O cliente abre a fatura Asaas e escolhe boleto ou Pix. Depois do recebimento, o dinheiro permanece no saldo da Conta Digital Asaas até você transferir para outro banco.</p>}
                 {chargeForm.paymentMethod==='asaas'&&<p className="permission-note">O boleto é emitido pelo Asaas e, quando recebido, o valor fica na sua Conta Digital Asaas.</p>}
                 {chargeForm.paymentMethod==='asaas_pix'&&<p className="permission-note">O Pix é emitido pelo Asaas e, quando recebido, o valor fica na sua Conta Digital Asaas.</p>}
                 {chargeForm.paymentMethod==='mercadopago_card'&&<p className="permission-note">Será gerado um link seguro do Mercado Pago para o cliente pagar com cartão de crédito, com parcelamento disponível conforme a conta Mercado Pago.</p>}
-                {chargeForm.paymentMethod==='mercadopago_both'&&<p className="permission-note">Serão gerados boleto e Pix para a mesma cobrança. O cliente receberá as duas opções e escolherá como pagar. Para o boleto, mantenha CPF/CNPJ, e-mail e endereço completos.</p>}
-                {chargeForm.paymentMethod==='mercadopago'&&<p className="permission-note">O boleto pode vencer entre 1 e 30 dias após a emissão. O cliente precisa ter CPF/CNPJ, e-mail e endereço completo.</p>}
+                {chargeForm.paymentMethod==='mercadopago_both'&&<p className="permission-note">Será gerado 1 boleto e 1 Pix para a mesma cobrança. O sistema enviará somente 1 e-mail contendo as duas opções: botão do boleto, linha digitável e Pix Copia e Cola. Para gerar o boleto, mantenha CPF/CNPJ, e-mail e endereço completos.</p>}
                 {chargeForm.paymentMethod==='mercadopago_pix'&&<p className="permission-note">O Pix gera QR Code e código Copia e Cola pelo Mercado Pago. O cliente precisa ter e-mail cadastrado.</p>}
                 <button className="primaryBtn" disabled={busy||!clients.some(c=>c.status==='active')||!canManageFinance}><Plus size={16}/> {
                   chargeForm.paymentMethod==='asaas_both'?'Gerar cobrança Asaas':
                   chargeForm.paymentMethod==='asaas_pix'?'Gerar Pix Asaas':
                   chargeForm.paymentMethod==='asaas'?'Gerar boleto Asaas':
                   chargeForm.paymentMethod==='mercadopago_card'?'Gerar link de cartão':
-                  chargeForm.paymentMethod==='mercadopago_both'?'Gerar boleto + Pix':
+                  chargeForm.paymentMethod==='mercadopago_both'?'Gerar boleto + Pix e enviar 1 e-mail':
                   chargeForm.paymentMethod==='mercadopago_pix'?'Gerar Pix':
                   chargeForm.paymentMethod==='mercadopago'?'Gerar boleto':'Criar cobrança'
                 }</button>
