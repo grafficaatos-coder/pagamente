@@ -23,7 +23,7 @@ type Charge = {
   id:string; description:string; amount_cents:number; due_date:string; status:string;
   provider:string; payment_method?:'boleto'|'pix'|'boleto_pix'|'card'|null; provider_charge_id?:string|null; provider_status_detail?:string|null; created_at:string; boleto_url?:string|null; digitable_line?:string|null;
   pix_provider_charge_id?:string|null; pix_url?:string|null; pix_code?:string|null;
-  clients?:{name?:string;email?:string|null;whatsapp?:string|null}|null
+  clients?:{name?:string;email?:string|null;email_2?:string|null;email_3?:string|null;whatsapp?:string|null}|null
 };
 type RecurringRule = { id:string; description:string; amount_cents:number; frequency:string; generation_day:number; due_day:number; status:string; clients?:{name?:string}|null };
 type TeamMember = { user_id:string; email:string|null; display_name:string|null; role:string; created_at:string };
@@ -338,7 +338,7 @@ export default function Home(){
         supabase.from('organizations').select('id,name,status').eq('id',orgId).single(),
         supabase.from('wallet_accounts').select('id,account_number,pix_key,balance_cents').eq('organization_id',orgId).single(),
         supabase.from('clients').select('id,name,document,email,email_2,email_3,whatsapp,delivery_preference,address,status').eq('organization_id',orgId).order('created_at',{ascending:false}),
-        supabase.from('charges').select('id,description,amount_cents,due_date,status,provider,payment_method,provider_charge_id,pix_provider_charge_id,provider_status_detail,created_at,boleto_url,digitable_line,pix_url,pix_code,clients(name,email,whatsapp)').eq('organization_id',orgId).order('created_at',{ascending:false}).limit(250),
+        supabase.from('charges').select('id,description,amount_cents,due_date,status,provider,payment_method,provider_charge_id,pix_provider_charge_id,provider_status_detail,created_at,boleto_url,digitable_line,pix_url,pix_code,clients(name,email,email_2,email_3,whatsapp)').eq('organization_id',orgId).order('created_at',{ascending:false}).limit(250),
         supabase.from('recurring_rules').select('id,description,amount_cents,frequency,generation_day,due_day,status,clients(name)').eq('organization_id',orgId).order('created_at',{ascending:false}),
         supabase.from('subscriptions').select('status,trial_ends_at,current_period_end,chosen_plan_at,plans(name,billing_model,monthly_price_cents,boleto_fee_cents,max_clients,max_users)').eq('organization_id',orgId).maybeSingle(),
         supabase.from('platform_invoices').select('id,status,total_cents,due_date,reference_month').eq('organization_id',orgId).order('created_at',{ascending:false}).limit(1).maybeSingle(),
@@ -1340,7 +1340,9 @@ export default function Home(){
       const data=await response.json();
       if(!response.ok)throw new Error(data.error||'Não foi possível enviar o e-mail.');
       const count=Array.isArray(data.recipients)?data.recipients.length:1;
-      setMsg('Cobrança enviada por e-mail com sucesso para '+count+' endereço'+(count>1?'s':'')+'.');
+      const success='Boleto/cobrança enviado por e-mail para '+count+' endereço'+(count>1?'s':'')+'. Você pode clicar em Enviar e-mail novamente sempre que quiser reenviar.';
+      setMsg(success);
+      setChargeFeedback(current=>({...current,[charge.id]:'E-mail enviado. Clique novamente para reenviar.'}));
     }catch(e){
       setMsg(e instanceof Error?e.message:'Não foi possível enviar o e-mail.');
     }finally{
@@ -2209,7 +2211,7 @@ export default function Home(){
                     {charge.digitable_line&&<button onClick={()=>navigator.clipboard.writeText(charge.digitable_line||'')}>{charge.payment_method==='pix'?'Copiar Pix':'Copiar linha'}</button>}
                     {charge.payment_method==='boleto_pix'&&charge.pix_url&&<a className="table-link" href={charge.pix_url} target="_blank" rel="noreferrer">Abrir Pix</a>}
                     {charge.payment_method==='boleto_pix'&&charge.pix_code&&<button onClick={()=>navigator.clipboard.writeText(charge.pix_code||'')}>Copiar Pix</button>}
-                    {(charge.boleto_url||charge.pix_url)&&chargeClient(charge)?.email&&<button disabled={busy} onClick={()=>openEmailCharge(charge)}><Mail size={13}/> Enviar e-mail</button>}
+                    {(charge.boleto_url||charge.pix_url)&&[chargeClient(charge)?.email,chargeClient(charge)?.email_2,chargeClient(charge)?.email_3].some(Boolean)&&<button disabled={busy} onClick={()=>openEmailCharge(charge)} title="Cada clique envia novamente esta cobrança por e-mail"><Mail size={13}/> Enviar e-mail</button>}
                     {(charge.boleto_url||charge.pix_url)&&chargeClient(charge)?.whatsapp&&<button onClick={()=>openWhatsAppCharge(charge)}><MessageCircle size={13}/> WhatsApp</button>}
                     {chargeFeedback[charge.id]&&<span className="charge-action-feedback">{chargeFeedback[charge.id]}</span>}
                     {!chargeFeedback[charge.id]&&charge.provider_status_detail?.startsWith('Erro ao gerar')&&<span className="charge-action-feedback error">{charge.provider_status_detail}</span>}
