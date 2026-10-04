@@ -28,7 +28,7 @@ export async function POST(request:Request){
     if(!chargeId) throw new Error('Cobrança não informada.');
 
     const {data:charge,error:chargeError}=await admin.from('charges')
-      .select('id,organization_id,client_id,description,amount_cents,due_date,status,provider,payment_method,provider_charge_id,provider_payment_id,boleto_url,digitable_line,barcode_content,pix_provider_charge_id,pix_provider_payment_id,pix_url,pix_code,pix_qr_base64,send_email,email_sent_at,send_whatsapp,whatsapp_sent_at,clients(id,name,document,email,whatsapp,address,status)')
+      .select('id,organization_id,client_id,description,amount_cents,due_date,status,provider,payment_method,provider_charge_id,provider_payment_id,boleto_url,digitable_line,barcode_content,pix_provider_charge_id,pix_provider_payment_id,pix_url,pix_code,pix_qr_base64,send_email,email_sent_at,send_whatsapp,whatsapp_sent_at,clients(id,name,document,email,email_2,email_3,whatsapp,address,status)')
       .eq('id',chargeId)
       .eq('organization_id',member.organization_id)
       .single();
@@ -54,7 +54,7 @@ export async function POST(request:Request){
       if(!emailCharge.send_email||emailCharge.email_sent_at||!client?.email)return {sent:false,skipped:true};
       try{
         const result=await sendChargeEmail({
-          to:client.email,
+          to:[client.email,client.email_2,client.email_3].filter(Boolean),
           clientName:client.name,
           organizationName:organization.name,
           description:emailCharge.description,
