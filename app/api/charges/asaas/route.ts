@@ -44,7 +44,7 @@ export async function POST(request:Request){
     }
 
     const {data:charge,error:chargeError}=await admin.from('charges')
-      .select('id,organization_id,client_id,description,amount_cents,due_date,status,provider,payment_method,provider_charge_id,boleto_url,digitable_line,pix_url,pix_code,send_email,email_sent_at,send_whatsapp,whatsapp_sent_at,interest_monthly_percent,fine_type,fine_percent,fine_amount_cents,discount_type,discount_percent,discount_amount_cents,discount_deadline_days,clients(id,name,document,email,whatsapp,address,status)')
+      .select('id,organization_id,client_id,description,amount_cents,due_date,status,provider,payment_method,provider_charge_id,boleto_url,digitable_line,pix_url,pix_code,send_email,email_sent_at,send_whatsapp,whatsapp_sent_at,interest_monthly_percent,fine_type,fine_percent,fine_amount_cents,discount_type,discount_percent,discount_amount_cents,discount_deadline_days,clients(id,name,document,email,email_2,email_3,whatsapp,address,status)')
       .eq('id',chargeId)
       .eq('organization_id',member.organization_id)
       .single();
@@ -171,7 +171,7 @@ export async function POST(request:Request){
     if(charge.send_email&&!charge.email_sent_at&&client.email){
       try{
         const emailInput:any={
-          to:client.email,
+          to:[client.email,client.email_2,client.email_3].filter(Boolean),
           clientName:client.name,
           organizationName:organization.name,
           description:charge.description,
