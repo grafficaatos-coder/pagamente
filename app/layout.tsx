@@ -7,6 +7,11 @@ export const metadata = {
   description: 'Sistema de gestão de cobranças, clientes e recebimentos empresariais',
 };
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return <html lang="pt-BR"><body><AuthProvider><AppGate>{children}</AppGate></AuthProvider></body></html>;
 }
