@@ -121,6 +121,11 @@ function formatMoneyInput(value:string){
   return (cents/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 }
 
+function formatCepInput(value:string){
+  const digits=String(value||'').replace(/\D/g,'').slice(0,8);
+  return digits.length>5?digits.slice(0,5)+'-'+digits.slice(5):digits;
+}
+
 function clientName(value:any){
   return Array.isArray(value) ? value[0]?.name : value?.name;
 }
@@ -660,6 +665,61 @@ export default function Home(){
       setMsg(e instanceof Error?e.message:'Não foi possível escolher o plano.');
     }finally{
       setBusy(false);
+    }
+  }
+
+  async function fetchCepAddress(cepValue:string){
+    const cep=String(cepValue||'').replace(/\D/g,'');
+    if(cep.length!==8)return null;
+    const response=await fetch('/api/cep?cep='+encodeURIComponent(cep),{cache:'no-store'});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.error||'Não foi possível consultar o CEP.');
+    return data;
+  }
+
+  async function handleClientFormCep(value:string){
+    const formatted=formatCepInput(value);
+    setClientForm(current=>({...current,zip_code:formatted}));
+    if(formatted.replace(/\D/g,'').length!==8)return;
+    try{
+      const address=await fetchCepAddress(formatted);
+      if(!address)return;
+      setClientForm(current=>({
+        ...current,
+        zip_code:formatCepInput(address.cep||formatted),
+        street_name:address.street_name||current.street_name,
+        neighborhood:address.neighborhood||current.neighborhood,
+        city:address.city||current.city,
+        state:address.state||current.state
+      }));
+    }catch(error){
+      setMsg(error instanceof Error?error.message:'Não foi possível consultar o CEP.');
+    }
+  }
+
+  async function handleClientEditCep(value:string){
+    const formatted=formatCepInput(value);
+    setClientEdit(current=>current?{
+      ...current,
+      address:{...(current.address||{}),zip_code:formatted}
+    }:current);
+    if(formatted.replace(/\D/g,'').length!==8)return;
+    try{
+      const address=await fetchCepAddress(formatted);
+      if(!address)return;
+      setClientEdit(current=>current?{
+        ...current,
+        address:{
+          ...(current.address||{}),
+          zip_code:formatCepInput(address.cep||formatted),
+          street_name:address.street_name||current.address?.street_name||'',
+          neighborhood:address.neighborhood||current.address?.neighborhood||'',
+          city:address.city||current.address?.city||'',
+          state:address.state||current.address?.state||''
+        }
+      }:current);
+    }catch(error){
+      setMsg(error instanceof Error?error.message:'Não foi possível consultar o CEP.');
     }
   }
 
@@ -1919,7 +1979,7 @@ export default function Home(){
                   </select>
                 </label>
                 <div className="address-fields">
-                  <label>CEP<input value={clientEdit.address?.zip_code??''} onChange={e=>setClientEdit({...clientEdit,address:{...(clientEdit.address||{}),zip_code:e.target.value}})}/></label>
+                  <label>CEP<input inputMode="numeric" value={clientEdit.address?.zip_code??''} onChange={e=>void handleClientEditCep(e.target.value)} placeholder="00000-000"/></label>
                   <label>Rua<input value={clientEdit.address?.street_name??''} onChange={e=>setClientEdit({...clientEdit,address:{...(clientEdit.address||{}),street_name:e.target.value}})}/></label>
                   <label>Número<input value={clientEdit.address?.street_number??''} onChange={e=>setClientEdit({...clientEdit,address:{...(clientEdit.address||{}),street_number:e.target.value}})}/></label>
                   <label>Bairro<input value={clientEdit.address?.neighborhood??''} onChange={e=>setClientEdit({...clientEdit,address:{...(clientEdit.address||{}),neighborhood:e.target.value}})}/></label>
@@ -1947,7 +2007,7 @@ export default function Home(){
                 </label>
                 <p className="permission-note">A preferência será aplicada automaticamente às novas cobranças deste cliente.</p>
                 <div className="address-fields">
-                  <label>CEP<input value={clientForm.zip_code} onChange={e=>setClientForm({...clientForm,zip_code:e.target.value})} placeholder="00000-000"/></label>
+                  <label>CEP<input inputMode="numeric" value={clientForm.zip_code} onChange={e=>void handleClientFormCep(e.target.value)} placeholder="00000-000"/></label>
                   <label>Rua<input value={clientForm.street_name} onChange={e=>setClientForm({...clientForm,street_name:e.target.value})}/></label>
                   <label>Número<input value={clientForm.street_number} onChange={e=>setClientForm({...clientForm,street_number:e.target.value})} placeholder="S/N"/></label>
                   <label>Bairro<input value={clientForm.neighborhood} onChange={e=>setClientForm({...clientForm,neighborhood:e.target.value})}/></label>
@@ -2016,7 +2076,7 @@ export default function Home(){
                       </select>
                     </label>
                     <div className="address-fields">
-                      <label>CEP<input value={clientForm.zip_code} onChange={e=>setClientForm({...clientForm,zip_code:e.target.value})} placeholder="00000-000"/></label>
+                      <label>CEP<input inputMode="numeric" value={clientForm.zip_code} onChange={e=>void handleClientFormCep(e.target.value)} placeholder="00000-000"/></label>
                       <label>Rua<input value={clientForm.street_name} onChange={e=>setClientForm({...clientForm,street_name:e.target.value})}/></label>
                       <label>Número<input value={clientForm.street_number} onChange={e=>setClientForm({...clientForm,street_number:e.target.value})} placeholder="S/N"/></label>
                       <label>Bairro<input value={clientForm.neighborhood} onChange={e=>setClientForm({...clientForm,neighborhood:e.target.value})}/></label>
