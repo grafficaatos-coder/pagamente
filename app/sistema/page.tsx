@@ -117,7 +117,8 @@ function parsePercent(value:string){
 
 function formatMoneyInput(value:string){
   const digits=String(value||'').replace(/\D/g,'');
-  const cents=Number(digits||'0');
+  if(!digits)return '';
+  const cents=Number(digits);
   return (cents/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 }
 
@@ -2141,13 +2142,13 @@ export default function Home(){
                     <div className="charge-term-title"><strong>Multa</strong><span>Somada ao valor após o vencimento</span></div>
                     <div className="cols">
                       <label>Tipo
-                        <select value={chargeForm.fineType} onChange={e=>setChargeForm({...chargeForm,fineType:e.target.value})}>
+                        <select value={chargeForm.fineType} onChange={e=>setChargeForm({...chargeForm,fineType:e.target.value,fineValue:'0,00'})}>
                           <option value="percent">Percentual</option>
                           <option value="fixed">Valor fixo</option>
                         </select>
                       </label>
                       <label>{chargeForm.fineType==='percent'?'Valor percentual da multa (%)':'Valor fixo da multa (R$)'}
-                        <input inputMode="decimal" placeholder="0,00" value={chargeForm.fineValue} onChange={e=>setChargeForm({...chargeForm,fineValue:e.target.value})}/>
+                        <input inputMode={chargeForm.fineType==='fixed'?'numeric':'decimal'} placeholder="0,00" value={chargeForm.fineValue} onChange={e=>setChargeForm({...chargeForm,fineValue:chargeForm.fineType==='fixed'?formatMoneyInput(e.target.value):e.target.value})} onFocus={e=>e.currentTarget.select()}/>
                       </label>
                     </div>
                   </div>
@@ -2156,13 +2157,13 @@ export default function Home(){
                     <div className="charge-term-title"><strong>Desconto</strong><span>Incentivo para pagamento antecipado</span></div>
                     <div className="cols">
                       <label>Tipo
-                        <select value={chargeForm.discountType} onChange={e=>setChargeForm({...chargeForm,discountType:e.target.value})}>
+                        <select value={chargeForm.discountType} onChange={e=>setChargeForm({...chargeForm,discountType:e.target.value,discountValue:'0,00'})}>
                           <option value="percent">Percentual</option>
                           <option value="fixed">Valor fixo</option>
                         </select>
                       </label>
                       <label>{chargeForm.discountType==='percent'?'Valor percentual do desconto (%)':'Valor fixo do desconto (R$)'}
-                        <input inputMode="decimal" placeholder="0,00" value={chargeForm.discountValue} onChange={e=>setChargeForm({...chargeForm,discountValue:e.target.value})}/>
+                        <input inputMode={chargeForm.discountType==='fixed'?'numeric':'decimal'} placeholder="0,00" value={chargeForm.discountValue} onChange={e=>setChargeForm({...chargeForm,discountValue:chargeForm.discountType==='fixed'?formatMoneyInput(e.target.value):e.target.value})} onFocus={e=>e.currentTarget.select()}/>
                       </label>
                     </div>
                     <label>Prazo máximo do desconto
@@ -2258,7 +2259,7 @@ export default function Home(){
             <section className="card"><h2>Nova recorrência</h2><form onSubmit={addRecurring}>
               <label>Cliente<select required value={recurringForm.clientId} onChange={e=>setRecurringForm({...recurringForm,clientId:e.target.value})}><option value="">Selecione</option>{clients.filter(c=>c.status==='active').map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
               <label>Descrição<input required value={recurringForm.description} onChange={e=>setRecurringForm({...recurringForm,description:e.target.value})}/></label>
-              <div className="cols"><label>Valor<input required placeholder="0,00" value={recurringForm.amount} onChange={e=>setRecurringForm({...recurringForm,amount:e.target.value})}/></label><label>Frequência<select value={recurringForm.frequency} onChange={e=>setRecurringForm({...recurringForm,frequency:e.target.value})}><option value="monthly">Mensal</option><option value="biweekly">Quinzenal</option><option value="quarterly">Trimestral</option><option value="annual">Anual</option></select></label></div>
+              <div className="cols"><label>Valor<input required type="text" inputMode="numeric" placeholder="0,00" value={recurringForm.amount} onChange={e=>setRecurringForm({...recurringForm,amount:formatMoneyInput(e.target.value)})} onFocus={e=>e.currentTarget.select()}/></label><label>Frequência<select value={recurringForm.frequency} onChange={e=>setRecurringForm({...recurringForm,frequency:e.target.value})}><option value="monthly">Mensal</option><option value="biweekly">Quinzenal</option><option value="quarterly">Trimestral</option><option value="annual">Anual</option></select></label></div>
               <div className="cols"><label>Dia de geração<input type="number" min="1" max="28" value={recurringForm.generationDay} onChange={e=>setRecurringForm({...recurringForm,generationDay:e.target.value})}/></label><label>Dia do vencimento<input type="number" min="1" max="28" value={recurringForm.dueDay} onChange={e=>setRecurringForm({...recurringForm,dueDay:e.target.value})}/></label></div>
               <button className="primaryBtn" disabled={busy||!clients.some(c=>c.status==='active')||!canManageFinance}><Plus size={16}/> Criar recorrência</button>
               {!canManageFinance&&<p className="permission-note">Seu perfil não permite alterar recorrências.</p>}
@@ -2305,7 +2306,7 @@ export default function Home(){
                 <label>Regime tributário<select value={asaasAccountForm.taxRegime} onChange={e=>setAsaasAccountForm({...asaasAccountForm,taxRegime:e.target.value})}><option value="UNKNOWN">Não informado</option><option value="MEI">MEI</option><option value="NATIONAL_SIMPLE">Simples Nacional</option><option value="NORMAL_REGIME">Regime normal</option></select></label>
               </div>}
               {asaasAccountForm.cpfCnpj.replace(/\D/g,'').length===11&&<label>Data de nascimento<input type="date" required value={asaasAccountForm.birthDate} onChange={e=>setAsaasAccountForm({...asaasAccountForm,birthDate:e.target.value})}/></label>}
-              <label>Faturamento / renda mensal<input required value={asaasAccountForm.incomeValue} onChange={e=>setAsaasAccountForm({...asaasAccountForm,incomeValue:e.target.value})} placeholder="0,00"/></label>
+              <label>Faturamento / renda mensal<input required type="text" inputMode="numeric" value={asaasAccountForm.incomeValue} onChange={e=>setAsaasAccountForm({...asaasAccountForm,incomeValue:formatMoneyInput(e.target.value)})} onFocus={e=>e.currentTarget.select()} placeholder="0,00"/></label>
               <div className="cols">
                 <label>Endereço<input required value={asaasAccountForm.address} onChange={e=>setAsaasAccountForm({...asaasAccountForm,address:e.target.value})} placeholder="Rua / Avenida"/></label>
                 <label>Número<input required value={asaasAccountForm.addressNumber} onChange={e=>setAsaasAccountForm({...asaasAccountForm,addressNumber:e.target.value})}/></label>
@@ -2354,7 +2355,7 @@ export default function Home(){
                   <label>Chave Pix<input required disabled={!baasConnected||!canManageFinance} value={pixTransferForm.destinationKey} onChange={e=>setPixTransferForm({...pixTransferForm,destinationKey:e.target.value})} placeholder={pixTransferForm.destinationKeyType==='PHONE'?'DDD + número, ex.: 41999999999':pixTransferForm.destinationKeyType==='CPF'?'Somente números':pixTransferForm.destinationKeyType==='CNPJ'?'Somente números':pixTransferForm.destinationKeyType==='EMAIL'?'email@exemplo.com':'Chave aleatória'}/></label>
                 </div>
                 <div className="cols">
-                  <label>Valor<input required disabled={!baasConnected||!canManageFinance} value={pixTransferForm.amount} onChange={e=>setPixTransferForm({...pixTransferForm,amount:e.target.value})} placeholder="0,00"/></label>
+                  <label>Valor<input required type="text" inputMode="numeric" disabled={!baasConnected||!canManageFinance} value={pixTransferForm.amount} onChange={e=>setPixTransferForm({...pixTransferForm,amount:formatMoneyInput(e.target.value)})} onFocus={e=>e.currentTarget.select()} placeholder="0,00"/></label>
                   <label>Descrição<input disabled={!baasConnected||!canManageFinance} value={pixTransferForm.description} onChange={e=>setPixTransferForm({...pixTransferForm,description:e.target.value})} placeholder="Opcional"/></label>
                 </div>
                 <button className="primaryBtn" disabled={!baasConnected||busy||!canManageFinance}><Send size={16}/> Enviar Pix pelo Asaas</button>
