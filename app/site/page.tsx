@@ -66,7 +66,7 @@ export default function SitePage() {
       <header className={styles.header}>
         <div className={styles.headerInner}>
           <Link href="/" className={styles.brand} aria-label="JP Sistema de Cobrança">
-            <img src="/jp-sistema-cobranca-logo.svg" alt="JP Sistema de Cobrança" />
+            <img src="/jp-sistema-cobranca-logo.webp" alt="JP Sistema de Cobrança" />
           </Link>
 
           <nav className={styles.nav} aria-label="Navegação principal">
@@ -111,7 +111,7 @@ export default function SitePage() {
           <div className={styles.heroVisual} aria-label="Prévia do painel JP Sistema">
             <div className={styles.previewWindow}>
               <div className={styles.previewTop}>
-                <div className={styles.previewLogo}><img src="/jp-sistema-cobranca-logo.svg" alt="" /></div>
+                <div className={styles.previewLogo}><img src="/jp-sistema-cobranca-logo.webp" alt="" /></div>
                 <div className={styles.previewDots}><i /><i /><i /></div>
               </div>
               <div className={styles.previewBody}>
@@ -214,7 +214,7 @@ export default function SitePage() {
           </div>
 
           <div className={styles.integrationVisual}>
-            <div className={styles.centerNode}><img src="/jp-sistema-cobranca-logo.svg" alt="JP Sistema" /></div>
+            <div className={styles.centerNode}><img src="/jp-sistema-cobranca-logo.webp" alt="JP Sistema" /></div>
             <div className={styles.node + ' ' + styles.nodeTop}><Landmark size={24}/><strong>Asaas</strong></div>
             <div className={styles.node + ' ' + styles.nodeRight}><CreditCard size={24}/><strong>Mercado Pago</strong></div>
             <div className={styles.node + ' ' + styles.nodeBottom}><Mail size={24}/><strong>E-mail</strong></div>
@@ -258,7 +258,7 @@ export default function SitePage() {
 
       <footer className={styles.footer}>
         <div className={styles.footerBrand}>
-          <img src="/jp-sistema-cobranca-logo.svg" alt="JP Sistema de Cobrança"/>
+          <img src="/jp-sistema-cobranca-logo.webp" alt="JP Sistema de Cobrança"/>
           <p>Gestão de cobranças feita para empresas que querem mais controle.</p>
         </div>
         <div className={styles.footerLinks}>
