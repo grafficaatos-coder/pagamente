@@ -1,3 +1,5 @@
+// Redeploy 2026-10-04: refresh production email credential
+
 type ChargeEmailInput = {
   to:string|string[];
   clientName?:string|null;
