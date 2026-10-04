@@ -50,6 +50,7 @@ export async function POST(request:Request){
       boletoLine?:string|null;
       pixUrl?:string|null;
       pixCode?:string|null;
+      pixQrBase64?:string|null;
     }){
       if(!emailCharge.send_email||emailCharge.email_sent_at||![client?.email,client?.email_2,client?.email_3].some(Boolean))return {sent:false,skipped:true};
       try{
@@ -66,7 +67,8 @@ export async function POST(request:Request){
           boletoUrl:input.boletoUrl,
           boletoLine:input.boletoLine,
           pixUrl:input.pixUrl,
-          pixCode:input.pixCode
+          pixCode:input.pixCode,
+          pixQrBase64:input.pixQrBase64
         });
         await admin.from('charges').update({
           email_sent_at:new Date().toISOString(),
@@ -144,7 +146,8 @@ export async function POST(request:Request){
         boletoUrl:charge.boleto_url,
         boletoLine:charge.digitable_line,
         pixUrl:charge.pix_url,
-        pixCode:charge.pix_code
+        pixCode:charge.pix_code,
+        pixQrBase64:charge.pix_qr_base64
       };
       const email=await sendEmailIfNeeded(deliveryInput);
       const whatsapp=await sendWhatsAppIfNeeded(deliveryInput);
@@ -353,7 +356,8 @@ export async function POST(request:Request){
         boletoUrl:boleto.fields.boletoUrl,
         boletoLine:boleto.fields.digitableLine,
         pixUrl:pix.fields.boletoUrl,
-        pixCode:pix.fields.digitableLine
+        pixCode:pix.fields.digitableLine,
+        pixQrBase64:pix.fields.barcodeContent
       };
       const email=await sendEmailIfNeeded(deliveryInput);
       const whatsapp=await sendWhatsAppIfNeeded(deliveryInput);
@@ -387,7 +391,8 @@ export async function POST(request:Request){
     const deliveryInput={
       method:fields.paymentMethod||paymentMethod,
       paymentUrl:fields.boletoUrl,
-      paymentLine:fields.digitableLine
+      paymentLine:fields.digitableLine,
+      pixQrBase64:fields.paymentMethod==='pix'?fields.barcodeContent:null
     };
     const email=await sendEmailIfNeeded(deliveryInput);
     const whatsapp=await sendWhatsAppIfNeeded(deliveryInput);
