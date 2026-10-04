@@ -142,20 +142,38 @@ export async function POST(request:Request){
     }else{
       pix=inferPixKey(destinationKey);
     }
+
+    const {data:duplicate,error:duplicateError}=await admin.from('transfers')
+      .select('id,provider_transfer_id,created_at')
+      .eq('sender_organization_id',member.organization_id)
+      .eq('provider','asaas')
+      .eq('status','pending')
+      .eq('destination_key',pix.key)
+      .eq('amount_cents',amountCents)
+      .limit(1)
+      .maybeSingle();
+    if(duplicateError) throw duplicateError;
+    if(duplicate){
+      throw new Error('Já existe um Pix com o mesmo valor para esta chave aguardando conclusão no Asaas. Aguarde a conclusão ou cancele a transferência pendente antes de enviar outra.');
+    }
+
+    const localTransferId=randomUUID();
     const transfer=await asaasRequest<any>(apiKey,'/transfers',{
       method:'POST',
       body:JSON.stringify({
         value:amountCents/100,
         pixAddressKey:pix.key,
         pixAddressKeyType:pix.type,
-        description
+        description,
+        externalReference:localTransferId
       })
     });
 
     const mappedStatus=mapStatus(transfer?.status);
-    const idempotencyKey='asaas-'+String(transfer?.id||randomUUID());
+    const idempotencyKey='asaas-'+String(transfer?.id||localTransferId);
 
     const {error:transferError}=await admin.from('transfers').insert({
+      id:localTransferId,
       sender_organization_id:member.organization_id,
       recipient_organization_id:null,
       recipient_name:recipientName,
