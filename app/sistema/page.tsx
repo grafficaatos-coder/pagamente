@@ -1001,7 +1001,7 @@ export default function Home(){
         ?'Pix enviado e concluído com sucesso.'
         :data.status==='failed'
           ?'O Asaas recusou a transferência Pix'+(data.failReason?': '+data.failReason:'')+'.'
-          :'A transferência foi criada no Asaas, mas ainda está pendente. O JP vai atualizar o status pelo webhook; você também pode usar "Atualizar status".';
+          :'A transferência foi criada no Asaas e está pendente. O JP atualizará o status automaticamente assim que o Asaas concluir o Pix.';
       await load();
       setMsg(transferMessage);
     }catch(e){
