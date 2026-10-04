@@ -1,5 +1,5 @@
 type ChargeEmailInput = {
-  to:string;
+  to:string|string[];
   clientName?:string|null;
   organizationName?:string|null;
   description:string;
@@ -42,6 +42,9 @@ export async function sendChargeEmail(input:ChargeEmailInput){
   const apiKey=process.env.RESEND_API_KEY||process.env.EMAIL_API_KEY;
   if(!apiKey) throw new Error('RESEND_API_KEY (ou EMAIL_API_KEY) não configurado no servidor.');
   const from=process.env.EMAIL_FROM||'JP Sistema de Cobrança <cobranca@jpsistemadecobranca.com.br>';
+  const recipients=(Array.isArray(input.to)?input.to:[input.to]).map(item=>String(item||'').trim()).filter(Boolean);
+  const uniqueRecipients=[...new Set(recipients.map(item=>item.toLowerCase()))];
+  if(!uniqueRecipients.length) throw new Error('Nenhum e-mail válido informado para envio.');
   const method=input.paymentMethod==='pix'?'Pix':input.paymentMethod==='boleto_pix'?'boleto ou Pix':input.paymentMethod==='card'?'cartão de crédito':'boleto';
   const clientName=(input.clientName||'cliente').trim();
   const company=(input.organizationName||'JP Sistema de Cobrança').trim();
@@ -113,7 +116,7 @@ export async function sendChargeEmail(input:ChargeEmailInput){
     },
     body:JSON.stringify({
       from,
-      to:[input.to],
+      to:uniqueRecipients,
       subject,
       text:textLines.join('\n'),
       html
