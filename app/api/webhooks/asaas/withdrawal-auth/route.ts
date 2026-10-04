@@ -15,6 +15,7 @@ function normalizeKey(value:any){
   if(!raw) return '';
   if(raw.includes('@')) return raw;
   const digits=raw.replace(/\D/g,'');
+  if(digits.length===13&&digits.startsWith('55')) return digits.slice(2);
   return digits||raw;
 }
 
@@ -49,13 +50,32 @@ export async function POST(request:Request){
   if(!transferId) return refuse('Transferência sem identificador.');
 
   const admin=getSupabaseAdmin();
-  const {data:local,error}=await admin.from('transfers')
-    .select('id,sender_organization_id,destination_key,amount_cents,status,provider_transfer_id')
-    .eq('provider','asaas')
-    .eq('provider_transfer_id',transferId)
-    .maybeSingle();
+  const externalReference=String(transfer?.externalReference||'').trim();
 
-  if(error) return refuse('Não foi possível validar a transferência.');
+  let local:any=null;
+  let lookupError:any=null;
+
+  if(externalReference){
+    const result=await admin.from('transfers')
+      .select('id,sender_organization_id,destination_key,amount_cents,status,provider_transfer_id')
+      .eq('provider','asaas')
+      .eq('id',externalReference)
+      .maybeSingle();
+    local=result.data;
+    lookupError=result.error;
+  }
+
+  if(!local&&!lookupError){
+    const result=await admin.from('transfers')
+      .select('id,sender_organization_id,destination_key,amount_cents,status,provider_transfer_id')
+      .eq('provider','asaas')
+      .eq('provider_transfer_id',transferId)
+      .maybeSingle();
+    local=result.data;
+    lookupError=result.error;
+  }
+
+  if(lookupError) return refuse('Não foi possível validar a transferência.');
   if(!local) return refuse('Transferência não encontrada no JP.');
   if(!['pending','processing'].includes(String(local.status||''))){
     return refuse('A transferência não está aguardando autorização.');
@@ -71,7 +91,6 @@ export async function POST(request:Request){
     return refuse('A operação não é uma transferência Pix reconhecida pelo JP.');
   }
 
-  const externalReference=String(transfer?.externalReference||'').trim();
   if(externalReference&&externalReference!==String(local.id)){
     return refuse('A referência externa não corresponde à transferência registrada no JP.');
   }
