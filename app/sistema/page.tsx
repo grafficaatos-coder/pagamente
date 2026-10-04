@@ -233,6 +233,7 @@ export default function Home(){
   const [invoiceMonth,setInvoiceMonth]=useState(monthDateValue());
   const [clientSearch,setClientSearch]=useState('');
   const [clientEdit,setClientEdit]=useState<Client|null>(null);
+  const [quickClientOpen,setQuickClientOpen]=useState(false);
   const [chargeSearch,setChargeSearch]=useState('');
   const [chargeStatusFilter,setChargeStatusFilter]=useState('all');
   const [chargeEdit,setChargeEdit]=useState<{id:string;description:string;due_date:string}|null>(null);
@@ -679,6 +680,47 @@ export default function Home(){
       setMsg('Cliente cadastrado com sucesso.');await load();setTenantTab('clientes')
     }
     setBusy(false);
+  }
+
+  async function addClientFromCharge(e:React.FormEvent){
+    e.preventDefault();
+    if(!supabase||!org)return;
+    setBusy(true);setMsg('');
+    try{
+      const {name,document,email,email2,email3,whatsapp,deliveryPreference,zip_code,street_name,street_number,neighborhood,city,state}=clientForm;
+      const {data:created,error}=await supabase.from('clients').insert({
+        organization_id:org.id,
+        name,
+        document:document||null,
+        email:email||null,
+        email_2:email2||null,
+        email_3:email3||null,
+        whatsapp:whatsapp||null,
+        delivery_preference:deliveryPreference,
+        status:'active',
+        address:{
+          zip_code:zip_code.replace(/\D/g,''),
+          street_name,
+          street_number,
+          neighborhood,
+          city,
+          state:state.toUpperCase().slice(0,2)
+        }
+      }).select('id,name').single();
+      if(error)throw error;
+
+      setClientForm({name:'',document:'',email:'',email2:'',email3:'',whatsapp:'',deliveryPreference:'manual',zip_code:'',street_name:'',street_number:'',neighborhood:'',city:'',state:''});
+      setChargeForm(form=>({...form,clientId:created.id}));
+      setQuickClientOpen(false);
+      await load();
+      setChargeForm(form=>({...form,clientId:created.id}));
+      setTenantTab('cobrancas');
+      setMsg('Cliente cadastrado e selecionado na nova cobrança.');
+    }catch(error){
+      setMsg(error instanceof Error?error.message:'Não foi possível cadastrar o cliente.');
+    }finally{
+      setBusy(false);
+    }
   }
 
   async function authenticatedFetch(url:string,init:RequestInit={}){
@@ -1944,7 +1986,44 @@ export default function Home(){
                 <label>Vencimento<input type="date" required value={chargeEdit.due_date} onChange={e=>setChargeEdit({...chargeEdit,due_date:e.target.value})}/></label>
                 <div className="form-actions"><button className="primaryBtn" disabled={busy}><Save size={16}/> Salvar cobrança</button><button type="button" className="secondaryBtn" onClick={()=>setChargeEdit(null)}>Cancelar</button></div>
               </form>:<form onSubmit={addCharge}>
-                <label>Cliente<select required value={chargeForm.clientId} onChange={e=>setChargeForm({...chargeForm,clientId:e.target.value})}><option value="">Selecione</option>{clients.filter(c=>c.status==='active').map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+                <div className="charge-client-picker">
+                  <label>Cliente<select required value={chargeForm.clientId} onChange={e=>setChargeForm({...chargeForm,clientId:e.target.value})}><option value="">Selecione</option>{clients.filter(c=>c.status==='active').map(c=><option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+                  <button type="button" className="secondaryBtn quick-client-button" disabled={!canManageFinance||busy} onClick={()=>setQuickClientOpen(open=>!open)}><Plus size={15}/> {quickClientOpen?'Fechar cadastro':'Cadastrar novo cliente'}</button>
+                </div>
+                {quickClientOpen&&<div className="quick-client-card">
+                  <div className="quick-client-head"><div><strong>Novo cliente</strong><span>Cadastre sem sair da cobrança. Depois ele já fica selecionado.</span></div></div>
+                  <form onSubmit={addClientFromCharge}>
+                    <label>Nome / Razão social<input required value={clientForm.name} onChange={e=>setClientForm({...clientForm,name:e.target.value})}/></label>
+                    <label>CPF / CNPJ<input value={clientForm.document} onChange={e=>setClientForm({...clientForm,document:e.target.value})}/></label>
+                    <label>E-mail principal<input type="email" value={clientForm.email} onChange={e=>setClientForm({...clientForm,email:e.target.value})}/></label>
+                    <div className="cols">
+                      <label>Segundo e-mail (opcional)<input type="email" value={clientForm.email2} onChange={e=>setClientForm({...clientForm,email2:e.target.value})}/></label>
+                      <label>Terceiro e-mail (opcional)<input type="email" value={clientForm.email3} onChange={e=>setClientForm({...clientForm,email3:e.target.value})}/></label>
+                    </div>
+                    <label>WhatsApp<input value={clientForm.whatsapp} onChange={e=>setClientForm({...clientForm,whatsapp:e.target.value})}/></label>
+                    <label>Enviar cobranças automaticamente por
+                      <select value={clientForm.deliveryPreference} onChange={e=>setClientForm({...clientForm,deliveryPreference:e.target.value})}>
+                        <option value="manual">Não enviar automaticamente</option>
+                        <option value="email">Somente e-mail</option>
+                        <option value="whatsapp">Somente WhatsApp</option>
+                        <option value="both">E-mail e WhatsApp</option>
+                      </select>
+                    </label>
+                    <div className="address-fields">
+                      <label>CEP<input value={clientForm.zip_code} onChange={e=>setClientForm({...clientForm,zip_code:e.target.value})} placeholder="00000-000"/></label>
+                      <label>Rua<input value={clientForm.street_name} onChange={e=>setClientForm({...clientForm,street_name:e.target.value})}/></label>
+                      <label>Número<input value={clientForm.street_number} onChange={e=>setClientForm({...clientForm,street_number:e.target.value})} placeholder="S/N"/></label>
+                      <label>Bairro<input value={clientForm.neighborhood} onChange={e=>setClientForm({...clientForm,neighborhood:e.target.value})}/></label>
+                      <label>Cidade<input value={clientForm.city} onChange={e=>setClientForm({...clientForm,city:e.target.value})}/></label>
+                      <label>UF<input maxLength={2} value={clientForm.state} onChange={e=>setClientForm({...clientForm,state:e.target.value.toUpperCase().slice(0,2)})}/></label>
+                    </div>
+                    <p className="permission-note">Para boleto Mercado Pago, preencha CPF/CNPJ e endereço completo. Se escolher e-mail, a cobrança pode ser enviada para até 3 endereços cadastrados.</p>
+                    <div className="form-actions">
+                      <button className="primaryBtn" disabled={busy||!canManageFinance}><Plus size={16}/> Cadastrar e selecionar</button>
+                      <button type="button" className="secondaryBtn" onClick={()=>setQuickClientOpen(false)}>Cancelar</button>
+                    </div>
+                  </form>
+                </div>}
                 <label>Descrição<input required value={chargeForm.description} onChange={e=>setChargeForm({...chargeForm,description:e.target.value})}/></label>
                 <div className="cols"><label>Valor<input required placeholder="0,00" value={chargeForm.amount} onChange={e=>setChargeForm({...chargeForm,amount:e.target.value})}/></label><label>Vencimento<input type="date" required value={chargeForm.dueDate} onChange={e=>setChargeForm({...chargeForm,dueDate:e.target.value})}/></label></div>
 
