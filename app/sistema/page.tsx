@@ -13,7 +13,7 @@ import { getSupabaseBrowserClient } from '@/lib/supabase';
 import { brl, dateBR, parseBRL } from '@/lib/format';
 
 type Client = {
-  id:string; name:string; document:string|null; email:string|null; whatsapp:string|null; status:string;
+  id:string; name:string; document:string|null; email:string|null; email_2?:string|null; email_3?:string|null; whatsapp:string|null; status:string;
   delivery_preference?:'manual'|'email'|'whatsapp'|'both';
   address?:{
     zip_code?:string; street_name?:string; street_number?:string; neighborhood?:string; city?:string; state?:string
@@ -214,7 +214,7 @@ export default function Home(){
   const mercadoPagoStatusSynced=useRef(false);
 
   const [clientForm,setClientForm]=useState({
-    name:'',document:'',email:'',whatsapp:'',deliveryPreference:'manual',
+    name:'',document:'',email:'',email2:'',email3:'',whatsapp:'',deliveryPreference:'manual',
     zip_code:'',street_name:'',street_number:'',neighborhood:'',city:'',state:''
   });
   const [chargeForm,setChargeForm]=useState({
@@ -331,7 +331,7 @@ export default function Home(){
       ]=await Promise.all([
         supabase.from('organizations').select('id,name,status').eq('id',orgId).single(),
         supabase.from('wallet_accounts').select('id,account_number,pix_key,balance_cents').eq('organization_id',orgId).single(),
-        supabase.from('clients').select('id,name,document,email,whatsapp,delivery_preference,address,status').eq('organization_id',orgId).order('created_at',{ascending:false}),
+        supabase.from('clients').select('id,name,document,email,email_2,email_3,whatsapp,delivery_preference,address,status').eq('organization_id',orgId).order('created_at',{ascending:false}),
         supabase.from('charges').select('id,description,amount_cents,due_date,status,provider,payment_method,provider_charge_id,pix_provider_charge_id,provider_status_detail,created_at,boleto_url,digitable_line,pix_url,pix_code,clients(name,email,whatsapp)').eq('organization_id',orgId).order('created_at',{ascending:false}).limit(250),
         supabase.from('recurring_rules').select('id,description,amount_cents,frequency,generation_day,due_day,status,clients(name)').eq('organization_id',orgId).order('created_at',{ascending:false}),
         supabase.from('subscriptions').select('status,trial_ends_at,current_period_end,chosen_plan_at,plans(name,billing_model,monthly_price_cents,boleto_fee_cents,max_clients,max_users)').eq('organization_id',orgId).maybeSingle(),
@@ -665,9 +665,9 @@ export default function Home(){
   async function addClient(e:React.FormEvent){
     e.preventDefault();if(!supabase||!org)return;
     setBusy(true);setMsg('');
-    const {name,document,email,whatsapp,deliveryPreference,zip_code,street_name,street_number,neighborhood,city,state}=clientForm;
+    const {name,document,email,email2,email3,whatsapp,deliveryPreference,zip_code,street_name,street_number,neighborhood,city,state}=clientForm;
     const {error}=await supabase.from('clients').insert({
-      organization_id:org.id,name,document,email,whatsapp,delivery_preference:deliveryPreference,status:'active',
+      organization_id:org.id,name,document,email:email||null,email_2:email2||null,email_3:email3||null,whatsapp,delivery_preference:deliveryPreference,status:'active',
       address:{
         zip_code:zip_code.replace(/\D/g,''),street_name,street_number,neighborhood,city,
         state:state.toUpperCase().slice(0,2)
@@ -675,7 +675,7 @@ export default function Home(){
     });
     if(error)setMsg(error.message);
     else{
-      setClientForm({name:'',document:'',email:'',whatsapp:'',deliveryPreference:'manual',zip_code:'',street_name:'',street_number:'',neighborhood:'',city:'',state:''});
+      setClientForm({name:'',document:'',email:'',email2:'',email3:'',whatsapp:'',deliveryPreference:'manual',zip_code:'',street_name:'',street_number:'',neighborhood:'',city:'',state:''});
       setMsg('Cliente cadastrado com sucesso.');await load();setTenantTab('clientes')
     }
     setBusy(false);
@@ -1081,6 +1081,8 @@ export default function Home(){
       name:clientEdit.name,
       document:clientEdit.document||null,
       email:clientEdit.email||null,
+      email_2:clientEdit.email_2||null,
+      email_3:clientEdit.email_3||null,
       whatsapp:clientEdit.whatsapp||null,
       delivery_preference:clientEdit.delivery_preference||'manual',
       address:clientEdit.address||null,
@@ -1229,7 +1231,8 @@ export default function Home(){
       });
       const data=await response.json();
       if(!response.ok)throw new Error(data.error||'Não foi possível enviar o e-mail.');
-      setMsg('Cobrança enviada por e-mail com sucesso.');
+      const count=Array.isArray(data.recipients)?data.recipients.length:1;
+      setMsg('Cobrança enviada por e-mail com sucesso para '+count+' endereço'+(count>1?'s':'')+'.');
     }catch(e){
       setMsg(e instanceof Error?e.message:'Não foi possível enviar o e-mail.');
     }finally{
@@ -1653,7 +1656,9 @@ export default function Home(){
     return !q
       || client.name.toLowerCase().includes(q)
       || (client.document||'').toLowerCase().includes(q)
-      || (client.email||'').toLowerCase().includes(q);
+      || (client.email||'').toLowerCase().includes(q)
+      || (client.email_2||'').toLowerCase().includes(q)
+      || (client.email_3||'').toLowerCase().includes(q);
   });
   const filteredCharges=charges.filter(charge=>{
     const q=chargeSearch.trim().toLowerCase();
@@ -1850,10 +1855,13 @@ export default function Home(){
               {clientEdit?<form onSubmit={saveClientEdit}>
                 <label>Nome / Razão social<input required value={clientEdit.name} onChange={e=>setClientEdit({...clientEdit,name:e.target.value})}/></label>
                 <label>CPF / CNPJ<input value={clientEdit.document??''} onChange={e=>setClientEdit({...clientEdit,document:e.target.value})}/></label>
+                <label>E-mail principal<input type="email" value={clientEdit.email??''} onChange={e=>setClientEdit({...clientEdit,email:e.target.value})}/></label>
                 <div className="cols">
-                  <label>E-mail<input type="email" value={clientEdit.email??''} onChange={e=>setClientEdit({...clientEdit,email:e.target.value})}/></label>
-                  <label>WhatsApp<input value={clientEdit.whatsapp??''} onChange={e=>setClientEdit({...clientEdit,whatsapp:e.target.value})}/></label>
+                  <label>Segundo e-mail (opcional)<input type="email" value={clientEdit.email_2??''} onChange={e=>setClientEdit({...clientEdit,email_2:e.target.value})}/></label>
+                  <label>Terceiro e-mail (opcional)<input type="email" value={clientEdit.email_3??''} onChange={e=>setClientEdit({...clientEdit,email_3:e.target.value})}/></label>
                 </div>
+                <label>WhatsApp<input value={clientEdit.whatsapp??''} onChange={e=>setClientEdit({...clientEdit,whatsapp:e.target.value})}/></label>
+                <p className="permission-note">Quando o envio por e-mail estiver ativo, a mesma cobrança será enviada para todos os e-mails preenchidos.</p>
                 <label>Enviar cobranças automaticamente por
                   <select value={clientEdit.delivery_preference||'manual'} onChange={e=>setClientEdit({...clientEdit,delivery_preference:e.target.value as Client['delivery_preference']})}>
                     <option value="manual">Não enviar automaticamente</option>
@@ -1874,7 +1882,13 @@ export default function Home(){
               </form>:<form onSubmit={addClient}>
                 <label>Nome / Razão social<input required value={clientForm.name} onChange={e=>setClientForm({...clientForm,name:e.target.value})}/></label>
                 <label>CPF / CNPJ<input value={clientForm.document} onChange={e=>setClientForm({...clientForm,document:e.target.value})}/></label>
-                <div className="cols"><label>E-mail<input type="email" value={clientForm.email} onChange={e=>setClientForm({...clientForm,email:e.target.value})}/></label><label>WhatsApp<input value={clientForm.whatsapp} onChange={e=>setClientForm({...clientForm,whatsapp:e.target.value})}/></label></div>
+                <label>E-mail principal<input type="email" value={clientForm.email} onChange={e=>setClientForm({...clientForm,email:e.target.value})}/></label>
+                <div className="cols">
+                  <label>Segundo e-mail (opcional)<input type="email" value={clientForm.email2} onChange={e=>setClientForm({...clientForm,email2:e.target.value})}/></label>
+                  <label>Terceiro e-mail (opcional)<input type="email" value={clientForm.email3} onChange={e=>setClientForm({...clientForm,email3:e.target.value})}/></label>
+                </div>
+                <label>WhatsApp<input value={clientForm.whatsapp} onChange={e=>setClientForm({...clientForm,whatsapp:e.target.value})}/></label>
+                <p className="permission-note">Você pode cadastrar até 3 e-mails. Se escolher envio por e-mail, o boleto será enviado para todos eles.</p>
                 <label>Enviar cobranças automaticamente por
                   <select value={clientForm.deliveryPreference} onChange={e=>setClientForm({...clientForm,deliveryPreference:e.target.value})}>
                     <option value="manual">Não enviar automaticamente</option>
@@ -1907,7 +1921,7 @@ export default function Home(){
             </div>
             <div className="tableWrap"><table><thead><tr><th>Nome</th><th>Documento</th><th>E-mail</th><th>WhatsApp</th><th>Envio</th><th>Status</th><th>Ações</th></tr></thead><tbody>
               {filteredClients.map(client=><tr key={client.id}>
-                <td><strong>{client.name}</strong></td><td>{client.document||'—'}</td><td>{client.email||'—'}</td><td>{client.whatsapp||'—'}</td>
+                <td><strong>{client.name}</strong></td><td>{client.document||'—'}</td><td><div className="client-email-list">{[client.email,client.email_2,client.email_3].filter(Boolean).map((mail,index)=><span key={String(mail)}>{index+1}. {mail}</span>)}{![client.email,client.email_2,client.email_3].some(Boolean)&&'—'}</div></td><td>{client.whatsapp||'—'}</td>
                 <td>{client.delivery_preference==='email'?'E-mail':client.delivery_preference==='whatsapp'?'WhatsApp':client.delivery_preference==='both'?'E-mail + WhatsApp':'Manual'}</td>
                 <td><span className={'status '+client.status}>{client.status==='active'?'Ativo':'Inativo'}</span></td>
                 <td><div className="row-actions">
