@@ -12,6 +12,7 @@ type ChargeEmailInput = {
   boletoLine?:string|null;
   pixUrl?:string|null;
   pixCode?:string|null;
+  pixQrBase64?:string|null;
 };
 
 function required(name:string){
@@ -79,14 +80,20 @@ export async function sendChargeEmail(input:ChargeEmailInput){
   const safeBoletoLine=input.boletoLine?escapeHtml(input.boletoLine):'';
   const safePixUrl=input.pixUrl?escapeHtml(input.pixUrl):'';
   const safePixCode=input.pixCode?escapeHtml(input.pixCode):'';
+  const rawPixQr=String(input.pixQrBase64||'').trim();
+  const pixQrBase64=rawPixQr.replace(/^data:image\/[a-zA-Z0-9.+-]+;base64,/,'').replace(/\s/g,'');
+  const hasPixQr=/^[A-Za-z0-9+/]+={0,2}$/.test(pixQrBase64)&&pixQrBase64.length>100;
+  const pixQrImage=hasPixQr
+    ? '<div style="margin:16px 0;text-align:center"><strong style="display:block;margin-bottom:10px">QR Code Pix</strong><img src="cid:pix-qrcode" alt="QR Code Pix" width="220" height="220" style="width:220px;height:220px;max-width:100%;display:inline-block;border:1px solid #e3e8ec;border-radius:12px;padding:8px;background:#fff"/></div>'
+    : '';
 
   const paymentButton=input.paymentUrl
     ? '<p style="margin:24px 0"><a href="'+safePaymentUrl+'" style="background:#0f9f78;color:#fff;text-decoration:none;padding:12px 18px;border-radius:8px;font-weight:700;display:inline-block">Abrir pagamento</a></p>'
     : '';
 
-  const lineBlock=input.digitableLine
+  const lineBlock=(input.digitableLine
     ? '<div style="margin-top:18px;padding:14px;background:#f6f8fa;border-radius:8px"><strong>'+(input.paymentMethod==='pix'?'Pix Copia e Cola':'Linha digitável')+'</strong><div style="margin-top:8px;word-break:break-all">'+safeLine+'</div></div>'
-    : '';
+    : '')+(input.paymentMethod==='pix'?pixQrImage:'');
 
   const choiceBlock=input.paymentMethod==='boleto_pix'
     ? '<div style="margin:24px 0;padding:18px;border:1px solid #e3e8ec;border-radius:10px">'+
@@ -95,6 +102,7 @@ export async function sendChargeEmail(input:ChargeEmailInput){
       (safeBoletoLine?'<div style="margin:10px 0;padding:12px;background:#f6f8fa;border-radius:8px"><strong>Linha digitável do boleto</strong><div style="margin-top:6px;word-break:break-all">'+safeBoletoLine+'</div></div>':'')+
       (safePixUrl?'<p style="margin:14px 0 10px"><a href="'+safePixUrl+'" style="background:#0f9f78;color:#fff;text-decoration:none;padding:11px 16px;border-radius:8px;font-weight:700;display:inline-block">Pagar por Pix</a></p>':'')+
       (safePixCode?'<div style="margin:10px 0;padding:12px;background:#f6f8fa;border-radius:8px"><strong>Pix Copia e Cola</strong><div style="margin-top:6px;word-break:break-all">'+safePixCode+'</div></div>':'')+
+      pixQrImage+
       '</div>'
     : '';
 
@@ -119,7 +127,15 @@ export async function sendChargeEmail(input:ChargeEmailInput){
       to:uniqueRecipients,
       subject,
       text:textLines.join('\n'),
-      html
+      html,
+      ...(hasPixQr?{
+        attachments:[{
+          filename:'pix-qrcode.png',
+          content:pixQrBase64,
+          content_id:'pix-qrcode',
+          content_type:'image/png'
+        }]
+      }:{})
     })
   });
 
