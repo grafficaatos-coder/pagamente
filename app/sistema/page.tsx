@@ -2031,7 +2031,7 @@ export default function Home(){
                   </div>
                 </div>}
                 <label>Descrição<input required value={chargeForm.description} onChange={e=>setChargeForm({...chargeForm,description:e.target.value})}/></label>
-                <div className="cols"><label>Valor<input required placeholder="0,00" value={chargeForm.amount} onChange={e=>setChargeForm({...chargeForm,amount:e.target.value})}/></label><label>Vencimento<input type="date" required value={chargeForm.dueDate} onChange={e=>setChargeForm({...chargeForm,dueDate:e.target.value})}/></label></div>
+                <div className="cols"><label>Valor<input required type="text" inputMode="numeric" placeholder="0,00" value={chargeForm.amount} onChange={e=>setChargeForm({...chargeForm,amount:formatMoneyInput(e.target.value)})} onFocus={e=>e.currentTarget.select()}/></label><label>Vencimento<input type="date" required value={chargeForm.dueDate} onChange={e=>setChargeForm({...chargeForm,dueDate:e.target.value})}/></label></div>
 
                 <div className="charge-terms">
                   <div className="charge-terms-head">
