@@ -5,7 +5,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowDownLeft, ArrowUpRight, BarChart3, Building2, CalendarClock, CheckCircle2, CircleDollarSign, Clock3, CreditCard, Crown,
   History, Landmark, LayoutDashboard, LogOut, Mail, MessageCircle, PauseCircle, Pencil, PlayCircle, Plus, ReceiptText, RefreshCw,
-  Save, Search, Send, Settings, Sparkles, ShieldCheck, TrendingUp, TriangleAlert, Trash2,
+  Save, Search, Send, Settings, Sparkles, ShieldCheck, TrendingUp, TriangleAlert, Trash2, Menu, X,
   UserCircle2, UserCog, UsersRound, WalletCards, XCircle
 } from 'lucide-react';
 import { useAuth } from '@/components/AuthProvider';
@@ -239,6 +239,7 @@ export default function Home(){
   const [clientSearch,setClientSearch]=useState('');
   const [clientEdit,setClientEdit]=useState<Client|null>(null);
   const [quickClientOpen,setQuickClientOpen]=useState(false);
+  const [mobileMenuOpen,setMobileMenuOpen]=useState(false);
   const [chargeSearch,setChargeSearch]=useState('');
   const [chargeStatusFilter,setChargeStatusFilter]=useState('all');
   const [chargeEdit,setChargeEdit]=useState<{id:string;description:string;due_date:string}|null>(null);
@@ -253,7 +254,21 @@ export default function Home(){
   });
   const [asaasFormError,setAsaasFormError]=useState('');
 
-  async function load(){
+  useEffect(()=>{
+    if(!mobileMenuOpen)return;
+    const previousOverflow=document.body.style.overflow;
+    const onKeyDown=(event:KeyboardEvent)=>{
+      if(event.key==='Escape')setMobileMenuOpen(false);
+    };
+    document.body.style.overflow='hidden';
+    window.addEventListener('keydown',onKeyDown);
+    return ()=>{
+      document.body.style.overflow=previousOverflow;
+      window.removeEventListener('keydown',onKeyDown);
+    };
+  },[mobileMenuOpen]);
+
+    async function load(){
     if(!supabase||!user)return;
     setBusy(true);
     setMsg('');
@@ -1786,16 +1801,30 @@ export default function Home(){
     ['relatorios','Relatórios',BarChart3],['assinatura','Assinatura',WalletCards],['conta','Minha conta',UserCircle2]
   ] as const;
 
-  return <div className="tenant-shell">
-    <aside className="tenant-sidebar">
+  return <div className={'tenant-shell '+(mobileMenuOpen?'mobile-menu-open':'')}>
+    <button
+      type="button"
+      className={'tenant-mobile-backdrop '+(mobileMenuOpen?'visible':'')}
+      aria-label="Fechar menu"
+      onClick={()=>setMobileMenuOpen(false)}
+    />
+    <aside className={'tenant-sidebar '+(mobileMenuOpen?'mobile-open':'')}>
+      <div className="tenant-mobile-menu-head">
+        <strong>Menu</strong>
+        <button type="button" onClick={()=>setMobileMenuOpen(false)} aria-label="Fechar menu"><X size={20}/></button>
+      </div>
       <div className="tenant-brand jp-brand"><img className="jp-brand-logo" src="/jp-sistema-cobranca-logo.webp" alt="JP Sistema de Cobrança"/><span className="jp-brand-subtitle">Área do cliente</span></div>
       <div className="company-card"><Building2 size={18}/><div><strong>{org?.name??'Sua empresa'}</strong><span>{planName?'Plano '+planName:'Conta empresarial'}</span></div></div>
-      <nav className="tenant-nav">{tenantNav.map(([id,label,Icon])=><button key={id} className={tenantTab===id?'active':''} onClick={()=>setTenantTab(id)}><Icon size={18}/><span>{label}</span></button>)}</nav>
+      <nav className="tenant-nav">{tenantNav.map(([id,label,Icon])=><button key={id} className={tenantTab===id?'active':''} onClick={()=>{setTenantTab(id);setMobileMenuOpen(false)}}><Icon size={18}/><span>{label}</span></button>)}</nav>
       <div className="tenant-side-bottom"><div className="tenant-user"><div className="avatar">{(profile?.display_name?.[0]??user?.email?.[0]??'U').toUpperCase()}</div><div><strong>{profile?.display_name??'Usuário'}</strong><span>{roleLabel(membership?.role)}</span></div></div><button className="tenant-logout" onClick={()=>signOut()}><LogOut size={17}/> Sair</button></div>
     </aside>
 
     <section className="tenant-main">
-      <header className="tenant-topbar"><div><strong>{org?.name??'Minha empresa'}</strong><span>{user?.email}</span></div><button onClick={load} title="Atualizar"><RefreshCw size={17}/></button></header>
+      <header className="tenant-topbar">
+        <button type="button" className="tenant-menu-toggle" onClick={()=>setMobileMenuOpen(true)} aria-label="Abrir menu"><Menu size={21}/></button>
+        <div className="tenant-topbar-account"><strong>{org?.name??'Minha empresa'}</strong><span>{user?.email}</span></div>
+        <button className="tenant-refresh-button" onClick={load} title="Atualizar" aria-label="Atualizar"><RefreshCw size={17}/></button>
+      </header>
       <main className="tenant-content">
         {msg&&<div className="notice">{msg}</div>}
 
