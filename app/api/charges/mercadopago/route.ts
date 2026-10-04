@@ -51,7 +51,7 @@ export async function POST(request:Request){
       pixUrl?:string|null;
       pixCode?:string|null;
     }){
-      if(!emailCharge.send_email||emailCharge.email_sent_at||!client?.email)return {sent:false,skipped:true};
+      if(!emailCharge.send_email||emailCharge.email_sent_at||![client?.email,client?.email_2,client?.email_3].some(Boolean))return {sent:false,skipped:true};
       try{
         const result=await sendChargeEmail({
           to:[client.email,client.email_2,client.email_3].filter(Boolean),
