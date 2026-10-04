@@ -41,7 +41,7 @@ function dateBR(value:string){
 export async function sendChargeEmail(input:ChargeEmailInput){
   const apiKey=process.env.RESEND_API_KEY||process.env.EMAIL_API_KEY;
   if(!apiKey) throw new Error('RESEND_API_KEY (ou EMAIL_API_KEY) não configurado no servidor.');
-  const from=process.env.EMAIL_FROM||'JP Sistema de Cobrança <cobranca@jpsistemadecobranca.com.br>';
+  const from='JP Sistema de Cobrança <cobranca@jpsistemadecobranca.com.br>';
   const recipients=(Array.isArray(input.to)?input.to:[input.to]).map(item=>String(item||'').trim()).filter(Boolean);
   const uniqueRecipients=[...new Set(recipients.map(item=>item.toLowerCase()))];
   if(!uniqueRecipients.length) throw new Error('Nenhum e-mail válido informado para envio.');
