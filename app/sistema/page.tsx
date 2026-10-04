@@ -682,12 +682,18 @@ export default function Home(){
     setBusy(false);
   }
 
-  async function addClientFromCharge(e:React.FormEvent){
-    e.preventDefault();
+  async function addClientFromCharge(){
     if(!supabase||!org)return;
-    setBusy(true);setMsg('');
+    setMsg('');
+    const cleanName=clientForm.name.trim();
+    if(!cleanName){
+      setMsg('Informe o nome ou razão social do cliente.');
+      return;
+    }
+    setBusy(true);
     try{
-      const {name,document,email,email2,email3,whatsapp,deliveryPreference,zip_code,street_name,street_number,neighborhood,city,state}=clientForm;
+      const {document,email,email2,email3,whatsapp,deliveryPreference,zip_code,street_name,street_number,neighborhood,city,state}=clientForm;
+      const name=cleanName;
       const {data:created,error}=await supabase.from('clients').insert({
         organization_id:org.id,
         name,
@@ -1992,7 +1998,7 @@ export default function Home(){
                 </div>
                 {quickClientOpen&&<div className="quick-client-card">
                   <div className="quick-client-head"><div><strong>Novo cliente</strong><span>Cadastre sem sair da cobrança. Depois ele já fica selecionado.</span></div></div>
-                  <form onSubmit={addClientFromCharge}>
+                  <div className="quick-client-form">
                     <label>Nome / Razão social<input required value={clientForm.name} onChange={e=>setClientForm({...clientForm,name:e.target.value})}/></label>
                     <label>CPF / CNPJ<input value={clientForm.document} onChange={e=>setClientForm({...clientForm,document:e.target.value})}/></label>
                     <label>E-mail principal<input type="email" value={clientForm.email} onChange={e=>setClientForm({...clientForm,email:e.target.value})}/></label>
@@ -2019,10 +2025,10 @@ export default function Home(){
                     </div>
                     <p className="permission-note">Para boleto Mercado Pago, preencha CPF/CNPJ e endereço completo. Se escolher e-mail, a cobrança pode ser enviada para até 3 endereços cadastrados.</p>
                     <div className="form-actions">
-                      <button className="primaryBtn" disabled={busy||!canManageFinance}><Plus size={16}/> Cadastrar e selecionar</button>
+                      <button type="button" className="primaryBtn" disabled={busy||!canManageFinance} onClick={()=>void addClientFromCharge()}><Plus size={16}/> Cadastrar e selecionar</button>
                       <button type="button" className="secondaryBtn" onClick={()=>setQuickClientOpen(false)}>Cancelar</button>
                     </div>
-                  </form>
+                  </div>
                 </div>}
                 <label>Descrição<input required value={chargeForm.description} onChange={e=>setChargeForm({...chargeForm,description:e.target.value})}/></label>
                 <div className="cols"><label>Valor<input required placeholder="0,00" value={chargeForm.amount} onChange={e=>setChargeForm({...chargeForm,amount:e.target.value})}/></label><label>Vencimento<input type="date" required value={chargeForm.dueDate} onChange={e=>setChargeForm({...chargeForm,dueDate:e.target.value})}/></label></div>
