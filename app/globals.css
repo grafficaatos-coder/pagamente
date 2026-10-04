@@ -629,3 +629,15 @@ input:focus,select:focus{border-color:#0e9878!important;box-shadow:0 0 0 3px rgb
 }
 
 .client-email-list{display:flex;flex-direction:column;gap:3px;min-width:190px}.client-email-list span{font-size:11px;color:#34465f;white-space:nowrap}
+
+.charge-client-picker{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end}
+.quick-client-button{height:42px;margin-bottom:1px;white-space:nowrap}
+.quick-client-card{margin:10px 0 16px;padding:16px;border:1px solid #dfe7ef;border-radius:14px;background:#f8fbfd}
+.quick-client-head{margin-bottom:12px}
+.quick-client-head strong{display:block;font-size:13px;color:#13243d}
+.quick-client-head span{display:block;margin-top:3px;font-size:10px;color:#7a8aa0}
+.quick-client-form{display:flex;flex-direction:column;gap:10px}
+@media(max-width:760px){
+  .charge-client-picker{grid-template-columns:1fr}
+  .quick-client-button{width:100%}
+}
