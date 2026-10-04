@@ -168,7 +168,7 @@ export async function POST(request:Request){
     if(updateError) throw updateError;
 
     let email:any={sent:false,skipped:true};
-    if(charge.send_email&&!charge.email_sent_at&&client.email){
+    if(charge.send_email&&!charge.email_sent_at&&[client.email,client.email_2,client.email_3].some(Boolean)){
       try{
         const emailInput:any={
           to:[client.email,client.email_2,client.email_3].filter(Boolean),
