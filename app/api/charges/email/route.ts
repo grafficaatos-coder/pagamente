@@ -11,7 +11,7 @@ export async function POST(request:Request){
     if(!chargeId) throw new Error('Cobrança não informada.');
 
     const {data:charge,error}=await admin.from('charges')
-      .select('id,organization_id,description,amount_cents,due_date,payment_method,boleto_url,digitable_line,pix_url,pix_code,clients(name,email,email_2,email_3)')
+      .select('id,organization_id,description,amount_cents,due_date,payment_method,boleto_url,digitable_line,pix_url,pix_code,pix_qr_base64,clients(name,email,email_2,email_3)')
       .eq('id',chargeId)
       .eq('organization_id',member.organization_id)
       .single();
@@ -35,7 +35,8 @@ export async function POST(request:Request){
       boletoUrl:charge.payment_method==='boleto_pix'?charge.boleto_url:null,
       boletoLine:charge.payment_method==='boleto_pix'?charge.digitable_line:null,
       pixUrl:charge.payment_method==='boleto_pix'?charge.pix_url:null,
-      pixCode:charge.payment_method==='boleto_pix'?charge.pix_code:null
+      pixCode:charge.payment_method==='boleto_pix'?charge.pix_code:null,
+      pixQrBase64:charge.payment_method==='boleto_pix'||charge.payment_method==='pix'?charge.pix_qr_base64:null
     });
 
     await admin.from('charges').update({
