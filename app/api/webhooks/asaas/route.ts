@@ -29,13 +29,16 @@ function mappedChargeStatus(event:string,paymentStatus:string){
 }
 
 export async function POST(request:Request){
-  const configuredToken=process.env.ASAAS_WEBHOOK_TOKEN||'';
-  if(!configuredToken){
+  const configuredTokens=[
+    process.env.ASAAS_WEBHOOK_TOKEN||'',
+    process.env.ASAAS_WITHDRAWAL_AUTH_TOKEN||''
+  ].filter(Boolean);
+  if(!configuredTokens.length){
     return Response.json({error:'Webhook Asaas não configurado.'},{status:503});
   }
 
   const incomingToken=request.headers.get('asaas-access-token')||'';
-  if(!incomingToken||!secureEqual(incomingToken,configuredToken)){
+  if(!incomingToken||!configuredTokens.some(token=>secureEqual(incomingToken,token))){
     return Response.json({error:'Webhook não autorizado.'},{status:401});
   }
 
