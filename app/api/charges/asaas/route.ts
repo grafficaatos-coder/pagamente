@@ -185,6 +185,7 @@ export async function POST(request:Request){
         }else{
           emailInput.paymentUrl=paymentUrl;
           emailInput.digitableLine=requestedMethod==='pix'?pixCode:digitableLine;
+          if(requestedMethod==='pix') emailInput.pixQrBase64=pixQrBase64;
         }
         const result=await sendChargeEmail(emailInput);
         await admin.from('charges').update({
