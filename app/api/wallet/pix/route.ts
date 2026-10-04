@@ -158,21 +158,9 @@ export async function POST(request:Request){
     }
 
     const localTransferId=randomUUID();
-    const transfer=await asaasRequest<any>(apiKey,'/transfers',{
-      method:'POST',
-      body:JSON.stringify({
-        value:amountCents/100,
-        pixAddressKey:pix.key,
-        pixAddressKeyType:pix.type,
-        description,
-        externalReference:localTransferId
-      })
-    });
+    const pendingIdempotencyKey='jp-'+localTransferId;
 
-    const mappedStatus=mapStatus(transfer?.status);
-    const idempotencyKey='asaas-'+String(transfer?.id||localTransferId);
-
-    const {error:transferError}=await admin.from('transfers').insert({
+    const {error:preInsertError}=await admin.from('transfers').insert({
       id:localTransferId,
       sender_organization_id:member.organization_id,
       recipient_organization_id:null,
@@ -180,15 +168,48 @@ export async function POST(request:Request){
       destination_key:pix.key,
       description,
       amount_cents:amountCents,
+      fee_cents:0,
+      status:'pending',
+      provider:'asaas',
+      provider_transfer_id:null,
+      idempotency_key:pendingIdempotencyKey,
+      created_by:user.id,
+      completed_at:null,
+      failed_at:null
+    });
+    if(preInsertError) throw preInsertError;
+
+    let transfer:any;
+    try{
+      transfer=await asaasRequest<any>(apiKey,'/transfers',{
+        method:'POST',
+        body:JSON.stringify({
+          value:amountCents/100,
+          pixAddressKey:pix.key,
+          pixAddressKeyType:pix.type,
+          description,
+          externalReference:localTransferId
+        })
+      });
+    }catch(error){
+      await admin.from('transfers').update({
+        status:'failed',
+        failed_at:new Date().toISOString()
+      }).eq('id',localTransferId);
+      throw error;
+    }
+
+    const mappedStatus=mapStatus(transfer?.status);
+    const idempotencyKey='asaas-'+String(transfer?.id||localTransferId);
+
+    const {error:transferError}=await admin.from('transfers').update({
       fee_cents:Math.round(Number(transfer?.transferFee||0)*100),
       status:mappedStatus,
-      provider:'asaas',
-      provider_transfer_id:String(transfer?.id||''),
+      provider_transfer_id:String(transfer?.id||'')||null,
       idempotency_key:idempotencyKey,
-      created_by:user.id,
       completed_at:mappedStatus==='completed'?new Date().toISOString():null,
       failed_at:mappedStatus==='failed'?new Date().toISOString():null
-    });
+    }).eq('id',localTransferId);
     if(transferError) throw transferError;
 
     const updatedBalance=await getAsaasBalance(apiKey);
