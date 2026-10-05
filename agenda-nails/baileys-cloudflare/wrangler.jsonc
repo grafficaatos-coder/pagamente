@@ -3,12 +3,31 @@
   "name": "agenda-pro-baileys",
   "main": "src/worker.js",
   "compatibility_date": "2026-10-05",
-  "observability": { "enabled": true },
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "vars": {
+    "AGENDA_ORIGIN": "https://agenda-nails-grafficaatos-3591.vercel.app"
+  },
+  "r2_buckets": [
+    {
+      "binding": "WHATSAPP_PROFILES",
+      "bucket_name": "agenda-pro-whatsapp-sessions"
+    }
+  ],
   "containers": [
     {
       "class_name": "WhatsAppContainer",
       "image": "./Dockerfile",
-      "max_instances": 20
+      "max_instances": 20,
+      "rollout_step_percentage": 100,
+      "instance_type": "basic",
+      "constraints": {
+        "regions": ["SAM"]
+      }
     }
   ],
   "durable_objects": {
@@ -19,34 +38,19 @@
       }
     ]
   },
+  "exports": {
+    "WhatsAppContainer": {
+      "type": "durable-object",
+      "storage": "sqlite"
+    }
+  },
   "migrations": [
     {
       "tag": "v1",
       "new_sqlite_classes": ["WhatsAppContainer"]
     }
   ],
-  "queues": {
-    "producers": [
-      {
-        "binding": "MESSAGE_QUEUE",
-        "queue": "agenda-pro-whatsapp-send"
-      }
-    ],
-    "consumers": [
-      {
-        "queue": "agenda-pro-whatsapp-send",
-        "max_batch_size": 5,
-        "max_batch_timeout": 2,
-        "max_retries": 3
-      }
-    ]
-  },
-  "triggers": { "crons": ["* * * * *"] },
-  "secrets": {
-    "required": [
-      "SUPABASE_URL",
-      "SUPABASE_SERVICE_ROLE_KEY",
-      "SUPABASE_PUBLISHABLE_KEY"
-    ]
+  "triggers": {
+    "crons": ["* * * * *"]
   }
 }
