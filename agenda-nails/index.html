@@ -262,6 +262,9 @@
       }
     }
 
+  
+    .booking-whats-note{margin-top:12px;padding:11px 13px;border:1px solid #d7ebde;background:#f4fbf6;color:#356145;border-radius:12px;font-size:10px;line-height:1.45}
+    .booking-whats-note b{color:#176b3a}
   </style>
 </head>
 <body>
@@ -895,7 +898,7 @@
 }
     function booking(){
   const p=P();
-  return `<div class="booking"><div class="bookwrap"><section class="bookintro"><div class="logo">${p.initials}</div><h1>Novo horário</h1><p>Agendamento de ${companyCtx.business.name}.</p><button class="btn secondary" onclick="go('agenda')">← Voltar</button></section><section class="book"><div class="book-title"><div><span class="eyebrow">${p.segment}</span><h2>Cadastrar ${p.appointment.toLowerCase()}</h2><p>Os dados serão salvos somente nesta empresa.</p></div><span class="tag">Novo</span></div><div class="formgrid"><div class="field"><div class="field-title-row"><b>${p.person}</b><button type="button" class="inline-add-customer" onclick="addCustomerFromBooking()">+ Cadastrar ${p.person.toLowerCase()}</button></div><select id="fclient"><option value="">Selecione</option>${companyData.customers.map(x=>`<option value="${x.id}">${x.name}</option>`).join('')}</select></div><div class="field"><b>${p.service}</b><select id="fservice"><option value="">Selecione</option>${companyData.services.filter(x=>x.active).map(x=>`<option value="${x.id}">${x.name} · ${moneyBR(Number(x.price_cents||0)/100)}</option>`).join('')}</select></div><div class="field"><b>${p.professional}</b><input id="fpro" placeholder="Nome do profissional"></div><div class="field"><b>Data</b><input id="fdate" type="date"></div><div class="field"><b>Horário</b><input id="ftime" type="time"></div><div class="field"><b>Status</b><select id="fstatus"><option value="confirmed">Confirmado</option><option value="pending">Pendente</option></select></div></div><div class="field"><b>Observação administrativa</b><textarea id="fnote" placeholder="${p.notePlaceholder}"></textarea></div><button class="btn primary" style="width:100%;margin-top:12px;min-height:48px" onclick="saveAppointment()">Salvar horário</button></section></div></div>`;
+  return `<div class="booking"><div class="bookwrap"><section class="bookintro"><div class="logo">${p.initials}</div><h1>Novo horário</h1><p>Agendamento de ${companyCtx.business.name}.</p><button class="btn secondary" onclick="go('agenda')">← Voltar</button></section><section class="book"><div class="book-title"><div><span class="eyebrow">${p.segment}</span><h2>Cadastrar ${p.appointment.toLowerCase()}</h2><p>Os dados serão salvos somente nesta empresa.</p></div><span class="tag">Novo</span></div><div class="formgrid"><div class="field"><div class="field-title-row"><b>${p.person}</b><button type="button" class="inline-add-customer" onclick="addCustomerFromBooking()">+ Cadastrar ${p.person.toLowerCase()}</button></div><select id="fclient"><option value="">Selecione</option>${companyData.customers.map(x=>`<option value="${x.id}">${x.name}</option>`).join('')}</select></div><div class="field"><b>${p.service}</b><select id="fservice"><option value="">Selecione</option>${companyData.services.filter(x=>x.active).map(x=>`<option value="${x.id}">${x.name} · ${moneyBR(Number(x.price_cents||0)/100)}</option>`).join('')}</select></div><div class="field"><b>${p.professional}</b><input id="fpro" placeholder="Nome do profissional"></div><div class="field"><b>Data</b><input id="fdate" type="date"></div><div class="field"><b>Horário</b><input id="ftime" type="time"></div><div class="field"><b>Status</b><select id="fstatus"><option value="confirmed">Confirmado</option><option value="pending">Pendente</option></select></div></div><div class="field"><b>Observação administrativa</b><textarea id="fnote" placeholder="${p.notePlaceholder}"></textarea></div><div class="booking-whats-note"><b>WhatsApp:</b> ao salvar, se a cliente tiver telefone cadastrado, a confirmação será aberta automaticamente no WhatsApp já conectado neste aparelho.</div><button class="btn primary" style="width:100%;margin-top:12px;min-height:48px" onclick="saveAppointment()">Salvar horário</button></section></div></div>`;
 }
     function fillPhone(){const n=document.getElementById('fclient').value,c=P().peopleData.find(x=>x[0]===n);document.getElementById('fphone').value=c?c[1]:''}
     async function addCustomerFromBooking(){
@@ -929,6 +932,25 @@
   }
   toast(p.person+' cadastrado e selecionado');
 }
+    function appointmentWhatsMessage(customer,service,date,time,professional,status){
+  const first=(customer?.name||'').trim().split(/\s+/)[0]||'';
+  const dateBR=String(date||'').split('-').reverse().join('/');
+  const statusText=status==='pending'?'Pendente':'Confirmado';
+  const lines=[
+    `Olá${first?', '+first:''}! 😊`,
+    '',
+    `Seu horário na *${companyCtx.business.name}* foi agendado.`,
+    '',
+    `📅 Data: *${dateBR}*`,
+    `🕐 Horário: *${time}*`,
+    `✨ ${P().service}: *${service?.name||''}*`,
+    professional?`👤 ${P().professional}: *${professional}*`:null,
+    `✅ Status: *${statusText}*`,
+    '',
+    'Se precisar alterar o horário, fale com a gente por aqui.'
+  ].filter(Boolean);
+  return lines.join('\n');
+}
     async function saveAppointment(){
   if(!hasFeature('agenda'))return toast('Agenda não incluída no plano');
   const customer_id=document.getElementById('fclient')?.value;
@@ -939,12 +961,51 @@
   const status=document.getElementById('fstatus')?.value||'confirmed';
   const notes=document.getElementById('fnote')?.value||'';
   if(!customer_id||!service_id||!date||!time)return toast('Preencha cliente, serviço, data e horário');
+
+  const customer=companyData.customers.find(x=>x.id===customer_id);
+  const service=companyData.services.find(x=>x.id===service_id);
+  const phone=normalizeWhatsPhone(customer?.phone);
+  let whatsWindow=null;
+
+  if(phone){
+    try{
+      whatsWindow=window.open('about:blank','_blank');
+    }catch(e){}
+  }
+
   const starts_at=new Date(`${date}T${time}:00`).toISOString();
   const {error}=await sb.from('agenda_appointments').insert({
-    business_id:companyCtx.business.id,customer_id,service_id,professional_name:professional_name||null,starts_at,status,notes:notes||null
+    business_id:companyCtx.business.id,
+    customer_id,
+    service_id,
+    professional_name:professional_name||null,
+    starts_at,
+    status,
+    notes:notes||null
   });
-  if(error){console.error(error);return toast('Não foi possível salvar o horário')}
-  await loadCompanyData();page='agenda';render();toast('Horário salvo');
+
+  if(error){
+    console.error(error);
+    if(whatsWindow&&!whatsWindow.closed)whatsWindow.close();
+    return toast('Não foi possível salvar o horário');
+  }
+
+  if(phone){
+    const msg=appointmentWhatsMessage(customer,service,date,time,professional_name,status);
+    const url='https://wa.me/'+phone+'?text='+encodeURIComponent(msg);
+    if(whatsWindow&&!whatsWindow.closed){
+      whatsWindow.location.href=url;
+    }else{
+      window.location.href=url;
+    }
+  }else{
+    toast('Horário salvo. Cliente sem WhatsApp cadastrado.');
+  }
+
+  await loadCompanyData();
+  page='agenda';
+  render();
+  if(phone)toast('Horário salvo e confirmação aberta no WhatsApp');
 }
     function companyBlockedView(){
   const name=companyCtx?.business?.name||'Sua empresa';
