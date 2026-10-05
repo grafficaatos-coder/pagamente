@@ -101,6 +101,13 @@
     @media(max-width:760px){.signup-screen{padding:18px 12px}.signup-top{display:block}.back-login{margin-bottom:14px}.signup-top h1{font-size:30px}.signup-fields,.signup-plans{grid-template-columns:1fr}.signup-box{padding:15px}}
   
     .signup-success-note{color:var(--muted);font-size:11px;line-height:1.55;margin:10px 0 18px}
+  
+    .service-top-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .whatsapp-btn{background:#eef9f2;color:#176b3a;border:1px solid #cfe8d8}
+    .whatsapp-btn:hover{background:#e2f5e9}
+    .whats-mini{color:#176b3a!important;border-color:#cfe8d8!important;background:#f4fbf6!important}
+    .whatsapp-catalog-note{margin:12px 0 14px;padding:11px 13px;border-radius:12px;background:#f4fbf6;border:1px solid #d7ebde;color:#356145;font-size:10px}
+    @media(max-width:760px){.service-top-actions{width:100%}.service-top-actions .btn{flex:1;min-width:150px}.inline-actions{align-items:stretch}.whats-mini{flex-basis:100%}}
   </style>
 </head>
 <body>
@@ -305,13 +312,44 @@
 }
     function clients(){
   const p=P();
-  const cards=companyData.customers.map(x=>`<div class="card client client-real-card" data-search="${x.name.toLowerCase()} ${(x.phone||'').toLowerCase()}"><div class="round">${x.name.split(' ').map(z=>z[0]).slice(0,2).join('').toUpperCase()}</div><div><b>${x.name}</b><small>${x.phone||'Sem telefone'}${x.email?' · '+x.email:''}</small><div class="inline-actions">${canOperateCompany()?`<button class="mini-btn" onclick="editCompanyCustomer('${x.id}')">Editar</button>`:''}${canAdminCompany()?`<button class="mini-btn danger" onclick="deleteCompanyCustomer('${x.id}')">Excluir</button>`:''}</div></div><div class="client-stat"><b>${companyData.appointments.filter(a=>a.customer_id===x.id).length}</b><small>${p.visit}</small></div></div>`).join('');
+  const cards=companyData.customers.map(x=>`<div class="card client client-real-card" data-search="${x.name.toLowerCase()} ${(x.phone||'').toLowerCase()}"><div class="round">${x.name.split(' ').map(z=>z[0]).slice(0,2).join('').toUpperCase()}</div><div><b>${x.name}</b><small>${x.phone||'Sem telefone'}${x.email?' · '+x.email:''}</small><div class="inline-actions"><button class="mini-btn whats-mini" onclick="sendServicesToCustomer('${x.id}')">WhatsApp · Enviar serviços</button>${canOperateCompany()?`<button class="mini-btn" onclick="editCompanyCustomer('${x.id}')">Editar</button>`:''}${canAdminCompany()?`<button class="mini-btn danger" onclick="deleteCompanyCustomer('${x.id}')">Excluir</button>`:''}</div></div><div class="client-stat"><b>${companyData.appointments.filter(a=>a.customer_id===x.id).length}</b><small>${p.visit}</small></div></div>`).join('');
   return shell(`<div class="section-title"><span class="eyebrow">Relacionamento</span><h2>${p.people}</h2><p>Dados pertencentes somente a ${companyCtx.business.name}.</p></div><div class="toolbar"><div class="search-wrap">${I.search}<input class="search" placeholder="Buscar ${p.person.toLowerCase()}" oninput="filterClientCards(this.value)"></div>${canOperateCompany()?`<button class="btn primary" onclick="addCompanyCustomer()">+ ${p.person}</button>`:''}</div><div class="list" id="clientCards">${cards||'<div class="empty-state">Nenhum cadastro ainda.</div>'}</div>`);
+}
+    function normalizeWhatsPhone(phone){
+  let n=String(phone||'').replace(/\D/g,'');
+  n=n.replace(/^0+/,'');
+  if(!n)return'';
+  if((n.length===10||n.length===11)&&!n.startsWith('55'))n='55'+n;
+  return n;
+}
+    function whatsCatalogMessage(customerName=''){
+  const active=companyData.services.filter(s=>s.active);
+  const hello=customerName?`Olá, ${customerName}! 😊`:'Olá! 😊';
+  const title=`Segue nosso catálogo de ${P().serviceLabel.toLowerCase()} da *${companyCtx.business.name}*:`;
+  const items=active.map(s=>`• *${s.name}* — ${moneyBR(Number(s.price_cents||0)/100)} · ${s.duration_minutes} min`).join('\n');
+  return `${hello}\n\n${title}\n\n${items}\n\nSe quiser agendar, é só falar com a gente por aqui.`;
+}
+    function shareServicesWhatsApp(){
+  const active=companyData.services.filter(s=>s.active);
+  if(!active.length)return toast('Cadastre pelo menos um serviço ativo');
+  const url='https://wa.me/?text='+encodeURIComponent(whatsCatalogMessage());
+  window.open(url,'_blank','noopener,noreferrer');
+}
+    function sendServicesToCustomer(id){
+  const x=companyData.customers.find(c=>c.id===id);
+  if(!x)return;
+  const phone=normalizeWhatsPhone(x.phone);
+  if(!phone)return toast('Cadastre o WhatsApp desta cliente primeiro');
+  const active=companyData.services.filter(s=>s.active);
+  if(!active.length)return toast('Cadastre pelo menos um serviço ativo');
+  const first=(x.name||'').trim().split(/\s+/)[0]||x.name;
+  const url='https://wa.me/'+phone+'?text='+encodeURIComponent(whatsCatalogMessage(first));
+  window.open(url,'_blank','noopener,noreferrer');
 }
     function services(){
   const p=P();
   const cards=companyData.services.map((s,i)=>`<article class="card service service-card"><div class="service-card-top"><div class="service-icon">${SERVICE_DEFAULTS[segment]?.[i%Math.max(1,SERVICE_DEFAULTS[segment]?.length||1)]?.[3]||'✨'}</div><span class="service-status">${s.active?'Ativo':'Inativo'}</span></div><h3>${s.name}</h3><p>${s.active?'Disponível para agendamento nesta empresa.':'Oculto para novos agendamentos.'}</p><div class="service-meta"><div><small>Duração</small><b>${s.duration_minutes} min</b></div><div><small>Valor</small><b>${moneyBR(Number(s.price_cents||0)/100)}</b></div></div>${canAdminCompany()?`<div class="service-card-actions"><button onclick="editCompanyService('${s.id}')">Editar</button><button onclick="toggleCompanyService('${s.id}')">${s.active?'Desativar':'Ativar'}</button><button onclick="deleteCompanyService('${s.id}')">Excluir</button></div>`:''}</article>`).join('');
-  return shell(`<div class="services-head"><div class="section-title service-title"><span class="eyebrow">${p.catalog}</span><h2>${p.serviceLabel}</h2><p>Catálogo salvo para esta empresa.</p></div>${canAdminCompany()?`<button class="btn primary service-add" onclick="addCompanyService()">+ Novo ${p.service.toLowerCase()}</button>`:''}</div><div class="catalog-summary"><div><span>Itens cadastrados</span><b>${companyData.services.length}</b></div><div><span>Disponibilidade</span><b>${companyData.services.filter(x=>x.active).length} ativos</b></div><div><span>Plano</span><b>${companyCtx.plan.name}</b></div></div><div class="services">${cards||'<div class="empty-state">Nenhum serviço cadastrado.</div>'}</div>`);
+  return shell(`<div class="services-head"><div class="section-title service-title"><span class="eyebrow">${p.catalog}</span><h2>${p.serviceLabel}</h2><p>Catálogo salvo para esta empresa.</p></div><div class="service-top-actions"><button class="btn whatsapp-btn" onclick="shareServicesWhatsApp()">WhatsApp · Enviar catálogo</button>${canAdminCompany()?`<button class="btn primary service-add" onclick="addCompanyService()">+ Novo ${p.service.toLowerCase()}</button>`:''}</div></div><div class="catalog-summary"><div><span>Itens cadastrados</span><b>${companyData.services.length}</b></div><div><span>Disponibilidade</span><b>${companyData.services.filter(x=>x.active).length} ativos</b></div><div><span>Plano</span><b>${companyCtx.plan.name}</b></div></div><div class="whatsapp-catalog-note"><b>Envio pelo WhatsApp:</b> serão enviados somente os serviços ativos, com valor e duração.</div><div class="services">${cards||'<div class="empty-state">Nenhum serviço cadastrado.</div>'}</div>`);
 }
     function cash(){
   const serviceMap=new Map(companyData.services.map(s=>[s.id,s]));
