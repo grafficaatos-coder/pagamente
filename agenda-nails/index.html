@@ -752,7 +752,10 @@
   if(btn){btn.disabled=true;btn.textContent='Entrando...'}
   const {data,error}=await sb.auth.signInWithPassword({email,password});
   if(error||!data?.user){
-    if(e)e.textContent='E-mail ou senha incorretos.';
+    const msg=String(error?.message||'').toLowerCase();
+    if(e)e.textContent=(msg.includes('not confirmed')||msg.includes('email not confirmed'))
+      ?'Seu e-mail ainda não foi confirmado. Abra o e-mail de confirmação e depois tente entrar novamente.'
+      :'E-mail ou senha não conferem. Verifique se está usando exatamente o mesmo e-mail informado no cadastro.';
     if(btn){btn.disabled=false;btn.textContent='Entrar'}
     return;
   }
