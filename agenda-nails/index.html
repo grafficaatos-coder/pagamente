@@ -270,6 +270,33 @@
     .plan-delete{background:#fff4f4;color:#9f3030;border:1px solid #efcccc}
     .plan-delete:hover{background:#fde8e8}
     @media(max-width:720px){.plan-actions-manage{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  
+    .wa-device-tabs{display:flex;gap:8px;margin-bottom:10px}
+    .wa-device-tabs button{flex:1;border:1px solid var(--line);background:#fff;color:var(--muted);padding:12px;border-radius:12px;font-weight:900;cursor:pointer}
+    .wa-device-tabs button.on{border-color:#1f8f50;background:#eef9f2;color:#176b3a}
+    .wa-device-help{display:flex;gap:8px;flex-direction:column;padding:13px 15px;border:1px solid #d7ebde;background:#f4fbf6;border-radius:13px;margin-bottom:12px;color:#356145}
+    .wa-device-help span{font-size:10px;line-height:1.5}
+    .wa-status{margin-bottom:12px}.wa-status.connected{border-color:#cfe8d8}
+    .wa-status p{color:var(--muted);line-height:1.55}
+    .wa-status-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-top:12px}
+    .wa-status-grid>div{background:#faf7f8;border:1px solid var(--line);border-radius:11px;padding:10px;min-width:0}
+    .wa-status-grid small,.wa-status-grid b{display:block}.wa-status-grid small{color:var(--muted);font-size:9px;margin-bottom:4px}.wa-status-grid b{overflow-wrap:anywhere}
+    .wa-disconnect{margin-top:12px;background:#fff4f4;color:#9f3030;border:1px solid #efcccc}
+    .wa-settings,.wa-connect-panel{margin-bottom:12px}
+    .wa-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+    .wa-form-grid .wa-full{grid-column:1/-1}
+    .wa-official-note{padding:11px 13px;border:1px solid #efdcae;background:#fff8e9;color:#73530d;border-radius:11px;font-size:10px;line-height:1.5;margin:8px 0 12px}
+    .wa-template-help{display:grid;gap:7px;padding:12px;border:1px dashed var(--line);border-radius:12px;background:#fcfafb;margin:10px 0 13px}
+    .wa-template-help span{color:var(--muted);font-size:10px;line-height:1.5}
+    .wa-template-help code{display:block;white-space:normal;overflow-wrap:anywhere;background:#f5edf1;padding:9px;border-radius:8px;color:var(--wine);font-size:10px}
+    .wa-check{display:flex;gap:10px;align-items:flex-start;padding:10px 0}
+    .wa-check input{width:18px;height:18px;accent-color:var(--wine)}
+    .wa-check b,.wa-check small{display:block}.wa-check small{color:var(--muted);margin-top:3px}
+    .wa-connect-btn{width:100%;min-height:46px}
+    .wa-log-row{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}
+    .wa-log-row:last-child{border-bottom:0}.wa-log-row b,.wa-log-row small{display:block}.wa-log-row small{color:var(--muted);margin-top:3px}.wa-log-error{color:#a23a3a!important}
+    .wa-log-dot{width:9px;height:9px;border-radius:50%;margin-top:4px;flex:0 0 auto}.wa-log-dot.ok{background:#37a66b}.wa-log-dot.bad{background:#cf5b5b}
+    @media(max-width:720px){.wa-status-grid,.wa-form-grid{grid-template-columns:1fr}.wa-form-grid .wa-full{grid-column:auto}.wa-device-tabs{position:sticky;top:68px;z-index:4;background:var(--bg);padding:4px 0}}
   </style>
 </head>
 <body>
@@ -315,9 +342,11 @@
     const SUPABASE_URL='https://zmrihyzwsyxjikdknfug.supabase.co';
     const SUPABASE_KEY='sb_publishable_nX-qLw9rEdLUvZpgXMj1LA_2gjB3umn';
     const AGENDA_ADMIN_FUNCTION=SUPABASE_URL+'/functions/v1/agenda-admin-access';
+    const AGENDA_WHATSAPP_FUNCTION=SUPABASE_URL+'/functions/v1/agenda-whatsapp';
     let sb=null,authUser=null,appMode=null,ownerLogged=false,authLoading=true,loginMessage='',passwordRecovery=false,signupMode=false,signupLoading=false,signupMessage='',signupWaitingEmail='',signupPlans=[],signupSettings={public_signup_enabled:true,free_trial_enabled:true,trial_days:7},signupSelectedPlan='profissional',loginPrefillEmail='';
     let companyCtx=null;
     let companyData={customers:[],services:[],appointments:[]};
+    let whatsappState={connection:null,messages:[]},whatsappLoading=false,whatsappSetupDevice='mobile';
     const CAPABILITIES={
       agenda:'Agenda, serviços e horários',
       clients:'Cadastro de clientes/pacientes',
@@ -411,7 +440,7 @@
     if(hasFeature('agenda'))n.push(['agenda','calendar','Agenda'],['services','sparkle',p.serviceLabel]);
     if(hasFeature('clients'))n.push(['clients','users',p.people]);
     if(hasFeature('finance'))n.push(['cash','wallet','Financeiro']);
-    if(hasFeature('whatsapp'))n.push(['wa','message','WhatsApp']);
+    n.push(['wa','message','WhatsApp']);
     return `<aside class="side"><div class="brand"><div class="logo">${p.initials}</div><div><b>${companyCtx?.business?.name||p.brand}</b><small>${companyCtx?.plan?.name||'PLANO'}</small></div></div><nav class="nav">${n.map(x=>`<button class="${page===x[0]?'on':''}" onclick="go('${x[0]}')">${I[x[1]]}<span class="label">${x[2]}</span></button>`).join('')}</nav><div class="side-foot"><small>Acesso da empresa</small><b>${subscriptionLabel()}</b></div></aside>`;
   }
   const n=[['overview','home','Visão geral'],['clients','users','Assinantes'],['plans','sparkle','Planos'],['billing','wallet','Cobranças'],['settings','more','Configurações']];
@@ -423,7 +452,7 @@
     if(hasFeature('agenda'))n.push(['agenda','calendar','Agenda']);
     if(hasFeature('clients'))n.push(['clients','users',p.people]);
     if(hasFeature('finance'))n.push(['cash','wallet','Financeiro']);
-    if(hasFeature('whatsapp'))n.push(['wa','message','WhatsApp']);
+    n.push(['wa','message','WhatsApp']);
     const items=n.slice(0,5);
     return `<nav class="bottom">${items.map(x=>`<button class="${page===x[0]?'on':''}" onclick="go('${x[0]}')">${I[x[1]]}${x[2]}</button>`).join('')}</nav>${hasFeature('agenda')?`<button class="fab" onclick="book()" aria-label="Novo horário">${I.plus}</button>`:''}`;
   }
@@ -520,7 +549,121 @@
   const future=companyData.appointments.filter(a=>new Date(a.starts_at)>=new Date()&&a.status!=='cancelled').length;
   return shell(`<div class="section-title"><span class="eyebrow">Financeiro</span><h2>Resumo</h2><p>Informações calculadas a partir dos atendimentos desta empresa.</p></div><div class="money"><div class="card"><span>Receita concluída</span><b>${moneyBR(revenue)}</b><small>atendimentos concluídos</small></div><div class="card"><span>Concluídos</span><b>${completed.length}</b><small>atendimentos finalizados</small></div><div class="card"><span>Próximos</span><b>${future}</b><small>horários futuros</small></div></div>`);
 }
-    function wa(){const p=P(),x=[['Confirmação ao salvar horário',`Envia assim que ${p.appointment.toLowerCase()} é criado`],['Lembrete 24h',`Um dia antes de ${p.appointment.toLowerCase()}`],['Lembrete 2h','No dia, pouco antes do horário'],['Pós-atendimento',p.key==='doctor'?'Mensagem administrativa após a consulta':'Pedido de avaliação da experiência']];return shell(`<div class="section-title"><span class="eyebrow">Automação</span><h2>WhatsApp <span class="demo">DEMO</span></h2><p>Prepare confirmações e lembretes para reduzir faltas.</p></div><section class="panel" style="margin-bottom:10px"><div class="head"><div><span class="eyebrow">Status</span><h3>Integração ainda não conectada</h3></div><span class="tag p">Modo demonstração</span></div><p style="color:var(--muted);margin:6px 0 0;line-height:1.55">As opções abaixo já fazem parte do fluxo. O envio real será ativado quando conectarmos uma conta/provedor de WhatsApp.</p></section><div class="list">${x.map((i,n)=>`<div class="card auto"><div><b>${i[0]}</b><small style="display:block;color:var(--muted);margin-top:3px">${i[1]}</small></div><div class="toggle ${n<3?'on':''}" onclick="this.classList.toggle('on')"></div></div>`).join('')}</div>`)}
+    async function callAgendaWhatsApp(payload){
+  if(!sb)throw new Error('Sessão indisponível');
+  const {data}=await sb.auth.getSession();
+  const token=data?.session?.access_token;
+  if(!token)throw new Error('Sessão expirada');
+  const r=await fetch(AGENDA_WHATSAPP_FUNCTION,{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'apikey':SUPABASE_KEY,
+      'Authorization':'Bearer '+token
+    },
+    body:JSON.stringify(payload)
+  });
+  const out=await r.json().catch(()=>({}));
+  if(!r.ok){
+    const err=new Error(out.error||'Erro na integração do WhatsApp');
+    err.code=out.code||'whatsapp_error';
+    throw err;
+  }
+  return out;
+}
+    async function loadWhatsappStatus(redraw=true){
+  if(!companyCtx||!sb||whatsappLoading)return;
+  whatsappLoading=true;
+  const bid=companyCtx.business.id;
+  const [connRes,msgRes]=await Promise.all([
+    sb.from('agenda_whatsapp_connections').select('business_id,status,waba_id,phone_number_id,display_phone_number,verified_name,quality_rating,auto_confirmation,confirmation_template_name,template_language,connected_at,last_error,updated_at').eq('business_id',bid).maybeSingle(),
+    sb.from('agenda_whatsapp_messages').select('id,to_phone,message_type,status,meta_message_id,error_message,created_at').eq('business_id',bid).order('created_at',{ascending:false}).limit(10)
+  ]);
+  if(connRes.error)console.error(connRes.error);
+  if(msgRes.error)console.error(msgRes.error);
+  whatsappState={connection:connRes.data||null,messages:msgRes.data||[]};
+  whatsappLoading=false;
+  if(redraw&&page==='wa')render();
+}
+    function setWhatsappSetupDevice(mode){
+  whatsappSetupDevice=mode==='desktop'?'desktop':'mobile';
+  render();
+}
+    async function connectWhatsAppBusiness(){
+  if(!canAdminCompany())return toast('Somente o administrador da empresa pode conectar');
+  const phoneId=(document.getElementById('waPhoneId')?.value||'').trim();
+  const wabaId=(document.getElementById('waWabaId')?.value||'').trim();
+  const token=(document.getElementById('waToken')?.value||'').trim();
+  const template=(document.getElementById('waTemplate')?.value||'').trim();
+  const language=(document.getElementById('waLanguage')?.value||'pt_BR').trim()||'pt_BR';
+  const btn=document.getElementById('waConnectBtn');
+  const err=document.getElementById('waConnectError');
+  if(!phoneId||!token){if(err)err.textContent='Informe o Phone Number ID e o token permanente da Meta.';return}
+  if(btn){btn.disabled=true;btn.textContent='Conectando...'}
+  try{
+    await callAgendaWhatsApp({
+      action:'connect',
+      phone_number_id:phoneId,
+      waba_id:wabaId,
+      access_token:token,
+      template_name:template,
+      template_language:language,
+      auto_confirmation:true
+    });
+    await loadWhatsappStatus(false);
+    render();
+    toast('WhatsApp Business conectado');
+  }catch(ex){
+    console.error(ex);
+    if(err)err.textContent=ex.message||'Não foi possível conectar';
+    if(btn){btn.disabled=false;btn.textContent='Conectar WhatsApp Business'}
+  }
+}
+    async function saveWhatsappSettings(){
+  const conn=whatsappState?.connection;if(!conn)return;
+  const template=(document.getElementById('waTemplateSettings')?.value||'').trim();
+  const language=(document.getElementById('waLanguageSettings')?.value||'pt_BR').trim()||'pt_BR';
+  const auto=!!document.getElementById('waAutoConfirmation')?.checked;
+  try{
+    await callAgendaWhatsApp({action:'settings',auto_confirmation:auto,template_name:template,template_language:language});
+    await loadWhatsappStatus(false);render();toast('Configuração do WhatsApp salva');
+  }catch(ex){console.error(ex);toast(ex.message||'Não foi possível salvar')}
+}
+    async function disconnectWhatsAppBusiness(){
+  if(!canAdminCompany())return;
+  if(!confirm('Desconectar o WhatsApp Business desta empresa?'))return;
+  try{
+    await callAgendaWhatsApp({action:'disconnect'});
+    whatsappState={connection:null,messages:[]};
+    render();toast('WhatsApp desconectado');
+  }catch(ex){console.error(ex);toast(ex.message||'Não foi possível desconectar')}
+}
+    async function copyWhatsTemplate(){
+  const text='Olá {{1}}! Seu horário na {{2}} foi confirmado para {{3}} às {{4}}. Serviço: {{5}}. Profissional: {{6}}.';
+  try{await navigator.clipboard.writeText(text);toast('Modelo copiado')}catch(e){prompt('Copie o modelo:',text)}
+}
+    function openMetaApps(){
+  window.open('https://developers.facebook.com/apps/','_blank','noopener,noreferrer');
+}
+    function wa(){
+  const conn=whatsappState?.connection;
+  const connected=conn?.status==='connected';
+  const admin=canAdminCompany();
+  const deviceHelp=whatsappSetupDevice==='mobile'
+    ? `<b>📱 Conectar pelo celular</b><span>Abra esta tela no navegador do celular. Os dados da Meta são salvos na empresa e depois funcionam também no computador.</span>`
+    : `<b>💻 Conectar pelo computador</b><span>Use o Meta for Developers em outra aba para copiar o Phone Number ID e o token. Depois a conexão vale também no celular.</span>`;
+  const status=connected
+    ? `<section class="panel wa-status connected"><div class="head"><div><span class="eyebrow">Status</span><h3>WhatsApp Business conectado</h3></div><span class="status-badge status-active">Conectado</span></div><div class="wa-status-grid"><div><small>Número</small><b>${conn.display_phone_number||'Conectado'}</b></div><div><small>Nome verificado</small><b>${conn.verified_name||'—'}</b></div><div><small>Qualidade</small><b>${conn.quality_rating||'—'}</b></div><div><small>Conectado em</small><b>${conn.connected_at?new Date(conn.connected_at).toLocaleString('pt-BR'):'—'}</b></div></div>${admin?`<button class="btn wa-disconnect" onclick="disconnectWhatsAppBusiness()">Desconectar</button>`:''}</section>`
+    : `<section class="panel wa-status"><div class="head"><div><span class="eyebrow">Status</span><h3>WhatsApp Business não conectado</h3></div><span class="tag p">Desconectado</span></div><p>Conecte a conta oficial da Meta para o Agenda Pro enviar confirmações pelo servidor, sem depender do WhatsApp Web aberto.</p></section>`;
+  const settings=connected&&admin
+    ? `<section class="panel wa-settings"><div class="head"><div><span class="eyebrow">Automação</span><h3>Envio automático</h3></div></div><label class="wa-check"><input id="waAutoConfirmation" type="checkbox" ${conn.auto_confirmation?'checked':''}><span><b>Enviar confirmação ao salvar horário</b><small>O Agenda Pro tenta enviar assim que o agendamento é criado.</small></span></label><div class="wa-form-grid"><div class="field"><b>Template aprovado pela Meta</b><input id="waTemplateSettings" value="${conn.confirmation_template_name||''}" placeholder="agendamento_confirmado"></div><div class="field"><b>Idioma</b><input id="waLanguageSettings" value="${conn.template_language||'pt_BR'}" placeholder="pt_BR"></div></div><div class="wa-template-help"><b>Modelo recomendado (6 variáveis)</b><code>Olá {{1}}! Seu horário na {{2}} foi confirmado para {{3}} às {{4}}. Serviço: {{5}}. Profissional: {{6}}.</code><button class="mini-btn" onclick="copyWhatsTemplate()">Copiar modelo</button></div><button class="btn primary" onclick="saveWhatsappSettings()">Salvar automação</button></section>`
+    : '';
+  const connectForm=!connected&&admin
+    ? `<section class="panel wa-connect-panel"><div class="head"><div><span class="eyebrow">Conexão oficial</span><h3>Dados da Meta Cloud API</h3></div><button class="btn secondary" onclick="openMetaApps()">Abrir Meta</button></div><div class="wa-official-note"><b>Importante:</b> envio 100% automático não usa QR do WhatsApp Web. A integração oficial usa a WhatsApp Business Platform (Cloud API) da Meta. A conexão feita aqui fica disponível no celular e no computador.</div><div class="wa-form-grid"><div class="field"><b>Phone Number ID</b><input id="waPhoneId" inputmode="numeric" placeholder="ID do número na Meta"></div><div class="field"><b>WhatsApp Business Account ID</b><input id="waWabaId" inputmode="numeric" placeholder="WABA ID (opcional)"></div><div class="field wa-full"><b>Token permanente</b><input id="waToken" type="password" autocomplete="off" placeholder="Cole o token da Meta"></div><div class="field"><b>Template de confirmação</b><input id="waTemplate" placeholder="agendamento_confirmado"></div><div class="field"><b>Idioma do template</b><input id="waLanguage" value="pt_BR" placeholder="pt_BR"></div></div><div class="wa-template-help"><b>Para mensagens iniciadas pela empresa</b><span>Crie na Meta um template do tipo utilidade. O modelo abaixo usa 6 variáveis e permite confirmar o agendamento mesmo fora da janela de 24 horas.</span><code>Olá {{1}}! Seu horário na {{2}} foi confirmado para {{3}} às {{4}}. Serviço: {{5}}. Profissional: {{6}}.</code><button class="mini-btn" onclick="copyWhatsTemplate()">Copiar modelo</button></div><div id="waConnectError" class="login-error"></div><button id="waConnectBtn" class="btn primary wa-connect-btn" onclick="connectWhatsAppBusiness()">Conectar WhatsApp Business</button></section>`
+    : '';
+  const recent=(whatsappState?.messages||[]).map(m=>`<div class="wa-log-row"><span class="wa-log-dot ${m.status==='sent'?'ok':'bad'}"></span><div><b>${m.status==='sent'?'Enviado':'Falhou'}</b><small>${m.to_phone} · ${new Date(m.created_at).toLocaleString('pt-BR')}</small>${m.error_message?`<small class="wa-log-error">${m.error_message}</small>`:''}</div></div>`).join('');
+  return shell(`<div class="section-title"><span class="eyebrow">WhatsApp Business</span><h2>Conexão e envio automático</h2><p>Conecte uma vez e use a mesma conta no celular e no computador.</p></div><div class="wa-device-tabs"><button class="${whatsappSetupDevice==='mobile'?'on':''}" onclick="setWhatsappSetupDevice('mobile')">📱 Celular</button><button class="${whatsappSetupDevice==='desktop'?'on':''}" onclick="setWhatsappSetupDevice('desktop')">💻 Computador</button></div><div class="wa-device-help">${deviceHelp}</div>${status}${settings}${connectForm}<section class="panel"><div class="head"><div><span class="eyebrow">Últimos envios</span><h3>Confirmações automáticas</h3></div></div>${recent||'<div class="empty-state">Nenhum envio automático registrado ainda.</div>'}</section>`);
+}
     function setup(){const p=P();return shell(`<div class="section-title"><span class="eyebrow">Personalização</span><h2>Tipo de negócio</h2><p>O sistema adapta automaticamente linguagem e fluxo de agendamento.</p></div><div class="setup-grid">${Object.values(PROFILES).map(x=>`<button class="setup-card ${x.key===segment?'on':''}" onclick="setSegment('${x.key}')"><span class="big-emoji">${x.emoji}</span><b>${x.segment}</b><small>${x.key==='salon'?'Clientes, serviços, profissionais, agenda e caixa.':x.key==='esthetic'?'Clientes, procedimentos, sessões, profissionais e pacotes.':'Pacientes, consultas, médicos, convênio e teleconsulta.'}</small></button>`).join('')}</div><div class="profile-row"><div class="profile-box"><span>Empresa demonstrada</span><b>${p.business}</b></div><div class="profile-box"><span>Terminologia ativa</span><b>${p.people} · ${p.serviceLabel} · ${p.professionals}</b></div></div><div class="context-note"><b>Multiempresa:</b> na versão comercial, cada assinante terá seu próprio cadastro, logo, equipe, horários, serviços e dados isolados. Esta tela demonstra como um único produto pode atender segmentos diferentes.</div>`)}
     function more(){const p=P();return shell(`<div class="section-title"><span class="eyebrow">Configurações</span><h2>Mais opções</h2><p>Personalize o sistema para ${p.business}.</p></div><div class="more-list"><button class="more-btn" onclick="go('admin')"><div class="quick-ico">${I.wallet}</div><b>Administração da plataforma</b><small>Planos, mensalidades, assinantes e bloqueios</small></button><button class="more-btn" onclick="go('setup')"><div class="quick-ico"><span style="font-size:18px">${p.emoji}</span></div><b>Tipo de negócio</b><small>${p.segment} · alterar modo</small></button><button class="more-btn" onclick="go('services')"><div class="quick-ico">${I.sparkle}</div><b>${p.serviceLabel}</b><small>Duração, valores e catálogo</small></button><button class="more-btn" onclick="go('wa')"><div class="quick-ico">${I.message}</div><b>WhatsApp</b><small>Confirmações e lembretes</small></button><button class="more-btn" onclick="book()"><div class="quick-ico">${I.calendar}</div><b>Novo horário</b><small>Cadastre ${p.appointment.toLowerCase()}</small></button><button class="more-btn" onclick="toast('Relatórios em breve')"><div class="quick-ico">${I.chart}</div><b>Relatórios</b><small>Indicadores de ${p.business}</small></button></div>`)}
     function admin(){const views={overview:adminOverview,clients:adminClients,plans:adminPlans,billing:adminBilling,settings:adminSettings};return shell((views[adminTab]||adminOverview)())}
@@ -562,8 +705,11 @@
   const customersPromise=hasFeature('clients')?sb.from('agenda_customers').select('*').eq('business_id',bid).order('name'):Promise.resolve({data:[],error:null});
   const servicesPromise=hasFeature('agenda')?sb.from('agenda_services').select('*').eq('business_id',bid).order('name'):Promise.resolve({data:[],error:null});
   const appointmentsPromise=hasFeature('agenda')?sb.from('agenda_appointments').select('*').eq('business_id',bid).order('starts_at',{ascending:true}):Promise.resolve({data:[],error:null});
-  let [cr,sr,ar]=await Promise.all([customersPromise,servicesPromise,appointmentsPromise]);
+  const whatsPromise=sb.from('agenda_whatsapp_connections').select('business_id,status,waba_id,phone_number_id,display_phone_number,verified_name,quality_rating,auto_confirmation,confirmation_template_name,template_language,connected_at,last_error,updated_at').eq('business_id',bid).maybeSingle();
+  const whatsMessagesPromise=sb.from('agenda_whatsapp_messages').select('id,to_phone,message_type,status,meta_message_id,error_message,created_at').eq('business_id',bid).order('created_at',{ascending:false}).limit(10);
+  let [cr,sr,ar,wr,wm]=await Promise.all([customersPromise,servicesPromise,appointmentsPromise,whatsPromise,whatsMessagesPromise]);
   companyData={customers:cr.data||[],services:sr.data||[],appointments:ar.data||[]};
+  whatsappState={connection:wr.data||null,messages:wm.data||[]};
   if(hasFeature('agenda')&&!companyData.services.length){
     await ensureDefaultServices();
     sr=await sb.from('agenda_services').select('*').eq('business_id',bid).order('name');
@@ -598,7 +744,6 @@
     [hasFeature('finance')?'money':'chart',hasFeature('finance')?'Receita concluída':'Plano',hasFeature('finance')?moneyBR(revenue):companyCtx.plan.name,subscriptionLabel()]
   ];
 }
-    
     async function changeMyPassword(){
       if(!sb||!authUser)return;
       const p=prompt('Digite a nova senha (mínimo 8 caracteres):');if(p===null)return;
@@ -1003,16 +1148,15 @@
   const customer=companyData.customers.find(x=>x.id===customer_id);
   const service=companyData.services.find(x=>x.id===service_id);
   const phone=normalizeWhatsPhone(customer?.phone);
+  const autoConnected=!!(whatsappState?.connection?.status==='connected'&&whatsappState?.connection?.auto_confirmation);
   let whatsWindow=null;
 
-  if(phone){
-    try{
-      whatsWindow=window.open('about:blank','_blank');
-    }catch(e){}
+  if(phone&&!autoConnected){
+    try{whatsWindow=window.open('about:blank','_blank')}catch(e){}
   }
 
   const starts_at=new Date(`${date}T${time}:00`).toISOString();
-  const {error}=await sb.from('agenda_appointments').insert({
+  const {data:created,error}=await sb.from('agenda_appointments').insert({
     business_id:companyCtx.business.id,
     customer_id,
     service_id,
@@ -1020,7 +1164,7 @@
     starts_at,
     status,
     notes:notes||null
-  });
+  }).select('id').single();
 
   if(error){
     console.error(error);
@@ -1028,22 +1172,31 @@
     return toast('Não foi possível salvar o horário');
   }
 
-  if(phone){
+  let automaticSent=false;
+  if(phone&&autoConnected&&created?.id){
+    try{
+      const out=await callAgendaWhatsApp({action:'send_confirmation',appointment_id:created.id});
+      automaticSent=!!out?.sent;
+    }catch(ex){
+      console.error(ex);
+      toast('Horário salvo. O envio automático falhou; abrindo WhatsApp manual.');
+      const msg=appointmentWhatsMessage(customer,service,date,time,professional_name,status);
+      const url='https://wa.me/'+phone+'?text='+encodeURIComponent(msg);
+      window.open(url,'_blank','noopener,noreferrer');
+    }
+  }else if(phone){
     const msg=appointmentWhatsMessage(customer,service,date,time,professional_name,status);
     const url='https://wa.me/'+phone+'?text='+encodeURIComponent(msg);
-    if(whatsWindow&&!whatsWindow.closed){
-      whatsWindow.location.href=url;
-    }else{
-      window.location.href=url;
-    }
-  }else{
-    toast('Horário salvo. Cliente sem WhatsApp cadastrado.');
+    if(whatsWindow&&!whatsWindow.closed)whatsWindow.location.href=url;
+    else window.open(url,'_blank','noopener,noreferrer');
   }
 
   await loadCompanyData();
   page='agenda';
   render();
-  if(phone)toast('Horário salvo e confirmação aberta no WhatsApp');
+  if(!phone)toast('Horário salvo. Cliente sem WhatsApp cadastrado.');
+  else if(automaticSent)toast('Horário salvo e confirmação enviada automaticamente');
+  else if(!autoConnected)toast('Horário salvo e confirmação aberta no WhatsApp');
 }
     function companyBlockedView(){
   const name=companyCtx?.business?.name||'Sua empresa';
@@ -1275,7 +1428,7 @@
     function go(p){
   if(!appMode){render();return}
   if(appMode==='owner'){page='admin';adminTab=['overview','clients','plans','billing','settings'].includes(p)?p:'overview';render();scrollTo(0,0);return}
-  const allowed={home:true,agenda:hasFeature('agenda'),services:hasFeature('agenda'),clients:hasFeature('clients'),cash:hasFeature('finance'),wa:hasFeature('whatsapp')};
+  const allowed={home:true,agenda:hasFeature('agenda'),services:hasFeature('agenda'),clients:hasFeature('clients'),cash:hasFeature('finance'),wa:true};
   if(!allowed[p])return toast('Este recurso não está incluído no seu plano');
   page=p;render();scrollTo(0,0);
 }
