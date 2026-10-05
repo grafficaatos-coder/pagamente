@@ -186,8 +186,11 @@
   const st=companyCtx.subscription?.status;
   if(st==='suspended'||st==='cancelled')return true;
   const now=new Date();
-  if(st==='trialing'&&companyCtx.subscription?.trial_ends_at&&new Date(companyCtx.subscription.trial_ends_at)<now)return true;
-  if(st==='past_due'&&companyCtx.settings?.auto_block&&companyCtx.subscription?.current_period_end){
+  if(st==='trialing'){
+    if(companyCtx.settings?.free_trial_enabled===false)return true;
+    if(companyCtx.subscription?.trial_ends_at&&new Date(companyCtx.subscription.trial_ends_at)<now)return true;
+  }
+  if((st==='active'||st==='past_due')&&companyCtx.settings?.auto_block&&companyCtx.subscription?.current_period_end){
     const d=new Date(companyCtx.subscription.current_period_end);
     d.setDate(d.getDate()+Number(companyCtx.settings.grace_days||0));
     if(now>d)return true;
@@ -198,8 +201,13 @@
   return s==='salon'?'Salão de beleza':s==='esthetic'?'Clínica de estética':s==='doctor'?'Consultório médico':'Outro';
 }
     function subscriptionLabel(){
-  const s=companyCtx?.subscription?.status;
-  return s==='trialing'?'Teste grátis':s==='past_due'?'Pagamento pendente':s==='suspended'?'Bloqueado':s==='cancelled'?'Cancelado':'Ativo';
+  if(!companyCtx)return'—';
+  if(companyAccessBlocked())return'Bloqueado';
+  const s=companyCtx.subscription?.status;
+  if(s==='trialing')return'Teste grátis';
+  if(s==='past_due')return'Pagamento pendente';
+  if(s==='active'&&companyCtx.subscription?.current_period_end&&new Date(companyCtx.subscription.current_period_end)<new Date())return'Em tolerância';
+  return s==='cancelled'?'Cancelado':'Ativo';
 }
     function nav(){
   if(appMode==='company'){
