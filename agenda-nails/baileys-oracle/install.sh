@@ -10,11 +10,32 @@ fi
 echo "Agenda Pro - instalação Baileys Oracle Cloud"
 echo
 
-$SUDO apt-get update
-$SUDO apt-get install -y docker.io git curl ca-certificates
+install_ubuntu() {
+  $SUDO apt-get update
+  $SUDO apt-get install -y docker.io git curl ca-certificates
+  if ! docker compose version >/dev/null 2>&1; then
+    $SUDO apt-get install -y docker-compose-v2 2>/dev/null || \
+    $SUDO apt-get install -y docker-compose-plugin
+  fi
+}
 
-if ! docker compose version >/dev/null 2>&1; then
-  $SUDO apt-get install -y docker-compose-v2 2>/dev/null ||   $SUDO apt-get install -y docker-compose-plugin
+install_oracle_linux() {
+  $SUDO dnf -y install dnf-plugins-core git curl ca-certificates
+  if ! command -v docker >/dev/null 2>&1; then
+    $SUDO dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+    $SUDO dnf -y install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+  elif ! docker compose version >/dev/null 2>&1; then
+    $SUDO dnf -y install docker-compose-plugin
+  fi
+}
+
+if command -v apt-get >/dev/null 2>&1; then
+  install_ubuntu
+elif command -v dnf >/dev/null 2>&1; then
+  install_oracle_linux
+else
+  echo "Sistema operacional não suportado automaticamente."
+  exit 1
 fi
 
 $SUDO systemctl enable --now docker
@@ -67,6 +88,13 @@ if command -v ufw >/dev/null 2>&1; then
   $SUDO ufw allow 22/tcp || true
   $SUDO ufw allow 80/tcp || true
   $SUDO ufw allow 443/tcp || true
+fi
+
+if command -v firewall-cmd >/dev/null 2>&1; then
+  $SUDO systemctl enable --now firewalld || true
+  $SUDO firewall-cmd --permanent --add-service=http || true
+  $SUDO firewall-cmd --permanent --add-service=https || true
+  $SUDO firewall-cmd --reload || true
 fi
 
 $SUDO docker compose build --pull
