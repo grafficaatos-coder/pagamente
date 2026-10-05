@@ -318,6 +318,16 @@
     @media(max-width:720px){
       .wa-simple-connect{grid-template-columns:auto 1fr;padding:14px}.wa-simple-button{grid-column:1/-1;width:100%}.wa-simple-error{grid-column:1/-1}.meta-platform-actions .btn{width:100%}
     }
+  
+    .wa-free-auto{background:linear-gradient(135deg,#fff,#f2fbf5);border:1px solid #cae9d5;border-radius:18px;padding:17px;margin-bottom:12px}
+    .wa-free-auto-top{display:flex;align-items:center;justify-content:space-between;gap:16px}.wa-free-auto h3{margin:4px 0;font-size:19px}.wa-free-auto p{margin:0;color:#5d7365;font-size:10px;line-height:1.5}
+    .wa-free-count{width:54px;height:54px;border-radius:17px;background:#1f9c55;color:#fff;display:grid;place-items:center;font-size:24px;font-weight:950;flex:0 0 auto}
+    .wa-free-actions{display:flex;gap:8px;flex-wrap:wrap;margin:13px 0}
+    .wa-queue-list{display:grid;gap:8px}.wa-queue-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;background:#fff;border:1px solid var(--line);border-radius:12px;padding:10px}
+    .wa-queue-type{font-size:8px;font-weight:950;padding:6px 8px;border-radius:999px;white-space:nowrap}.wa-queue-type.confirmation{background:#eaf2ff;color:#3569a8}.wa-queue-type.reminder{background:#fff3dc;color:#9a6c12}.wa-queue-type.followup{background:#f3eafa;color:#76509a}
+    .wa-queue-main b,.wa-queue-main small{display:block}.wa-queue-main small{color:var(--muted);font-size:9px;margin-top:3px}
+    .wa-upcoming{margin-top:10px;border-top:1px solid var(--line);padding-top:10px}.wa-upcoming summary{cursor:pointer;color:var(--wine);font-size:10px;font-weight:900}.wa-upcoming-row{display:grid;grid-template-columns:95px 1fr auto;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:9px}.wa-upcoming-row:last-child{border-bottom:0}.wa-upcoming-row small{color:var(--muted)}
+    @media(max-width:720px){.wa-free-auto-top{align-items:flex-start}.wa-queue-row{grid-template-columns:1fr}.wa-queue-type{width:max-content}.wa-queue-row .btn{width:100%}.wa-upcoming-row{grid-template-columns:1fr}.wa-free-actions .btn{flex:1}}
   </style>
 </head>
 <body>
@@ -369,6 +379,7 @@
     let companyCtx=null;
     let companyData={customers:[],services:[],appointments:[]};
     let whatsappState={connection:null,messages:[]},whatsappLoading=false,whatsappSetupDevice='mobile';
+    let whatsappQueue=[],whatsappQueueTimer=null;
     let metaPlatformConfig={configured:false,app_id:'',config_id:''},metaPlatformLoading=false,metaEmbeddedCapture={waba_id:'',phone_number_id:''},fbSdkPromise=null,metaListenerReady=false;
     const CAPABILITIES={
       agenda:'Agenda, serviços e horários',
@@ -860,42 +871,167 @@
     if(btn){btn.disabled=false;btn.textContent='Conectar meu WhatsApp Business'}
   }
 }
+    function queueTypeLabel(type){
+  return type==='confirmation'?'Confirmação':type==='reminder'?'Lembrete':'Pós-atendimento';
+}
+    function queueMessage(item){
+  const first=(item.customer_name||'').trim().split(/\s+/)[0]||'';
+  const d=new Date(item.starts_at);
+  const date=d.toLocaleDateString('pt-BR');
+  const time=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  const business=companyCtx?.business?.name||'Agenda Pro';
+  const service=item.service_name||'atendimento';
+  const professional=item.professional_name||'';
+  if(item.message_type==='reminder'){
+    return `Olá${first?', '+first:''}! 😊\n\nPassando para lembrar do seu horário na *${business}*.\n\n📅 Data: *${date}*\n🕐 Horário: *${time}*\n✨ ${P().service}: *${service}*${professional?`\n👤 ${P().professional}: *${professional}*`:''}\n\nSe precisar alterar, fale com a gente por aqui.`;
+  }
+  if(item.message_type==='followup'){
+    return `Olá${first?', '+first:''}! 😊\n\nObrigado pelo seu atendimento na *${business}*.\n\nEsperamos que tenha gostado. Quando quiser agendar novamente, é só chamar a gente por aqui. 💛`;
+  }
+  return `Olá${first?', '+first:''}! 😊\n\nSeu horário na *${business}* foi agendado.\n\n📅 Data: *${date}*\n🕐 Horário: *${time}*\n✨ ${P().service}: *${service}*${professional?`\n👤 ${P().professional}: *${professional}*`:''}\n\nSe precisar alterar o horário, fale com a gente por aqui.`;
+}
+    function dueWhatsappQueue(){
+  const now=Date.now();
+  return whatsappQueue.filter(x=>x.status==='pending'&&new Date(x.scheduled_for).getTime()<=now);
+}
+    function futureWhatsappQueue(){
+  const now=Date.now();
+  return whatsappQueue.filter(x=>x.status==='pending'&&new Date(x.scheduled_for).getTime()>now);
+}
+    async function loadWhatsappQueue(redraw=false){
+  if(!sb||!companyCtx)return;
+  const {data,error}=await sb.from('agenda_whatsapp_queue')
+    .select('*')
+    .eq('business_id',companyCtx.business.id)
+    .in('status',['pending','opened'])
+    .order('scheduled_for',{ascending:true})
+    .limit(100);
+  if(error){console.error(error);return}
+  whatsappQueue=data||[];
+  checkWhatsappQueueNotifications();
+  if(redraw&&page==='wa')render();
+}
+    async function openWhatsappQueueItem(id){
+  const item=whatsappQueue.find(x=>x.id===id);
+  if(!item)return;
+  const phone=normalizeWhatsPhone(item.customer_phone);
+  if(!phone)return toast('Esta cliente está sem WhatsApp cadastrado');
+  const msg=queueMessage(item);
+  let w=null;
+  try{w=window.open('about:blank','_blank')}catch(e){}
+  const {error}=await sb.from('agenda_whatsapp_queue').update({
+    status:'opened',
+    opened_at:new Date().toISOString(),
+    updated_at:new Date().toISOString()
+  }).eq('id',id).eq('business_id',companyCtx.business.id);
+  if(error)console.error(error);
+  item.status='opened';
+  const url='https://wa.me/'+phone+'?text='+encodeURIComponent(msg);
+  if(w&&!w.closed)w.location.href=url;
+  else window.open(url,'_blank','noopener,noreferrer');
+  if(page==='wa')render();
+}
+    async function markQueueByAppointment(appointmentId,type,status){
+  if(!sb||!companyCtx||!appointmentId)return;
+  const patch={status,updated_at:new Date().toISOString()};
+  if(status==='opened')patch.opened_at=new Date().toISOString();
+  if(status==='done')patch.done_at=new Date().toISOString();
+  const {error}=await sb.from('agenda_whatsapp_queue').update(patch)
+    .eq('business_id',companyCtx.business.id)
+    .eq('appointment_id',appointmentId)
+    .eq('message_type',type);
+  if(error)console.error(error);
+}
+    async function enableWhatsappNotifications(){
+  if(!('Notification' in window))return toast('Este navegador não oferece notificações');
+  const permission=await Notification.requestPermission();
+  if(permission==='granted'){
+    toast('Avisos do WhatsApp ativados');
+    checkWhatsappQueueNotifications();
+    if(page==='wa')render();
+  }else{
+    toast('As notificações não foram autorizadas');
+  }
+}
+    function checkWhatsappQueueNotifications(){
+  if(!('Notification' in window)||Notification.permission!=='granted'||!companyCtx)return;
+  const due=dueWhatsappQueue();
+  due.forEach(item=>{
+    const key='agendaProWaNotify:'+item.id;
+    if(localStorage.getItem(key))return;
+    localStorage.setItem(key,'1');
+    const n=new Notification('Agenda Pro · '+queueTypeLabel(item.message_type),{
+      body:(item.customer_name||'Cliente')+' · '+(item.service_name||'Atendimento'),
+      tag:'agenda-wa-'+item.id
+    });
+    n.onclick=()=>{try{window.focus()}catch(e){};go('wa')};
+  });
+}
+    function startWhatsappQueueWatcher(){
+  if(whatsappQueueTimer)clearInterval(whatsappQueueTimer);
+  whatsappQueueTimer=setInterval(()=>loadWhatsappQueue(page==='wa'),60000);
+  checkWhatsappQueueNotifications();
+}
     function wa(){
   const conn=whatsappState?.connection;
   const connected=conn?.status==='connected';
   const admin=canAdminCompany();
   const customers=companyData.customers.map(x=>`<option value="${x.id}">${x.name}${x.phone?' · '+x.phone:' · sem telefone'}</option>`).join('');
+  const due=dueWhatsappQueue();
+  const future=futureWhatsappQueue().slice(0,6);
+  const notifOn=('Notification' in window)&&Notification.permission==='granted';
+  const queueRows=due.map(item=>{
+    const when=new Date(item.scheduled_for);
+    return `<div class="wa-queue-row">
+      <div class="wa-queue-type ${item.message_type}">${queueTypeLabel(item.message_type)}</div>
+      <div class="wa-queue-main"><b>${item.customer_name||'Cliente'}</b><small>${item.service_name||'Atendimento'} · ${when.toLocaleString('pt-BR')}</small></div>
+      <button class="btn whatsapp-btn" onclick="openWhatsappQueueItem('${item.id}')">Abrir WhatsApp</button>
+    </div>`;
+  }).join('');
+  const futureRows=future.map(item=>`<div class="wa-upcoming-row"><span>${queueTypeLabel(item.message_type)}</span><b>${item.customer_name||'Cliente'}</b><small>${new Date(item.scheduled_for).toLocaleString('pt-BR')}</small></div>`).join('');
+
   const easyHelp=whatsappSetupDevice==='mobile'
-    ? `<b>📱 No celular</b><span>Sem API: abre o WhatsApp/WhatsApp Business com a mensagem pronta. Você só toca em <b>Enviar</b>.</span>`
-    : `<b>💻 No computador</b><span>Sem API: abre o WhatsApp Web com a conversa e a mensagem pronta.</span>`;
+    ? `<b>📱 No celular</b><span>O Agenda Pro prepara tudo sozinho e avisa quando houver mensagem. Ao abrir, o WhatsApp/WhatsApp Business já vem com o texto pronto.</span>`
+    : `<b>💻 No computador</b><span>O Agenda Pro prepara tudo sozinho e avisa quando houver mensagem. Ao abrir, o WhatsApp Web já vem com o texto pronto.</span>`;
 
   const connectedCard=connected
-    ? `<section class="panel wa-status connected"><div class="head"><div><span class="eyebrow">Conectado ao sistema</span><h3>WhatsApp Business ativo</h3></div><span class="status-badge status-active">Conectado</span></div><div class="wa-status-grid"><div><small>Número</small><b>${conn.display_phone_number||'Conectado'}</b></div><div><small>Nome verificado</small><b>${conn.verified_name||'—'}</b></div><div><small>Qualidade</small><b>${conn.quality_rating||'—'}</b></div><div><small>Automático</small><b>${conn.auto_confirmation?'Ligado':'Desligado'}</b></div></div>${admin?`<div class="wa-connected-actions"><button class="btn secondary" onclick="saveWhatsappSettings()">Configurar automação</button><button class="btn wa-disconnect" onclick="disconnectWhatsAppBusiness()">Desconectar</button></div>`:''}</section>`
+    ? `<section class="panel wa-status connected"><div class="head"><div><span class="eyebrow">Conectado ao sistema</span><h3>WhatsApp Business ativo</h3></div><span class="status-badge status-active">Conectado</span></div><div class="wa-status-grid"><div><small>Número</small><b>${conn.display_phone_number||'Conectado'}</b></div><div><small>Nome verificado</small><b>${conn.verified_name||'—'}</b></div><div><small>Qualidade</small><b>${conn.quality_rating||'—'}</b></div><div><small>Automático</small><b>${conn.auto_confirmation?'Ligado':'Desligado'}</b></div></div>${admin?`<div class="wa-connected-actions"><button class="btn wa-disconnect" onclick="disconnectWhatsAppBusiness()">Desconectar</button></div>`:''}</section>`
     : admin
-      ? `<section class="wa-simple-connect"><div class="wa-connect-brand">WA</div><div class="wa-simple-copy"><span class="eyebrow">Conexão oficial</span><h3>Deixar o WhatsApp conectado no Agenda Pro</h3><p>Clique uma vez, entre na sua conta Meta e escolha o WhatsApp Business. Depois a conexão fica salva para esta empresa.</p></div><button id="waSimpleConnectBtn" class="btn wa-simple-button" onclick="startWhatsEmbeddedSignup()">Conectar meu WhatsApp Business</button><div id="waSimpleConnectError" class="login-error wa-simple-error"></div></section>`
-      : `<section class="panel"><div class="empty-state">Peça ao administrador da empresa para conectar o WhatsApp Business.</div></section>`;
+      ? `<section class="wa-simple-connect"><div class="wa-connect-brand">WA</div><div class="wa-simple-copy"><span class="eyebrow">Opcional</span><h3>Conectar WhatsApp Business oficial</h3><p>Se você quiser envio sem nenhum clique, conecte pela Meta. O modo gratuito abaixo continua funcionando sem essa conexão.</p></div><button id="waSimpleConnectBtn" class="btn wa-simple-button" onclick="startWhatsEmbeddedSignup()">Conectar meu WhatsApp Business</button><div id="waSimpleConnectError" class="login-error wa-simple-error"></div></section>`
+      : '';
 
   const automationSettings=connected&&admin
-    ? `<details class="wa-advanced"><summary>⚙️ Configurar envio automático</summary><div class="wa-advanced-body"><label class="wa-check"><input id="waAutoConfirmation" type="checkbox" ${conn.auto_confirmation?'checked':''}><span><b>Enviar confirmação ao salvar horário</b><small>Quando ligado, o servidor tenta enviar sem abrir o WhatsApp.</small></span></label><div class="wa-form-grid"><div class="field"><b>Template aprovado pela Meta</b><input id="waTemplateSettings" value="${conn.confirmation_template_name||''}" placeholder="agendamento_confirmado"></div><div class="field"><b>Idioma</b><input id="waLanguageSettings" value="${conn.template_language||'pt_BR'}" placeholder="pt_BR"></div></div><button class="btn primary" onclick="saveWhatsappSettings()">Salvar automação</button></div></details>`
+    ? `<details class="wa-advanced"><summary>⚙️ Configurar envio automático oficial</summary><div class="wa-advanced-body"><label class="wa-check"><input id="waAutoConfirmation" type="checkbox" ${conn.auto_confirmation?'checked':''}><span><b>Enviar confirmação ao salvar horário</b><small>Quando ligado, o servidor tenta enviar sem abrir o WhatsApp.</small></span></label><div class="wa-form-grid"><div class="field"><b>Template aprovado pela Meta</b><input id="waTemplateSettings" value="${conn.confirmation_template_name||''}" placeholder="agendamento_confirmado"></div><div class="field"><b>Idioma</b><input id="waLanguageSettings" value="${conn.template_language||'pt_BR'}" placeholder="pt_BR"></div></div><button class="btn primary" onclick="saveWhatsappSettings()">Salvar automação</button></div></details>`
     : '';
 
   const recent=(whatsappState?.messages||[]).map(m=>`<div class="wa-log-row"><span class="wa-log-dot ${m.status==='sent'?'ok':'bad'}"></span><div><b>${m.status==='sent'?'Enviado':'Falhou'}</b><small>${m.to_phone} · ${new Date(m.created_at).toLocaleString('pt-BR')}</small>${m.error_message?`<small class="wa-log-error">${m.error_message}</small>`:''}</div></div>`).join('');
 
-  return shell(`<div class="section-title"><span class="eyebrow">WhatsApp</span><h2>WhatsApp conectado ao seu sistema</h2><p>Use sem API normalmente ou conecte o WhatsApp Business uma vez para manter a integração salva.</p></div>
+  return shell(`<div class="section-title"><span class="eyebrow">WhatsApp</span><h2>Central automática de mensagens</h2><p>Sem API: o Agenda Pro prepara confirmações, lembretes e pós-atendimento sozinho.</p></div>
+
+  <section class="wa-free-auto">
+    <div class="wa-free-auto-top">
+      <div><span class="eyebrow">Automação sem custo</span><h3>${due.length?due.length+' mensagem(ns) pronta(s) para enviar':'Nenhuma mensagem pendente agora'}</h3><p>O sistema monta e agenda as mensagens automaticamente. O WhatsApp exige apenas o envio final quando você abrir a conversa.</p></div>
+      <div class="wa-free-count">${due.length}</div>
+    </div>
+    <div class="wa-free-actions">
+      <button class="btn ${notifOn?'secondary':'primary'}" onclick="enableWhatsappNotifications()">${notifOn?'🔔 Avisos ativados':'🔔 Ativar avisos'}</button>
+      ${due.length?`<button class="btn whatsapp-btn" onclick="openWhatsappQueueItem('${due[0].id}')">Enviar próxima</button>`:''}
+    </div>
+    <div class="wa-queue-list">${queueRows||'<div class="empty-state">Quando chegar a hora de uma mensagem, ela aparecerá aqui automaticamente.</div>'}</div>
+    ${futureRows?`<details class="wa-upcoming"><summary>Ver próximas mensagens preparadas (${future.length})</summary><div>${futureRows}</div></details>`:''}
+  </section>
+
   ${connectedCard}
   ${automationSettings}
 
-  <section class="wa-easy-hero">
-    <div class="wa-easy-icon">✓</div>
-    <div><span class="eyebrow">Também funciona sem conexão</span><h3>Modo fácil</h3><p>Se preferir, continue usando seu WhatsApp normal ou Business sem API. O Agenda Pro abre a mensagem pronta.</p></div>
-  </section>
+  <section class="wa-easy-hero"><div class="wa-easy-icon">✓</div><div><span class="eyebrow">Envio manual rápido</span><h3>Também funciona sem API</h3><p>Escolha uma cliente e envie catálogo ou mensagem livre pelo WhatsApp normal ou Business.</p></div></section>
   <div class="wa-device-tabs"><button class="${whatsappSetupDevice==='mobile'?'on':''}" onclick="setWhatsappSetupDevice('mobile')">📱 Celular</button><button class="${whatsappSetupDevice==='desktop'?'on':''}" onclick="setWhatsappSetupDevice('desktop')">💻 Computador</button></div>
   <div class="wa-device-help">${easyHelp}</div>
   <section class="panel wa-quick-send"><div class="head"><div><span class="eyebrow">Enviar agora</span><h3>Escolha a cliente</h3></div><span class="status-badge status-active">Sem API</span></div><div class="wa-quick-grid"><div class="field"><b>Cliente</b><select id="waQuickCustomer" onchange="fillWhatsQuickMessage()"><option value="">Selecione</option>${customers}</select></div><div class="wa-quick-actions"><button class="btn whatsapp-btn" onclick="sendWhatsQuickCatalog()">Enviar catálogo de serviços</button></div></div><div class="field"><b>Mensagem livre</b><textarea id="waQuickMessage" placeholder="Digite uma mensagem para a cliente"></textarea></div><button class="btn primary" onclick="sendWhatsQuickMessage()">Abrir conversa no WhatsApp</button></section>
 
-  ${connected?`<section class="panel"><div class="head"><div><span class="eyebrow">Últimos envios</span><h3>Histórico automático</h3></div></div>${recent||'<div class="empty-state">Nenhum envio automático registrado.</div>'}</section>`:''}
+  ${connected?`<section class="panel"><div class="head"><div><span class="eyebrow">Últimos envios</span><h3>Histórico automático oficial</h3></div></div>${recent||'<div class="empty-state">Nenhum envio automático registrado.</div>'}</section>`:''}
 
-  ${!connected&&admin?`<details class="wa-advanced"><summary>🛠 Conexão manual — somente suporte técnico</summary><div class="wa-advanced-body"><p>Use apenas se o botão simples não estiver disponível. Esta área exige dados técnicos da Meta.</p><div class="wa-form-grid"><div class="field"><b>Phone Number ID</b><input id="waPhoneId" inputmode="numeric"></div><div class="field"><b>WABA ID</b><input id="waWabaId" inputmode="numeric"></div><div class="field wa-full"><b>Token permanente</b><input id="waToken" type="password" autocomplete="off"></div><div class="field"><b>Template</b><input id="waTemplate" placeholder="agendamento_confirmado"></div><div class="field"><b>Idioma</b><input id="waLanguage" value="pt_BR"></div></div><div id="waConnectError" class="login-error"></div><button id="waConnectBtn" class="btn secondary" onclick="connectWhatsAppBusiness()">Conectar manualmente</button></div></details>`:''}`);
+  ${!connected&&admin?`<details class="wa-advanced"><summary>🛠 Conexão manual — somente suporte técnico</summary><div class="wa-advanced-body"><p>Use apenas se o botão simples não estiver disponível.</p><div class="wa-form-grid"><div class="field"><b>Phone Number ID</b><input id="waPhoneId" inputmode="numeric"></div><div class="field"><b>WABA ID</b><input id="waWabaId" inputmode="numeric"></div><div class="field wa-full"><b>Token permanente</b><input id="waToken" type="password" autocomplete="off"></div><div class="field"><b>Template</b><input id="waTemplate" placeholder="agendamento_confirmado"></div><div class="field"><b>Idioma</b><input id="waLanguage" value="pt_BR"></div></div><div id="waConnectError" class="login-error"></div><button id="waConnectBtn" class="btn secondary" onclick="connectWhatsAppBusiness()">Conectar manualmente</button></div></details>`:''}`);
 }
     function setup(){const p=P();return shell(`<div class="section-title"><span class="eyebrow">Personalização</span><h2>Tipo de negócio</h2><p>O sistema adapta automaticamente linguagem e fluxo de agendamento.</p></div><div class="setup-grid">${Object.values(PROFILES).map(x=>`<button class="setup-card ${x.key===segment?'on':''}" onclick="setSegment('${x.key}')"><span class="big-emoji">${x.emoji}</span><b>${x.segment}</b><small>${x.key==='salon'?'Clientes, serviços, profissionais, agenda e caixa.':x.key==='esthetic'?'Clientes, procedimentos, sessões, profissionais e pacotes.':'Pacientes, consultas, médicos, convênio e teleconsulta.'}</small></button>`).join('')}</div><div class="profile-row"><div class="profile-box"><span>Empresa demonstrada</span><b>${p.business}</b></div><div class="profile-box"><span>Terminologia ativa</span><b>${p.people} · ${p.serviceLabel} · ${p.professionals}</b></div></div><div class="context-note"><b>Multiempresa:</b> na versão comercial, cada assinante terá seu próprio cadastro, logo, equipe, horários, serviços e dados isolados. Esta tela demonstra como um único produto pode atender segmentos diferentes.</div>`)}
     function more(){const p=P();return shell(`<div class="section-title"><span class="eyebrow">Configurações</span><h2>Mais opções</h2><p>Personalize o sistema para ${p.business}.</p></div><div class="more-list"><button class="more-btn" onclick="go('admin')"><div class="quick-ico">${I.wallet}</div><b>Administração da plataforma</b><small>Planos, mensalidades, assinantes e bloqueios</small></button><button class="more-btn" onclick="go('setup')"><div class="quick-ico"><span style="font-size:18px">${p.emoji}</span></div><b>Tipo de negócio</b><small>${p.segment} · alterar modo</small></button><button class="more-btn" onclick="go('services')"><div class="quick-ico">${I.sparkle}</div><b>${p.serviceLabel}</b><small>Duração, valores e catálogo</small></button><button class="more-btn" onclick="go('wa')"><div class="quick-ico">${I.message}</div><b>WhatsApp</b><small>Confirmações e lembretes</small></button><button class="more-btn" onclick="book()"><div class="quick-ico">${I.calendar}</div><b>Novo horário</b><small>Cadastre ${p.appointment.toLowerCase()}</small></button><button class="more-btn" onclick="toast('Relatórios em breve')"><div class="quick-ico">${I.chart}</div><b>Relatórios</b><small>Indicadores de ${p.business}</small></button></div>`)}
@@ -940,9 +1076,12 @@
   const appointmentsPromise=hasFeature('agenda')?sb.from('agenda_appointments').select('*').eq('business_id',bid).order('starts_at',{ascending:true}):Promise.resolve({data:[],error:null});
   const whatsPromise=sb.from('agenda_whatsapp_connections').select('business_id,status,waba_id,phone_number_id,display_phone_number,verified_name,quality_rating,auto_confirmation,confirmation_template_name,template_language,connected_at,last_error,updated_at').eq('business_id',bid).maybeSingle();
   const whatsMessagesPromise=sb.from('agenda_whatsapp_messages').select('id,to_phone,message_type,status,meta_message_id,error_message,created_at').eq('business_id',bid).order('created_at',{ascending:false}).limit(10);
-  let [cr,sr,ar,wr,wm]=await Promise.all([customersPromise,servicesPromise,appointmentsPromise,whatsPromise,whatsMessagesPromise]);
+  const queuePromise=sb.from('agenda_whatsapp_queue').select('*').eq('business_id',bid).in('status',['pending','opened']).order('scheduled_for',{ascending:true}).limit(100);
+  let [cr,sr,ar,wr,wm,wq]=await Promise.all([customersPromise,servicesPromise,appointmentsPromise,whatsPromise,whatsMessagesPromise,queuePromise]);
   companyData={customers:cr.data||[],services:sr.data||[],appointments:ar.data||[]};
   whatsappState={connection:wr.data||null,messages:wm.data||[]};
+  whatsappQueue=wq.data||[];
+  startWhatsappQueueWatcher();
   if(hasFeature('agenda')&&!companyData.services.length){
     await ensureDefaultServices();
     sr=await sb.from('agenda_services').select('*').eq('business_id',bid).order('name');
@@ -1432,18 +1571,21 @@
     try{
       const out=await callAgendaWhatsApp({action:'send_confirmation',appointment_id:created.id});
       automaticSent=!!out?.sent;
+      if(automaticSent)await markQueueByAppointment(created.id,'confirmation','done');
     }catch(ex){
       console.error(ex);
       toast('Horário salvo. O envio automático falhou; abrindo WhatsApp manual.');
       const msg=appointmentWhatsMessage(customer,service,date,time,professional_name,status);
       const url='https://wa.me/'+phone+'?text='+encodeURIComponent(msg);
       window.open(url,'_blank','noopener,noreferrer');
+      await markQueueByAppointment(created.id,'confirmation','opened');
     }
   }else if(phone){
     const msg=appointmentWhatsMessage(customer,service,date,time,professional_name,status);
     const url='https://wa.me/'+phone+'?text='+encodeURIComponent(msg);
     if(whatsWindow&&!whatsWindow.closed)whatsWindow.location.href=url;
     else window.open(url,'_blank','noopener,noreferrer');
+    await markQueueByAppointment(created.id,'confirmation','opened');
   }
 
   await loadCompanyData();
@@ -1451,7 +1593,7 @@
   render();
   if(!phone)toast('Horário salvo. Cliente sem WhatsApp cadastrado.');
   else if(automaticSent)toast('Horário salvo e confirmação enviada automaticamente');
-  else if(!autoConnected)toast('Horário salvo e confirmação aberta no WhatsApp');
+  else if(!autoConnected)toast('Horário salvo. Lembretes futuros já foram preparados automaticamente.');
 }
     function companyBlockedView(){
   const name=companyCtx?.business?.name||'Sua empresa';
@@ -1677,8 +1819,9 @@
 }
     function doOwnerLogin(ev){ev?.preventDefault();signInAgendaPro();return false}
     function ownerLogout(){
+  if(whatsappQueueTimer){clearInterval(whatsappQueueTimer);whatsappQueueTimer=null}
   if(sb)sb.auth.signOut();
-  authUser=null;appMode=null;ownerLogged=false;companyCtx=null;companyData={customers:[],services:[],appointments:[]};page='home';adminTab='overview';loginMessage='';render();
+  authUser=null;appMode=null;ownerLogged=false;companyCtx=null;companyData={customers:[],services:[],appointments:[]};whatsappQueue=[];page='home';adminTab='overview';loginMessage='';render();
 }
     function setAgendaView(v){agendaView=v;render()}
     function go(p){
