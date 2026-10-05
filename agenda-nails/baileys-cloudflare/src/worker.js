@@ -1,11 +1,11 @@
-import { Container } from "@cloudflare/containers";
+import { Container, getContainer } from "@cloudflare/containers";
 
 function runtimeRequest(path, init) {
   return new Request("https://agenda-whatsapp-runtime" + path, init);
 }
 
 function runtimeStub(env, businessId) {
-  return env.WHATSAPP_CONTAINER.getByName(businessId);
+  return getContainer(env.WHATSAPP_CONTAINER, businessId);
 }
 
 function json(body, status = 200, headers = {}) {
@@ -274,8 +274,10 @@ export class WhatsAppContainer extends Container {
   }
 
   async ensureSelfHealSchedule() {
-    const scheduled = await this.listSchedules("selfHeal");
-    if (!scheduled.length) await this.schedule(60, "selfHeal", null);
+    const scheduled = await this.ctx.storage.get("self_heal_scheduled");
+    if (scheduled) return;
+    await this.schedule(60, "selfHeal", null);
+    await this.ctx.storage.put("self_heal_scheduled", true);
   }
 
   async restoreProfile(config) {
@@ -411,6 +413,7 @@ export class WhatsAppContainer extends Container {
   }
 
   async selfHeal() {
+    await this.ctx.storage.put("self_heal_scheduled", false);
     const config = await this.runtimeConfig();
     if (!config) return;
 
@@ -499,8 +502,8 @@ export class WhatsAppContainer extends Container {
         message
       }));
     } finally {
-      this.deleteSchedules("selfHeal");
       await this.schedule(60, "selfHeal", null).catch(() => undefined);
+      await this.ctx.storage.put("self_heal_scheduled", true);
     }
   }
 
