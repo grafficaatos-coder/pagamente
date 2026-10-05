@@ -1,428 +1,613 @@
 import http from "node:http";
+import path from "node:path";
+import os from "node:os";
+import { createReadStream, createWriteStream } from "node:fs";
+import {
+  access,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  stat,
+  writeFile
+} from "node:fs/promises";
+import { pipeline } from "node:stream/promises";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import P from "pino";
 import QRCode from "qrcode";
-import { Boom } from "@hapi/boom";
 import makeWASocket, {
-  BufferJSON,
+  Browsers,
   DisconnectReason,
-  fetchLatestBaileysVersion,
-  initAuthCreds,
-  makeCacheableSignalKeyStore,
-  proto
+  jidNormalizedUser,
+  useMultiFileAuthState
 } from "@whiskeysockets/baileys";
 
-const BUSINESS_ID = process.env.BUSINESS_ID;
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const PORT = Number(process.env.PORT || 8080);
+const execFileAsync = promisify(execFile);
+const logger = P({ level: process.env.WHATSAPP_LOG_LEVEL || "warn" });
 
-if (!BUSINESS_ID || !SUPABASE_URL || !SERVICE_KEY) {
-  throw new Error("Configuração do container incompleta");
+const API_BASE_URL = String(process.env.API_BASE_URL || "").replace(/\/$/, "");
+const INTERNAL_TOKEN = process.env.INTERNAL_TOKEN || "";
+const BUSINESS_ID = process.env.BUSINESS_ID || "";
+const AUTH_DIR = process.env.WHATSAPP_AUTH_DIR || "/data/auth";
+const PORT = Number(process.env.PORT || 8080);
+const leaseId = process.pid + "-" + Date.now() + "-" + Math.random().toString(36).slice(2, 10);
+const agentId = "agenda-baileys-" + BUSINESS_ID + "-" + process.pid;
+
+if (!API_BASE_URL || !INTERNAL_TOKEN || !BUSINESS_ID) {
+  throw new Error("API_BASE_URL, INTERNAL_TOKEN e BUSINESS_ID são obrigatórios.");
 }
 
-const logger = P({ level: process.env.LOG_LEVEL || "warn" });
-let sock = null;
-let connectPromise = null;
-let liveStatus = "disconnected";
-let latestQrSvg = null;
-let latestQrRaw = null;
-let reconnectTimer = null;
-
-const headers = {
-  apikey: SERVICE_KEY,
-  authorization: "Bearer " + SERVICE_KEY,
-  "content-type": "application/json"
+const authHeaders = {
+  "content-type": "application/json",
+  "x-internal-token": INTERNAL_TOKEN,
+  "x-business-id": BUSINESS_ID
 };
 
-async function rest(path, options) {
-  options = options || {};
-  return fetch(SUPABASE_URL + path, Object.assign({}, options, {
-    headers: Object.assign({}, headers, options.headers || {})
-  }));
+let socket = null;
+let runtimeState = "offline";
+let runtimeError = "";
+let qrText = "";
+let qrSvg = null;
+let phone = null;
+let leaseOwned = false;
+let leaseFailures = 0;
+let connectBusy = false;
+let dispatchBusy = false;
+let manualDisconnect = false;
+let closing = false;
+let reconnectTimer = null;
+let checkpointDirty = false;
+let lastCheckpointAt = 0;
+let lastOpenAt = 0;
+let reconnectAttempts = 0;
+
+function sleep(ms) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-async function updateSession(patch) {
-  const row = Object.assign({
-    business_id: BUSINESS_ID,
-    updated_at: new Date().toISOString()
-  }, patch);
-  const res = await rest("/rest/v1/agenda_baileys_sessions?on_conflict=business_id", {
+async function api(route, init = {}) {
+  const headers = { ...authHeaders, ...(init.headers || {}) };
+  const response = await fetch(API_BASE_URL + route, {
+    ...init,
+    headers
+  });
+  if (!response.ok) {
+    throw new Error(route + ": " + response.status + " " + await response.text());
+  }
+  if (response.status === 204) return {};
+  return response.json();
+}
+
+async function renewLease() {
+  const result = await api("/internal/lease", {
     method: "POST",
-    headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
-    body: JSON.stringify(row)
+    body: JSON.stringify({ lease_id: leaseId })
   });
-  if (!res.ok) throw new Error("Falha ao atualizar sessão");
+  return Boolean(result.owned);
 }
 
-async function readSession() {
-  const res = await rest(
-    "/rest/v1/agenda_baileys_sessions?business_id=eq." +
-    encodeURIComponent(BUSINESS_ID) + "&select=*&limit=1"
-  );
-  if (!res.ok) throw new Error("Falha ao ler sessão");
-  const rows = await res.json();
-  return rows[0] || null;
+async function releaseLease() {
+  if (!leaseOwned) return;
+  await api("/internal/lease/release", {
+    method: "POST",
+    body: JSON.stringify({ lease_id: leaseId })
+  }).catch(() => {});
+  leaseOwned = false;
 }
 
-async function readAuth(keyType, keyId) {
-  const path =
-    "/rest/v1/agenda_baileys_auth?business_id=eq." + encodeURIComponent(BUSINESS_ID) +
-    "&key_type=eq." + encodeURIComponent(keyType) +
-    "&key_id=eq." + encodeURIComponent(keyId) +
-    "&select=data&limit=1";
-  const res = await rest(path);
-  if (!res.ok) throw new Error("Falha ao ler autenticação");
-  const rows = await res.json();
-  if (!rows.length) return null;
-  return JSON.parse(rows[0].data, BufferJSON.reviver);
-}
-
-async function writeAuth(keyType, keyId, value) {
-  if (value == null) {
-    const path =
-      "/rest/v1/agenda_baileys_auth?business_id=eq." + encodeURIComponent(BUSINESS_ID) +
-      "&key_type=eq." + encodeURIComponent(keyType) +
-      "&key_id=eq." + encodeURIComponent(keyId);
-    const res = await rest(path, { method: "DELETE" });
-    if (!res.ok) throw new Error("Falha ao remover chave de autenticação");
-    return;
-  }
-
-  const row = {
-    business_id: BUSINESS_ID,
-    key_type: keyType,
-    key_id: keyId,
-    data: JSON.stringify(value, BufferJSON.replacer),
-    updated_at: new Date().toISOString()
-  };
-
-  const res = await rest(
-    "/rest/v1/agenda_baileys_auth?on_conflict=business_id,key_type,key_id",
-    {
+async function heartbeat() {
+  try {
+    await api("/internal/heartbeat", {
       method: "POST",
-      headers: { Prefer: "resolution=merge-duplicates,return=minimal" },
-      body: JSON.stringify(row)
-    }
-  );
-  if (!res.ok) throw new Error("Falha ao salvar autenticação");
-}
-
-async function clearAuth() {
-  const res = await rest(
-    "/rest/v1/agenda_baileys_auth?business_id=eq." + encodeURIComponent(BUSINESS_ID),
-    { method: "DELETE" }
-  );
-  if (!res.ok) throw new Error("Falha ao limpar autenticação");
-}
-
-async function databaseAuthState() {
-  const creds = (await readAuth("creds", "creds")) || initAuthCreds();
-
-  const keys = {
-    async get(type, ids) {
-      const out = {};
-      await Promise.all(ids.map(async function (id) {
-        let value = await readAuth(type, id);
-        if (type === "app-state-sync-key" && value) {
-          value = proto.Message.AppStateSyncKeyData.fromObject(value);
-        }
-        if (value != null) out[id] = value;
-      }));
-      return out;
-    },
-
-    async set(data) {
-      const tasks = [];
-      for (const type of Object.keys(data || {})) {
-        for (const entry of Object.entries(data[type] || {})) {
-          tasks.push(writeAuth(type, entry[0], entry[1]));
-        }
-      }
-      await Promise.all(tasks);
-    },
-
-    async clear() {
-      await clearAuth();
-    }
-  };
-
-  return {
-    state: { creds: creds, keys: keys },
-    saveCreds: function () {
-      return writeAuth("creds", "creds", creds);
-    }
-  };
-}
-
-function scheduleReconnect() {
-  if (reconnectTimer) return;
-  reconnectTimer = setTimeout(function () {
-    reconnectTimer = null;
-    ensureSocket().catch(function (error) {
-      logger.error(error, "reconnect failed");
+      body: JSON.stringify({
+        lease_id: leaseId,
+        agent_id: agentId,
+        state: runtimeState,
+        phone,
+        error: runtimeError || null,
+        last_checkpoint_at: lastCheckpointAt
+          ? new Date(lastCheckpointAt).toISOString()
+          : null
+      })
     });
-  }, 3000);
+  } catch (error) {
+    logger.warn({ error: String(error?.message || error) }, "heartbeat failed");
+  }
 }
 
-async function createSocket() {
-  const auth = await databaseAuthState();
-  const versionInfo = await fetchLatestBaileysVersion();
+async function hasAuthFiles() {
+  try {
+    await access(path.join(AUTH_DIR, "creds.json"));
+    return true;
+  } catch {
+    return false;
+  }
+}
 
-  liveStatus = "connecting";
-  await updateSession({ status: "connecting", last_error: null });
+async function resetAuth() {
+  await rm(AUTH_DIR, { recursive: true, force: true }).catch(() => {});
+  await mkdir(AUTH_DIR, { recursive: true });
+}
 
-  const next = makeWASocket({
-    version: versionInfo.version,
-    logger: logger,
-    printQRInTerminal: false,
-    markOnlineOnConnect: false,
-    syncFullHistory: false,
-    generateHighQualityLinkPreview: false,
-    auth: {
-      creds: auth.state.creds,
-      keys: makeCacheableSignalKeyStore(auth.state.keys, logger)
-    }
-  });
+function disconnectCode(lastDisconnect) {
+  const error = lastDisconnect?.error;
+  return Number(
+    error?.output?.statusCode ||
+    error?.data?.statusCode ||
+    error?.statusCode ||
+    0
+  ) || 0;
+}
 
-  next.ev.on("creds.update", auth.saveCreds);
+function scheduleReconnect(delayMs) {
+  if (closing || manualDisconnect) return;
+  if (reconnectTimer) clearTimeout(reconnectTimer);
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    void connectSocket();
+  }, delayMs);
+  reconnectTimer.unref?.();
+}
 
-  next.ev.on("connection.update", async function (update) {
-    try {
-      if (update.qr) {
-        latestQrRaw = update.qr;
-        latestQrSvg = await QRCode.toString(update.qr, {
-          type: "svg",
-          width: 280,
-          margin: 1
-        });
-        liveStatus = "qr";
-        await updateSession({
-          status: "qr",
-          qr: update.qr,
-          pairing_code: null,
-          last_error: null
-        });
+async function connectSocket() {
+  if (closing || manualDisconnect || !leaseOwned || connectBusy) return;
+  connectBusy = true;
+  runtimeState = "connecting";
+  runtimeError = "";
+  qrText = "";
+  qrSvg = null;
+
+  try {
+    await mkdir(AUTH_DIR, { recursive: true });
+    const auth = await useMultiFileAuthState(AUTH_DIR);
+
+    const nextSocket = makeWASocket({
+      auth: auth.state,
+      logger,
+      browser: Browsers.ubuntu("Agenda Pro"),
+      printQRInTerminal: false,
+      markOnlineOnConnect: false,
+      syncFullHistory: false,
+      generateHighQualityLinkPreview: false,
+      maxMsgRetryCount: 1,
+      connectTimeoutMs: 30000,
+      defaultQueryTimeoutMs: 30000,
+      keepAliveIntervalMs: 15000
+    });
+
+    socket = nextSocket;
+
+    nextSocket.ev.on("creds.update", async () => {
+      try {
+        await auth.saveCreds();
+        checkpointDirty = true;
+      } catch (error) {
+        runtimeError = ("Falha ao salvar credenciais locais: " + String(error?.message || error)).slice(0, 1200);
       }
+    });
 
-      if (update.connection === "open") {
-        liveStatus = "connected";
-        latestQrRaw = null;
-        latestQrSvg = null;
-        const userId = String(next.user && next.user.id ? next.user.id : "");
-        const phone = userId.split(":")[0].split("@")[0] || null;
-        await updateSession({
-          status: "connected",
-          phone: phone,
-          qr: null,
-          pairing_code: null,
-          connected_at: new Date().toISOString(),
-          last_seen_at: new Date().toISOString(),
-          last_error: null
-        });
-      }
+    nextSocket.ev.on("connection.update", async update => {
+      if (socket !== nextSocket) return;
 
-      if (update.connection === "close") {
-        const statusCode = new Boom(update.lastDisconnect && update.lastDisconnect.error)
-          .output.statusCode;
-        const loggedOut = statusCode === DisconnectReason.loggedOut;
-        sock = null;
-
-        if (loggedOut) {
-          liveStatus = "disconnected";
-          await clearAuth();
-          await updateSession({
-            status: "disconnected",
-            phone: null,
-            qr: null,
-            pairing_code: null,
-            last_error: "WhatsApp desconectado pelo aparelho"
+      try {
+        if (update.qr) {
+          qrText = update.qr;
+          qrSvg = await QRCode.toString(update.qr, {
+            type: "svg",
+            width: 320,
+            margin: 1
           });
-        } else {
-          liveStatus = "error";
-          await updateSession({
-            status: "error",
-            qr: null,
-            last_error:
-              (update.lastDisconnect && update.lastDisconnect.error &&
-               update.lastDisconnect.error.message) ||
-              "Conexão interrompida"
-          });
-          scheduleReconnect();
+          runtimeState = "waiting_qr";
+          runtimeError = "";
         }
+
+        if (update.connection === "open") {
+          runtimeState = "online";
+          runtimeError = "";
+          qrText = "";
+          qrSvg = null;
+          reconnectAttempts = 0;
+          lastOpenAt = Date.now();
+          checkpointDirty = true;
+
+          const normalized = jidNormalizedUser(String(nextSocket.user?.id || ""));
+          phone = normalized ? normalized.split("@")[0].split(":")[0] : null;
+
+          await heartbeat();
+        }
+
+        if (update.connection === "close") {
+          const code = disconnectCode(update.lastDisconnect);
+          socket = null;
+
+          if (closing || manualDisconnect) {
+            runtimeState = "offline";
+            return;
+          }
+
+          if (code === DisconnectReason.loggedOut) {
+            runtimeState = "waiting_qr";
+            runtimeError = "WhatsApp desconectado pelo aparelho. Escaneie um novo QR.";
+            phone = null;
+            await resetAuth();
+            checkpointDirty = true;
+            scheduleReconnect(1200);
+            return;
+          }
+
+          reconnectAttempts += 1;
+          runtimeState = "connecting";
+          runtimeError = String(
+            update.lastDisconnect?.error?.message ||
+            "Conexão interrompida; tentando reconectar."
+          ).slice(0, 1200);
+
+          const delay = Math.min(30000, 1500 * Math.max(1, reconnectAttempts));
+          scheduleReconnect(delay);
+        }
+      } catch (error) {
+        runtimeState = "error";
+        runtimeError = String(error?.message || error).slice(0, 1200);
       }
-    } catch (error) {
-      logger.error(error, "connection.update failed");
+    });
+  } catch (error) {
+    socket = null;
+    runtimeState = "error";
+    runtimeError = String(error?.message || error).slice(0, 1200);
+    scheduleReconnect(5000);
+  } finally {
+    connectBusy = false;
+  }
+}
+
+async function leaseCycle() {
+  if (closing || manualDisconnect) return;
+
+  try {
+    const owned = await renewLease();
+
+    if (!owned) {
+      leaseFailures = 0;
+      leaseOwned = false;
+      runtimeState = "standby_lease";
+      runtimeError = "";
+      if (socket) {
+        try { socket.end(new Error("Lease pertence a outro runtime")); } catch {}
+        socket = null;
+      }
+      return;
     }
-  });
 
-  sock = next;
-  return next;
-}
+    leaseOwned = true;
+    leaseFailures = 0;
 
-async function ensureSocket() {
-  if (sock && ["connected", "connecting", "qr"].includes(liveStatus)) return sock;
-  if (connectPromise) return connectPromise;
+    if (!socket && !connectBusy) {
+      await connectSocket();
+    }
+  } catch (error) {
+    leaseFailures += 1;
+    runtimeError = ("Lease falhou (" + leaseFailures + "): " + String(error?.message || error)).slice(0, 1200);
 
-  connectPromise = createSocket().finally(function () {
-    connectPromise = null;
-  });
-  return connectPromise;
-}
-
-async function waitForReady(timeout) {
-  timeout = timeout || 25000;
-  await ensureSocket();
-  const started = Date.now();
-
-  while (Date.now() - started < timeout) {
-    if (liveStatus === "connected" && sock) return sock;
-    if (liveStatus === "qr") throw new Error("WhatsApp precisa ser conectado pelo QR Code");
-    await new Promise(function (resolve) { setTimeout(resolve, 350); });
+    if (leaseOwned && leaseFailures >= 4) {
+      leaseOwned = false;
+      runtimeState = "standby_lease";
+      if (socket) {
+        try { socket.end(new Error("Lease não pôde ser renovado por 20s")); } catch {}
+        socket = null;
+      }
+    }
   }
-  throw new Error("WhatsApp não ficou disponível a tempo");
 }
 
-function normalizePhone(value) {
-  let n = String(value || "").replace(/\D/g, "").replace(/^0+/, "");
-  if ((n.length === 10 || n.length === 11) && !n.startsWith("55")) n = "55" + n;
-  return n;
-}
+async function validateDestination(phoneValue) {
+  const digits = String(phoneValue || "").replace(/\D/g, "");
+  if (!digits) throw Object.assign(new Error("Destino sem telefone válido."), { noRetry: true });
 
-async function loadQueueItem(id) {
-  const res = await rest(
-    "/rest/v1/agenda_whatsapp_queue?id=eq." + encodeURIComponent(id) +
-    "&business_id=eq." + encodeURIComponent(BUSINESS_ID) +
-    "&select=*&limit=1"
-  );
-  if (!res.ok) throw new Error("Falha ao carregar mensagem");
-  const rows = await res.json();
-  return rows[0] || null;
-}
-
-async function disconnect() {
-  if (sock) {
-    try { await sock.logout(); } catch {}
-    try { sock.end(new Error("logout")); } catch {}
+  const results = await socket.onWhatsApp(digits).catch(() => []);
+  const first = Array.isArray(results) ? results.find(item => item?.exists) : null;
+  if (!first?.jid) {
+    throw Object.assign(new Error("Número não possui WhatsApp ativo."), { noRetry: true });
   }
-  sock = null;
-  liveStatus = "disconnected";
-  latestQrRaw = null;
-  latestQrSvg = null;
-  await clearAuth();
-  await updateSession({
-    status: "disconnected",
-    phone: null,
-    qr: null,
-    pairing_code: null,
-    connected_at: null,
-    last_error: null
-  });
+  return first.jid;
+}
+
+async function completeDispatch(message, messageRef) {
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= 5; attempt += 1) {
+    try {
+      await api("/internal/dispatch/" + message.id + "/complete", {
+        method: "POST",
+        body: JSON.stringify({
+          reservation_token: message.reservation_token,
+          message_ref: messageRef || null
+        })
+      });
+      return;
+    } catch (error) {
+      lastError = error;
+      if (attempt < 5) await sleep(500 * (2 ** (attempt - 1)));
+    }
+  }
+
+  throw lastError || new Error("Falha ao confirmar envio concluído.");
+}
+
+async function dispatchCycle() {
+  if (
+    dispatchBusy ||
+    runtimeState !== "online" ||
+    !socket ||
+    closing ||
+    manualDisconnect ||
+    !leaseOwned
+  ) return;
+
+  dispatchBusy = true;
+
+  try {
+    const result = await api("/internal/dispatch/next", {
+      method: "POST",
+      body: JSON.stringify({ lease_id: leaseId })
+    });
+
+    if (!result.message) return;
+    const message = result.message;
+    let dispatchStarted = false;
+    let sent = false;
+
+    try {
+      const jid = await validateDestination(message.phone);
+
+      await api("/internal/dispatch/" + message.id + "/start", {
+        method: "POST",
+        body: JSON.stringify({
+          reservation_token: message.reservation_token
+        })
+      });
+      dispatchStarted = true;
+
+      const info = await socket.sendMessage(jid, { text: message.text });
+      sent = true;
+
+      await completeDispatch(message, info?.key?.id || null);
+    } catch (error) {
+      const ambiguous = dispatchStarted || sent;
+      const noRetry =
+        ambiguous ||
+        error?.noRetry === true ||
+        String(message.delivery_semantics || "").toUpperCase() === "AT_MOST_ONCE";
+
+      await api("/internal/dispatch/" + message.id + "/fail", {
+        method: "POST",
+        body: JSON.stringify({
+          reservation_token: message.reservation_token,
+          no_retry: noRetry,
+          error: ambiguous
+            ? "Envio iniciado, mas o resultado ficou incerto. Retry automático bloqueado para evitar mensagem duplicada. " +
+              String(error?.message || error).slice(0, 900)
+            : String(error?.message || error).slice(0, 1200)
+        })
+      }).catch(() => {});
+
+      throw error;
+    }
+  } catch (error) {
+    runtimeError = String(error?.message || error).slice(0, 1200);
+    logger.error({ error: runtimeError }, "dispatch failed");
+  } finally {
+    dispatchBusy = false;
+  }
+}
+
+async function checkpointBuffer() {
+  if (!await hasAuthFiles()) return null;
+
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), "agenda-wa-save-"));
+  const archive = path.join(tempDir, "auth.tar.gz");
+
+  try {
+    await execFileAsync("tar", ["-czf", archive, "-C", AUTH_DIR, "."], {
+      timeout: 30000
+    });
+    const info = await stat(archive);
+    if (!info.size) return null;
+    return await readFile(archive);
+  } finally {
+    await rm(tempDir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+async function restoreBuffer(buffer) {
+  const tempDir = await mkdtemp(path.join(os.tmpdir(), "agenda-wa-restore-"));
+  const archive = path.join(tempDir, "auth.tar.gz");
+
+  try {
+    runtimeState = "restoring";
+    await writeFile(archive, buffer);
+    await resetAuth();
+    await execFileAsync("tar", ["-xzf", archive, "-C", AUTH_DIR], {
+      timeout: 30000
+    });
+    checkpointDirty = false;
+    runtimeState = "offline";
+    runtimeError = "";
+  } finally {
+    await rm(tempDir, { recursive: true, force: true }).catch(() => {});
+  }
+}
+
+async function manualDisconnectNow() {
+  manualDisconnect = true;
+  runtimeState = "offline";
+  qrText = "";
+  qrSvg = null;
+  runtimeError = "";
+
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
+
+  if (socket) {
+    try { await socket.logout(); } catch {}
+    try { socket.end(new Error("Manual disconnect")); } catch {}
+  }
+  socket = null;
+  phone = null;
+  await resetAuth();
+  checkpointDirty = false;
+  await releaseLease();
 }
 
 function sendJson(res, status, body) {
   const data = JSON.stringify(body);
   res.writeHead(status, {
     "content-type": "application/json; charset=utf-8",
-    "content-length": Buffer.byteLength(data)
+    "content-length": Buffer.byteLength(data),
+    "cache-control": "no-store"
   });
   res.end(data);
 }
 
-async function bodyJson(req) {
+async function readBody(req) {
   const chunks = [];
   for await (const chunk of req) chunks.push(chunk);
-  if (!chunks.length) return {};
-  return JSON.parse(Buffer.concat(chunks).toString("utf8"));
+  return Buffer.concat(chunks);
 }
 
-const server = http.createServer(async function (req, res) {
+const server = http.createServer(async (req, res) => {
   try {
-    const url = new URL(req.url, "http://localhost");
+    const url = new URL(req.url || "/", "http://localhost");
 
-    if (url.pathname === "/health") {
-      return sendJson(res, 200, { ok: true, business_id: BUSINESS_ID });
-    }
-
-    if (url.pathname === "/status" && req.method === "GET") {
-      const row = await readSession();
+    if (url.pathname === "/ready") {
       return sendJson(res, 200, {
         ok: true,
-        status: row ? row.status : liveStatus,
-        phone: row ? row.phone : null,
-        qr_svg: row && row.status === "qr" ? latestQrSvg : null,
-        qr: row && row.status === "qr" ? (row.qr || latestQrRaw) : null,
-        last_error: row ? row.last_error : null
+        state: runtimeState,
+        engine: "baileys",
+        business_id: BUSINESS_ID
       });
     }
 
-    if (url.pathname === "/connect" && req.method === "POST") {
-      await ensureSocket();
+    if (url.pathname === "/status") {
+      return sendJson(res, 200, {
+        ok: true,
+        status:
+          runtimeState === "online" ? "connected" :
+          runtimeState === "waiting_qr" ? "qr" :
+          runtimeState === "connecting" || runtimeState === "restoring" ? "connecting" :
+          runtimeState === "error" ? "error" :
+          "disconnected",
+        state: runtimeState,
+        phone,
+        qr_svg: runtimeState === "waiting_qr" ? qrSvg : null,
+        qr_available: Boolean(qrText),
+        last_error: runtimeError || null,
+        lease_owned: leaseOwned,
+        checkpoint_dirty: checkpointDirty,
+        last_open_at: lastOpenAt ? new Date(lastOpenAt).toISOString() : null,
+        last_checkpoint_at: lastCheckpointAt ? new Date(lastCheckpointAt).toISOString() : null
+      });
+    }
+
+    if ((url.pathname === "/start" || url.pathname === "/connect") && req.method === "POST") {
+      manualDisconnect = false;
+      await leaseCycle();
+
       const started = Date.now();
-      while (Date.now() - started < 12000 &&
-             ["qr", "connected"].indexOf(liveStatus) === -1) {
-        await new Promise(function (resolve) { setTimeout(resolve, 250); });
+      while (
+        Date.now() - started < 12000 &&
+        !["online", "waiting_qr", "standby_lease", "error"].includes(runtimeState)
+      ) {
+        await sleep(250);
       }
 
-      const row = await readSession();
       return sendJson(res, 200, {
         ok: true,
-        status: row ? row.status : liveStatus,
-        phone: row ? row.phone : null,
-        qr_svg: latestQrSvg,
-        qr: row ? (row.qr || latestQrRaw) : latestQrRaw,
-        last_error: row ? row.last_error : null
+        status:
+          runtimeState === "online" ? "connected" :
+          runtimeState === "waiting_qr" ? "qr" :
+          runtimeState === "error" ? "error" :
+          "connecting",
+        state: runtimeState,
+        phone,
+        qr_svg: qrSvg,
+        last_error: runtimeError || null
       });
+    }
+
+    if (url.pathname === "/restore" && req.method === "POST") {
+      const buffer = await readBody(req);
+      if (!buffer.length) return sendJson(res, 400, { error: "Checkpoint vazio." });
+      await restoreBuffer(buffer);
+      return sendJson(res, 200, { ok: true });
+    }
+
+    if (url.pathname === "/checkpoint" && req.method === "POST") {
+      const buffer = await checkpointBuffer();
+      if (!buffer) {
+        res.writeHead(204, { "cache-control": "no-store" });
+        res.end();
+        return;
+      }
+
+      res.writeHead(200, {
+        "content-type": "application/gzip",
+        "content-length": String(buffer.length),
+        "cache-control": "no-store"
+      });
+      res.end(buffer);
+      return;
+    }
+
+    if (url.pathname === "/checkpoint-ack" && req.method === "POST") {
+      checkpointDirty = false;
+      lastCheckpointAt = Date.now();
+      await heartbeat();
+      return sendJson(res, 200, { ok: true });
     }
 
     if (url.pathname === "/disconnect" && req.method === "POST") {
-      await disconnect();
+      await manualDisconnectNow();
       return sendJson(res, 200, { ok: true, status: "disconnected" });
-    }
-
-    if (url.pathname === "/send-queue" && req.method === "POST") {
-      const body = await bodyJson(req);
-      const queueId = String(body.queue_id || "");
-      const text = String(body.text || "");
-      if (!queueId || !text) {
-        return sendJson(res, 400, { error: "Mensagem incompleta" });
-      }
-
-      const item = await loadQueueItem(queueId);
-      if (!item) return sendJson(res, 404, { error: "Mensagem não encontrada" });
-      if (item.status === "done" || item.status === "cancelled") {
-        return sendJson(res, 200, { ok: true, skipped: true });
-      }
-
-      const phone = normalizePhone(item.customer_phone);
-      if (!phone) {
-        return sendJson(res, 400, { error: "Cliente sem WhatsApp cadastrado" });
-      }
-
-      const socket = await waitForReady();
-      const jid = phone + "@s.whatsapp.net";
-      const result = await socket.sendMessage(jid, { text: text });
-
-      await updateSession({
-        last_seen_at: new Date().toISOString(),
-        last_error: null
-      });
-
-      return sendJson(res, 200, {
-        ok: true,
-        sent: true,
-        message_id: result && result.key ? result.key.id : null
-      });
     }
 
     return sendJson(res, 404, { error: "Rota não encontrada" });
   } catch (error) {
-    logger.error(error);
-    return sendJson(res, 500, {
-      error: error && error.message ? error.message : "Erro interno"
-    });
+    runtimeState = "error";
+    runtimeError = String(error?.message || error).slice(0, 1200);
+    logger.error({ error: runtimeError }, "runtime request failed");
+    return sendJson(res, 500, { error: runtimeError });
   }
 });
 
-server.listen(PORT, "0.0.0.0", function () {
-  logger.info({ port: PORT, business: BUSINESS_ID }, "Baileys container ready");
+async function shutdown(signal) {
+  if (closing) return;
+  closing = true;
+
+  if (reconnectTimer) clearTimeout(reconnectTimer);
+
+  logger.info({ signal }, "shutting down");
+  await heartbeat().catch(() => {});
+  await releaseLease().catch(() => {});
+
+  try { socket?.end(new Error("Shutdown " + signal)); } catch {}
+  socket = null;
+
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 5000).unref?.();
+}
+
+process.on("SIGINT", () => void shutdown("SIGINT"));
+process.on("SIGTERM", () => void shutdown("SIGTERM"));
+
+await resetAuth();
+
+server.listen(PORT, "0.0.0.0", () => {
+  logger.info({ port: PORT, business: BUSINESS_ID }, "Agenda Pro Baileys runtime ready");
 });
+
+setInterval(() => void leaseCycle(), 5000).unref?.();
+setInterval(() => void heartbeat(), 5000).unref?.();
+setInterval(() => void dispatchCycle(), 2500).unref?.();
