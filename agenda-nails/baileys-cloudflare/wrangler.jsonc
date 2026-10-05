@@ -1,0 +1,52 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "agenda-pro-baileys",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-10-05",
+  "observability": { "enabled": true },
+  "containers": [
+    {
+      "class_name": "WhatsAppContainer",
+      "image": "./Dockerfile",
+      "max_instances": 20
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "WHATSAPP_CONTAINER",
+        "class_name": "WhatsAppContainer"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["WhatsAppContainer"]
+    }
+  ],
+  "queues": {
+    "producers": [
+      {
+        "binding": "MESSAGE_QUEUE",
+        "queue": "agenda-pro-whatsapp-send"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "agenda-pro-whatsapp-send",
+        "max_batch_size": 5,
+        "max_batch_timeout": 2,
+        "max_retries": 3
+      }
+    ]
+  },
+  "triggers": { "crons": ["* * * * *"] },
+  "secrets": {
+    "required": [
+      "SUPABASE_URL",
+      "SUPABASE_SERVICE_ROLE_KEY",
+      "SUPABASE_PUBLISHABLE_KEY"
+    ]
+  }
+}
