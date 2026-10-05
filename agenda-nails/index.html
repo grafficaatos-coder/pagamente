@@ -76,6 +76,12 @@
     .auth-loading,.blocked-screen{min-height:100vh;display:grid;place-items:center;background:var(--bg);text-align:center}.auth-loading{gap:12px;color:var(--wine)}.blocked-card{width:min(92vw,480px);background:#fff;border:1px solid var(--line);border-radius:24px;padding:30px;box-shadow:0 24px 60px rgba(70,45,55,.12)}.blocked-card .logo{margin:0 auto 18px}.blocked-card h2{font:600 30px Georgia,serif;margin:8px 0}.blocked-card p{color:var(--muted);line-height:1.6}.blocked-plan{display:grid;grid-template-columns:1fr 1fr;gap:8px;background:#faf6f8;border:1px solid var(--line);padding:12px;border-radius:14px;margin:18px 0}.blocked-plan span{color:var(--muted);font-size:10px}.blocked-plan b{font-size:11px}.company-app .side-foot b{color:#fff}.login-card button:disabled{opacity:.6;cursor:wait}
   
     .empty-state{padding:24px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:14px}.empty-next p{color:rgba(255,255,255,.75);line-height:1.5}.company-app .content{max-width:1180px}
+  
+    .agenda-actions,.inline-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:7px}
+    .agenda-actions select{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 8px;font-size:9px;color:var(--ink)}
+    .inline-actions .mini-btn{margin-top:2px}
+    .service-card-actions{flex-wrap:wrap}.service-card-actions button{min-width:72px}
+    @media(max-width:760px){.agenda-actions{align-items:stretch}.agenda-actions select{width:100%}.top-actions .logout-btn:first-of-type{display:none}}
   </style>
 </head>
 <body>
@@ -125,10 +131,9 @@
     let companyCtx=null;
     let companyData={customers:[],services:[],appointments:[]};
     const CAPABILITIES={
-      agenda:'Agenda online',clients:'Cadastro de clientes/pacientes',reminders:'Lembretes básicos',
-      whatsapp:'WhatsApp automático',finance:'Financeiro',reports:'Relatórios',
-      publicBooking:'Página pública de agendamento',multiunit:'Multiunidade',
-      advancedReports:'Relatórios avançados',prioritySupport:'Suporte prioritário'
+      agenda:'Agenda, serviços e horários',
+      clients:'Cadastro de clientes/pacientes',
+      finance:'Financeiro por atendimentos concluídos'
     };
     const DEFAULT_ADMIN={
       settings:{autoBlock:true,freeTrial:true,trialDays:7,graceDays:5},
@@ -165,6 +170,9 @@
     function resetData(){A=P().appts.map(x=>[...x])}
     resetData();
     function titles(){return {overview:['Visão geral','Administração da plataforma'],clients:['Assinantes','Empresas cadastradas na plataforma'],plans:['Planos','Planos e valores mensais'],billing:['Cobranças','Mensalidades e situação de pagamento'],settings:['Configurações','Preferências da plataforma']}}
+    function companyRole(){return companyCtx?.membership?.role||'viewer'}
+    function canOperateCompany(){return ['owner','admin','professional'].includes(companyRole())}
+    function canAdminCompany(){return ['owner','admin'].includes(companyRole())}
     function companyTitles(){
   const p=P();
   return {
@@ -237,10 +245,10 @@
     function shell(content){
   if(appMode==='company'){
     const p=P(),t=companyTitles()[page]||companyTitles().home;
-    return `<div class="app company-app">${nav()}<main class="main"><header class="top"><div class="top-left"><div class="logo mini-logo">${p.initials}</div><div><h1>${t[0]}</h1><small>${t[1]}</small></div></div><div class="top-actions"><span class="owner-session"><i class="owner-dot"></i> ${companyCtx?.plan?.name||'Plano'}</span>${hasFeature('agenda')?'<button class="btn primary" onclick="book()">+ Novo horário</button>':''}<button class="logout-btn" onclick="ownerLogout()">Sair</button></div></header><div class="content">${content}</div></main>${bottom()}</div>`;
+    return `<div class="app company-app">${nav()}<main class="main"><header class="top"><div class="top-left"><div class="logo mini-logo">${p.initials}</div><div><h1>${t[0]}</h1><small>${t[1]}</small></div></div><div class="top-actions"><span class="owner-session"><i class="owner-dot"></i> ${companyCtx?.plan?.name||'Plano'} · ${companyRole()}</span>${hasFeature('agenda')&&canOperateCompany()?'<button class="btn primary" onclick="book()">+ Novo horário</button>':''}<button class="logout-btn" onclick="changeMyPassword()">Senha</button><button class="logout-btn" onclick="ownerLogout()">Sair</button></div></header><div class="content">${content}</div></main>${bottom()}</div>`;
   }
   const t=titles()[adminTab]||titles().overview;
-  return `<div class="app admin-owner-app">${nav()}<main class="main"><header class="top"><div class="top-left"><div class="logo mini-logo">AP</div><div><h1>${t[0]}</h1><small>${t[1]}</small></div></div><div class="top-actions"><span class="owner-session"><i class="owner-dot"></i> Proprietário</span><button class="icon-btn" onclick="toast('Nenhuma notificação nova')" aria-label="Notificações">${I.bell}</button><button class="logout-btn" onclick="ownerLogout()">Sair</button></div></header><div class="content">${content}</div></main>${bottom()}</div>`;
+  return `<div class="app admin-owner-app">${nav()}<main class="main"><header class="top"><div class="top-left"><div class="logo mini-logo">AP</div><div><h1>${t[0]}</h1><small>${t[1]}</small></div></div><div class="top-actions"><span class="owner-session"><i class="owner-dot"></i> Proprietário</span><button class="logout-btn" onclick="changeMyPassword()">Senha</button><button class="logout-btn" onclick="ownerLogout()">Sair</button></div></header><div class="content">${content}</div></main>${bottom()}</div>`;
 }
     function segmentSwitch(){return `<div class="segment-switch"><button class="${segment==='salon'?'on':''}" onclick="setSegment('salon')">✂️ Salão</button><button class="${segment==='esthetic'?'on':''}" onclick="setSegment('esthetic')">✨ Estética</button><button class="${segment==='doctor'?'on':''}" onclick="setSegment('doctor')">🩺 Consultório</button></div>`}
     function setSegment(s){segment=s;localStorage.setItem('agendaProSegment',s);resetData();page='home';render();toast(`Modo alterado para ${P().segment}`)}
@@ -270,20 +278,21 @@
   const p=P(),list=[...companyData.appointments].sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at));
   const rows=list.map(a=>{
     const d=new Date(a.starts_at),cu=companyData.customers.find(x=>x.id===a.customer_id),se=companyData.services.find(x=>x.id===a.service_id);
-    const statusText=a.status==='pending'?'Pendente':a.status==='cancelled'?'Cancelado':a.status==='completed'?'Concluído':'Confirmado';
-    return `<div class="appt agenda-real-row" data-search="${(cu?.name||'').toLowerCase()} ${(se?.name||'').toLowerCase()}"><div class="appt-time">${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div><span class="status-line ${a.status==='pending'?'p':''}"></span><div><strong>${cu?.name||'Cliente'}</strong><small>${d.toLocaleDateString('pt-BR')} · ${se?.name||'Serviço'} · ${a.professional_name||'Profissional'}</small></div><span class="tag ${a.status==='pending'?'p':''}">${statusText}</span></div>`;
+    const statusText=a.status==='pending'?'Pendente':a.status==='cancelled'?'Cancelado':a.status==='completed'?'Concluído':a.status==='no_show'?'Faltou':'Confirmado';
+    const actions=canOperateCompany()?`<div class="agenda-actions"><select onchange="updateAppointmentStatus('${a.id}',this.value)"><option value="pending" ${a.status==='pending'?'selected':''}>Pendente</option><option value="confirmed" ${a.status==='confirmed'?'selected':''}>Confirmado</option><option value="completed" ${a.status==='completed'?'selected':''}>Concluído</option><option value="no_show" ${a.status==='no_show'?'selected':''}>Faltou</option><option value="cancelled" ${a.status==='cancelled'?'selected':''}>Cancelado</option></select><button class="mini-btn" onclick="editAppointment('${a.id}')">Editar</button>${canAdminCompany()?`<button class="mini-btn danger" onclick="deleteAppointment('${a.id}')">Excluir</button>`:''}</div>`:'';
+    return `<div class="appt agenda-real-row" data-search="${(cu?.name||'').toLowerCase()} ${(se?.name||'').toLowerCase()}"><div class="appt-time">${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div><span class="status-line ${a.status==='pending'?'p':''}"></span><div><strong>${cu?.name||'Cliente'}</strong><small>${d.toLocaleDateString('pt-BR')} · ${se?.name||'Serviço'} · ${a.professional_name||'Profissional'}</small>${actions}</div><span class="tag ${a.status==='pending'?'p':''}">${statusText}</span></div>`;
   }).join('');
-  return shell(`<div class="section-title"><span class="eyebrow">${p.segment}</span><h2>Sua agenda</h2><p>Horários salvos na conta desta empresa.</p></div><div class="toolbar"><div class="search-wrap">${I.search}<input class="search" placeholder="Buscar ${p.person.toLowerCase()}" oninput="filterAgendaRows(this.value)"></div><button class="btn primary" onclick="book()">+ Horário</button></div><section class="panel"><div class="head"><div><span class="eyebrow">Agendamentos</span><h3>Todos os horários</h3></div><span class="tag">${list.length} horários</span></div><div id="agendaRows">${rows||'<div class="empty-state">Nenhum agendamento cadastrado.</div>'}</div></section>`);
+  return shell(`<div class="section-title"><span class="eyebrow">${p.segment}</span><h2>Sua agenda</h2><p>Horários salvos na conta desta empresa.</p></div><div class="toolbar"><div class="search-wrap">${I.search}<input class="search" placeholder="Buscar ${p.person.toLowerCase()}" oninput="filterAgendaRows(this.value)"></div>${canOperateCompany()?'<button class="btn primary" onclick="book()">+ Horário</button>':''}</div><section class="panel"><div class="head"><div><span class="eyebrow">Agendamentos</span><h3>Todos os horários</h3></div><span class="tag">${list.length} horários</span></div><div id="agendaRows">${rows||'<div class="empty-state">Nenhum agendamento cadastrado.</div>'}</div></section>`);
 }
     function clients(){
   const p=P();
-  const cards=companyData.customers.map(x=>`<div class="card client client-real-card" data-search="${x.name.toLowerCase()} ${(x.phone||'').toLowerCase()}"><div class="round">${x.name.split(' ').map(z=>z[0]).slice(0,2).join('').toUpperCase()}</div><div><b>${x.name}</b><small>${x.phone||'Sem telefone'}${x.email?' · '+x.email:''}</small></div><div class="client-stat"><b>${companyData.appointments.filter(a=>a.customer_id===x.id).length}</b><small>${p.visit}</small></div></div>`).join('');
-  return shell(`<div class="section-title"><span class="eyebrow">Relacionamento</span><h2>${p.people}</h2><p>Dados pertencentes somente a ${companyCtx.business.name}.</p></div><div class="toolbar"><div class="search-wrap">${I.search}<input class="search" placeholder="Buscar ${p.person.toLowerCase()}" oninput="filterClientCards(this.value)"></div><button class="btn primary" onclick="addCompanyCustomer()">+ ${p.person}</button></div><div class="list" id="clientCards">${cards||'<div class="empty-state">Nenhum cadastro ainda.</div>'}</div>`);
+  const cards=companyData.customers.map(x=>`<div class="card client client-real-card" data-search="${x.name.toLowerCase()} ${(x.phone||'').toLowerCase()}"><div class="round">${x.name.split(' ').map(z=>z[0]).slice(0,2).join('').toUpperCase()}</div><div><b>${x.name}</b><small>${x.phone||'Sem telefone'}${x.email?' · '+x.email:''}</small><div class="inline-actions">${canOperateCompany()?`<button class="mini-btn" onclick="editCompanyCustomer('${x.id}')">Editar</button>`:''}${canAdminCompany()?`<button class="mini-btn danger" onclick="deleteCompanyCustomer('${x.id}')">Excluir</button>`:''}</div></div><div class="client-stat"><b>${companyData.appointments.filter(a=>a.customer_id===x.id).length}</b><small>${p.visit}</small></div></div>`).join('');
+  return shell(`<div class="section-title"><span class="eyebrow">Relacionamento</span><h2>${p.people}</h2><p>Dados pertencentes somente a ${companyCtx.business.name}.</p></div><div class="toolbar"><div class="search-wrap">${I.search}<input class="search" placeholder="Buscar ${p.person.toLowerCase()}" oninput="filterClientCards(this.value)"></div>${canOperateCompany()?`<button class="btn primary" onclick="addCompanyCustomer()">+ ${p.person}</button>`:''}</div><div class="list" id="clientCards">${cards||'<div class="empty-state">Nenhum cadastro ainda.</div>'}</div>`);
 }
     function services(){
   const p=P();
-  const cards=companyData.services.map((s,i)=>`<article class="card service service-card"><div class="service-card-top"><div class="service-icon">${SERVICE_DEFAULTS[segment]?.[i%Math.max(1,SERVICE_DEFAULTS[segment]?.length||1)]?.[3]||'✨'}</div><span class="service-status">${s.active?'Ativo':'Inativo'}</span></div><h3>${s.name}</h3><p>Disponível para agendamento nesta empresa.</p><div class="service-meta"><div><small>Duração</small><b>${s.duration_minutes} min</b></div><div><small>Valor</small><b>${moneyBR(Number(s.price_cents||0)/100)}</b></div></div></article>`).join('');
-  return shell(`<div class="services-head"><div class="section-title service-title"><span class="eyebrow">${p.catalog}</span><h2>${p.serviceLabel}</h2><p>Catálogo salvo para esta empresa.</p></div><button class="btn primary service-add" onclick="addCompanyService()">+ Novo ${p.service.toLowerCase()}</button></div><div class="catalog-summary"><div><span>Itens cadastrados</span><b>${companyData.services.length}</b></div><div><span>Disponibilidade</span><b>${companyData.services.filter(x=>x.active).length} ativos</b></div><div><span>Plano</span><b>${companyCtx.plan.name}</b></div></div><div class="services">${cards||'<div class="empty-state">Nenhum serviço cadastrado.</div>'}</div>`);
+  const cards=companyData.services.map((s,i)=>`<article class="card service service-card"><div class="service-card-top"><div class="service-icon">${SERVICE_DEFAULTS[segment]?.[i%Math.max(1,SERVICE_DEFAULTS[segment]?.length||1)]?.[3]||'✨'}</div><span class="service-status">${s.active?'Ativo':'Inativo'}</span></div><h3>${s.name}</h3><p>${s.active?'Disponível para agendamento nesta empresa.':'Oculto para novos agendamentos.'}</p><div class="service-meta"><div><small>Duração</small><b>${s.duration_minutes} min</b></div><div><small>Valor</small><b>${moneyBR(Number(s.price_cents||0)/100)}</b></div></div>${canAdminCompany()?`<div class="service-card-actions"><button onclick="editCompanyService('${s.id}')">Editar</button><button onclick="toggleCompanyService('${s.id}')">${s.active?'Desativar':'Ativar'}</button><button onclick="deleteCompanyService('${s.id}')">Excluir</button></div>`:''}</article>`).join('');
+  return shell(`<div class="services-head"><div class="section-title service-title"><span class="eyebrow">${p.catalog}</span><h2>${p.serviceLabel}</h2><p>Catálogo salvo para esta empresa.</p></div>${canAdminCompany()?`<button class="btn primary service-add" onclick="addCompanyService()">+ Novo ${p.service.toLowerCase()}</button>`:''}</div><div class="catalog-summary"><div><span>Itens cadastrados</span><b>${companyData.services.length}</b></div><div><span>Disponibilidade</span><b>${companyData.services.filter(x=>x.active).length} ativos</b></div><div><span>Plano</span><b>${companyCtx.plan.name}</b></div></div><div class="services">${cards||'<div class="empty-state">Nenhum serviço cadastrado.</div>'}</div>`);
 }
     function cash(){
   const serviceMap=new Map(companyData.services.map(s=>[s.id,s]));
@@ -368,6 +377,97 @@
     [hasFeature('finance')?'money':'chart',hasFeature('finance')?'Receita concluída':'Plano',hasFeature('finance')?moneyBR(revenue):companyCtx.plan.name,subscriptionLabel()]
   ];
 }
+    
+    async function changeMyPassword(){
+      if(!sb||!authUser)return;
+      const p=prompt('Digite a nova senha (mínimo 8 caracteres):');if(p===null)return;
+      if(p.length<8)return toast('A senha precisa ter pelo menos 8 caracteres');
+      const confirmPass=prompt('Digite a nova senha novamente:');if(confirmPass!==p)return toast('As senhas não conferem');
+      const {error}=await sb.auth.updateUser({password:p});
+      if(error){console.error(error);return toast('Não foi possível alterar a senha')}
+      toast('Senha alterada com sucesso');
+    }
+
+    async function editCompanyCustomer(id){
+      if(!canOperateCompany())return toast('Seu perfil não permite editar');
+      const x=companyData.customers.find(y=>y.id===id);if(!x)return;
+      const name=prompt('Nome:',x.name);if(name===null||!name.trim())return;
+      const phone=prompt('Telefone / WhatsApp:',x.phone||'');if(phone===null)return;
+      const email=prompt('E-mail:',x.email||'');if(email===null)return;
+      const {error}=await sb.from('agenda_customers').update({name:name.trim(),phone:phone.trim()||null,email:email.trim()||null,updated_at:new Date().toISOString()}).eq('id',id).eq('business_id',companyCtx.business.id);
+      if(error){console.error(error);return toast('Não foi possível editar')}
+      await loadCompanyData();render();toast('Cadastro atualizado');
+    }
+
+    async function deleteCompanyCustomer(id){
+      if(!canAdminCompany())return toast('Somente administrador pode excluir');
+      const x=companyData.customers.find(y=>y.id===id);if(!x)return;
+      if(!confirm('Excluir '+x.name+'? Os agendamentos antigos permanecerão sem vínculo com o cadastro.'))return;
+      const {error}=await sb.from('agenda_customers').delete().eq('id',id).eq('business_id',companyCtx.business.id);
+      if(error){console.error(error);return toast('Não foi possível excluir')}
+      await loadCompanyData();render();toast('Cadastro excluído');
+    }
+
+    async function editCompanyService(id){
+      if(!canAdminCompany())return toast('Somente administrador pode editar serviços');
+      const x=companyData.services.find(y=>y.id===id);if(!x)return;
+      const name=prompt('Nome do serviço/procedimento:',x.name);if(name===null||!name.trim())return;
+      const duration=Number(prompt('Duração em minutos:',String(x.duration_minutes)));if(!Number.isFinite(duration)||duration<=0)return toast('Duração inválida');
+      const priceText=prompt('Valor em reais:',String(Number(x.price_cents||0)/100).replace('.',','));if(priceText===null)return;
+      const price=Number(String(priceText).replace('.','').replace(',','.'));if(!Number.isFinite(price)||price<0)return toast('Valor inválido');
+      const {error}=await sb.from('agenda_services').update({name:name.trim(),duration_minutes:Math.round(duration),price_cents:Math.round(price*100),updated_at:new Date().toISOString()}).eq('id',id).eq('business_id',companyCtx.business.id);
+      if(error){console.error(error);return toast('Não foi possível editar')}
+      await loadCompanyData();render();toast('Serviço atualizado');
+    }
+
+    async function toggleCompanyService(id){
+      if(!canAdminCompany())return;
+      const x=companyData.services.find(y=>y.id===id);if(!x)return;
+      const {error}=await sb.from('agenda_services').update({active:!x.active,updated_at:new Date().toISOString()}).eq('id',id).eq('business_id',companyCtx.business.id);
+      if(error){console.error(error);return toast('Não foi possível alterar')}
+      await loadCompanyData();render();toast(!x.active?'Serviço ativado':'Serviço desativado');
+    }
+
+    async function deleteCompanyService(id){
+      if(!canAdminCompany())return toast('Somente administrador pode excluir serviços');
+      const x=companyData.services.find(y=>y.id===id);if(!x)return;
+      if(!confirm('Excluir '+x.name+'? Os agendamentos antigos permanecerão sem vínculo com o serviço.'))return;
+      const {error}=await sb.from('agenda_services').delete().eq('id',id).eq('business_id',companyCtx.business.id);
+      if(error){console.error(error);return toast('Não foi possível excluir')}
+      await loadCompanyData();render();toast('Serviço excluído');
+    }
+
+    async function updateAppointmentStatus(id,status){
+      if(!canOperateCompany())return;
+      const allowed=['pending','confirmed','completed','cancelled','no_show'];if(!allowed.includes(status))return;
+      const {error}=await sb.from('agenda_appointments').update({status,updated_at:new Date().toISOString()}).eq('id',id).eq('business_id',companyCtx.business.id);
+      if(error){console.error(error);return toast('Não foi possível alterar o status')}
+      await loadCompanyData();render();toast('Status atualizado');
+    }
+
+    async function editAppointment(id){
+      if(!canOperateCompany())return toast('Seu perfil não permite editar');
+      const a=companyData.appointments.find(x=>x.id===id);if(!a)return;
+      const d=new Date(a.starts_at);
+      const localDate=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+      const localTime=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+      const date=prompt('Data (AAAA-MM-DD):',localDate);if(date===null)return;
+      const time=prompt('Horário (HH:MM):',localTime);if(time===null)return;
+      const professional=prompt('Profissional:',a.professional_name||'');if(professional===null)return;
+      const starts=new Date(date+'T'+time+':00');if(Number.isNaN(starts.getTime()))return toast('Data ou horário inválido');
+      const {error}=await sb.from('agenda_appointments').update({starts_at:starts.toISOString(),professional_name:professional.trim()||null,updated_at:new Date().toISOString()}).eq('id',id).eq('business_id',companyCtx.business.id);
+      if(error){console.error(error);return toast('Não foi possível editar')}
+      await loadCompanyData();render();toast('Agendamento atualizado');
+    }
+
+    async function deleteAppointment(id){
+      if(!canAdminCompany())return toast('Somente administrador pode excluir');
+      if(!confirm('Excluir este agendamento?'))return;
+      const {error}=await sb.from('agenda_appointments').delete().eq('id',id).eq('business_id',companyCtx.business.id);
+      if(error){console.error(error);return toast('Não foi possível excluir')}
+      await loadCompanyData();render();toast('Agendamento excluído');
+    }
+
     async function addCompanyCustomer(){
   if(!hasFeature('clients'))return toast('Cadastro de clientes não incluído no plano');
   const name=prompt('Nome do '+P().person.toLowerCase()+':');if(!name)return;
@@ -691,6 +791,7 @@
     function book(){
   if(appMode!=='company')return toast('Agendamentos ficam no acesso das empresas');
   if(!hasFeature('agenda'))return toast('Agenda não incluída no seu plano');
+  if(!canOperateCompany())return toast('Seu perfil é somente visualização');
   page='book';render();scrollTo(0,0);
 }
     function toast(x){const e=document.getElementById('toast');e.textContent=x;e.hidden=false;clearTimeout(window.__toastTimer);window.__toastTimer=setTimeout(()=>e.hidden=true,1900)}
