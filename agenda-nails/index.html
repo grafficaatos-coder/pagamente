@@ -111,9 +111,23 @@
   
     .field-title-row{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:6px}
     .field-title-row>b{margin:0!important}
-    .inline-add-customer{border:0;background:transparent;color:var(--wine);font-size:9px;font-weight:900;cursor:pointer;padding:2px 0}
-    .inline-add-customer:hover{text-decoration:underline}
-    @media(max-width:560px){.field-title-row{align-items:flex-start;flex-direction:column;gap:4px}}
+    .inline-add-customer{
+      border:1px solid var(--wine);
+      background:var(--wine);
+      color:#fff;
+      font-size:10px;
+      font-weight:900;
+      cursor:pointer;
+      padding:8px 12px;
+      border-radius:10px;
+      box-shadow:0 5px 14px rgba(111,31,60,.16);
+      white-space:nowrap
+    }
+    .inline-add-customer:hover{background:#5d1832;transform:translateY(-1px)}
+    @media(max-width:560px){
+      .field-title-row{align-items:stretch;flex-direction:column;gap:7px}
+      .inline-add-customer{width:100%;text-align:center;padding:10px 12px;font-size:11px}
+    }
   </style>
 </head>
 <body>
