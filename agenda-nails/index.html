@@ -471,8 +471,23 @@
   const items=Object.entries(CAPABILITIES).filter(([k])=>pl?.permissions?.[k]).map(([,v])=>v);
   alert(`${x.name}\n\nPlano: ${pl?.name||'—'}\nStatus: ${statusLabel(effectiveClientStatus(x))}\nUsuários: ${x.currentUsers}/${planUserLimit(pl)}\n\nRecursos liberados:\n• ${items.join('\n• ')}`);
 }
-    function toggleAdminSetting(key){ADMIN.settings[key]=!ADMIN.settings[key];saveAdmin();render()}
-    function editAdminNumber(key,label){const v=prompt(label+':',String(ADMIN.settings[key]));if(v===null)return;const n=Math.max(0,Number(v));if(!Number.isFinite(n))return toast('Valor inválido');ADMIN.settings[key]=n;saveAdmin();render();toast(label+' atualizado')}
+    async function toggleAdminSetting(key){
+  const map={autoBlock:'auto_block',freeTrial:'free_trial_enabled'};
+  const field=map[key];if(!field)return;
+  const next=!ADMIN.settings[key];
+  const {error}=await sb.from('agenda_platform_settings').update({[field]:next,updated_at:new Date().toISOString()}).eq('id',true);
+  if(error){console.error(error);return toast('Não foi possível atualizar')}
+  await loadOwnerData();render();toast('Configuração atualizada');
+}
+    async function editAdminNumber(key,label){
+  const map={graceDays:'grace_days',trialDays:'trial_days'};
+  const field=map[key];if(!field)return;
+  const v=prompt(label+':',String(ADMIN.settings[key]));if(v===null)return;
+  const n=Math.max(0,Number(v));if(!Number.isFinite(n))return toast('Valor inválido');
+  const {error}=await sb.from('agenda_platform_settings').update({[field]:Math.round(n),updated_at:new Date().toISOString()}).eq('id',true);
+  if(error){console.error(error);return toast('Não foi possível atualizar')}
+  await loadOwnerData();render();toast(label+' atualizado');
+}
     function booking(){
   const p=P();
   return `<div class="booking"><div class="bookwrap"><section class="bookintro"><div class="logo">${p.initials}</div><h1>Novo horário</h1><p>Agendamento de ${companyCtx.business.name}.</p><button class="btn secondary" onclick="go('agenda')">← Voltar</button></section><section class="book"><div class="book-title"><div><span class="eyebrow">${p.segment}</span><h2>Cadastrar ${p.appointment.toLowerCase()}</h2><p>Os dados serão salvos somente nesta empresa.</p></div><span class="tag">Novo</span></div><div class="formgrid"><div class="field"><b>${p.person}</b><select id="fclient"><option value="">Selecione</option>${companyData.customers.map(x=>`<option value="${x.id}">${x.name}</option>`).join('')}</select></div><div class="field"><b>${p.service}</b><select id="fservice"><option value="">Selecione</option>${companyData.services.filter(x=>x.active).map(x=>`<option value="${x.id}">${x.name} · ${moneyBR(Number(x.price_cents||0)/100)}</option>`).join('')}</select></div><div class="field"><b>${p.professional}</b><input id="fpro" placeholder="Nome do profissional"></div><div class="field"><b>Data</b><input id="fdate" type="date"></div><div class="field"><b>Horário</b><input id="ftime" type="time"></div><div class="field"><b>Status</b><select id="fstatus"><option value="confirmed">Confirmado</option><option value="pending">Pendente</option></select></div></div><div class="field"><b>Observação administrativa</b><textarea id="fnote" placeholder="${p.notePlaceholder}"></textarea></div><button class="btn primary" style="width:100%;margin-top:12px;min-height:48px" onclick="saveAppointment()">Salvar horário</button></section></div></div>`;
