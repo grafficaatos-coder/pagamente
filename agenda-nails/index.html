@@ -876,7 +876,13 @@
   signupMode=false;signupLoading=false;signupMessage='';signupWaitingEmail='';render();
 }
     function selectSignupPlan(code){
-  signupSelectedPlan=code;render();
+  signupSelectedPlan=code;
+  document.querySelectorAll('.signup-plan').forEach(card=>{
+    const radio=card.querySelector('input[name="signupPlan"]');
+    const selected=radio?.value===code;
+    card.classList.toggle('selected',selected);
+    if(radio)radio.checked=selected;
+  });
 }
     async function selfRegister(){
   if(!sb||signupLoading)return;
