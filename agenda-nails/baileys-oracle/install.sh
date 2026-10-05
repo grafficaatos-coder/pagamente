@@ -10,6 +10,28 @@ fi
 echo "Agenda Pro - instalação Baileys Oracle Cloud"
 echo
 
+ensure_swap() {
+  local mem_kb swap_kb
+  mem_kb="$(awk '/MemTotal/ {print $2}' /proc/meminfo)"
+  swap_kb="$(awk '/SwapTotal/ {print $2}' /proc/meminfo)"
+  if [ "${mem_kb:-0}" -lt 2000000 ] && [ "${swap_kb:-0}" -lt 1000000 ]; then
+    echo "VM com pouca RAM detectada. Criando 3 GB de memória SWAP..."
+    if command -v fallocate >/dev/null 2>&1; then
+      $SUDO fallocate -l 3G /swapfile
+    else
+      $SUDO dd if=/dev/zero of=/swapfile bs=1M count=3072 status=progress
+    fi
+    $SUDO chmod 600 /swapfile
+    $SUDO mkswap /swapfile
+    $SUDO swapon /swapfile
+    if ! grep -q '^/swapfile ' /etc/fstab; then
+      echo '/swapfile swap swap defaults 0 0' | $SUDO tee -a /etc/fstab >/dev/null
+    fi
+  fi
+}
+
+ensure_swap
+
 install_ubuntu() {
   $SUDO apt-get update
   $SUDO apt-get install -y docker.io git curl ca-certificates
