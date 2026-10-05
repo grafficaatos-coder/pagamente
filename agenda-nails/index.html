@@ -99,6 +99,8 @@
     .signup-plan-users{font-size:10px;font-weight:850;margin:13px 0 9px;padding:7px 8px;border-radius:9px;background:var(--rose)}.signup-plan-features{display:grid;gap:5px}.signup-plan-features span{font-size:10px;color:var(--muted)}
     .signup-submit{min-height:50px;font-size:13px}.signup-submit:disabled{opacity:.6;cursor:wait}.signup-footnote{text-align:center;color:var(--muted);font-size:9px;margin:0 10px 20px}
     @media(max-width:760px){.signup-screen{padding:18px 12px}.signup-top{display:block}.back-login{margin-bottom:14px}.signup-top h1{font-size:30px}.signup-fields,.signup-plans{grid-template-columns:1fr}.signup-box{padding:15px}}
+  
+    .signup-success-note{color:var(--muted);font-size:11px;line-height:1.55;margin:10px 0 18px}
   </style>
 </head>
 <body>
@@ -144,7 +146,7 @@
     const SUPABASE_URL='https://zmrihyzwsyxjikdknfug.supabase.co';
     const SUPABASE_KEY='sb_publishable_nX-qLw9rEdLUvZpgXMj1LA_2gjB3umn';
     const AGENDA_ADMIN_FUNCTION=SUPABASE_URL+'/functions/v1/agenda-admin-access';
-    let sb=null,authUser=null,appMode=null,ownerLogged=false,authLoading=true,loginMessage='',passwordRecovery=false,signupMode=false,signupLoading=false,signupMessage='',signupWaitingEmail='',signupPlans=[],signupSettings={public_signup_enabled:true,free_trial_enabled:true,trial_days:7},signupSelectedPlan='profissional';
+    let sb=null,authUser=null,appMode=null,ownerLogged=false,authLoading=true,loginMessage='',passwordRecovery=false,signupMode=false,signupLoading=false,signupMessage='',signupWaitingEmail='',signupPlans=[],signupSettings={public_signup_enabled:true,free_trial_enabled:true,trial_days:7},signupSelectedPlan='profissional',loginPrefillEmail='';
     let companyCtx=null;
     let companyData={customers:[],services:[],appointments:[]};
     const CAPABILITIES={
@@ -826,7 +828,7 @@
     return `<div class="auth-loading"><div class="logo">AP</div><b>Carregando planos...</b></div>`;
   }
   if(signupWaitingEmail){
-    return `<div class="login-screen"><section class="login-brand"><div class="logo">AP</div><h1>Conta criada.</h1><p>Sua empresa e o plano escolhido já foram cadastrados.</p><div class="login-feature"><i>✓</i> Empresa criada</div><div class="login-feature"><i>✓</i> Plano reservado</div><div class="login-feature"><i>✓</i> Dados separados das outras empresas</div></section><section class="login-panel"><div class="login-card"><span class="eyebrow">Confirme seu acesso</span><h2>Verifique seu e-mail</h2><p>Enviamos a confirmação para <b>${signupWaitingEmail}</b>. Depois de confirmar, volte para entrar no sistema.</p><button class="btn primary" style="width:100%;min-height:48px" onclick="closeSignup()">Voltar para entrar</button></div></section></div>`;
+    return `<div class="login-screen"><section class="login-brand"><div class="logo">AP</div><h1>Conta criada com sucesso.</h1><p>Sua empresa e o plano escolhido já foram cadastrados.</p><div class="login-feature"><i>✓</i> Empresa criada</div><div class="login-feature"><i>✓</i> Plano escolhido</div><div class="login-feature"><i>✓</i> Teste grátis configurado</div></section><section class="login-panel"><div class="login-card"><span class="eyebrow">Cadastro concluído</span><h2>Pronto para começar</h2><p>Seu acesso foi criado com o e-mail <b>${signupWaitingEmail}</b>.</p><p class="signup-success-note">Clique abaixo para ir direto à página de login. Se o seu e-mail pedir confirmação, confirme-o antes de entrar.</p><button class="btn primary" style="width:100%;min-height:50px" onclick="finishSignupToLogin()">Começar a usar</button></div></section></div>`;
   }
   const plans=signupPlans.map(pl=>{
     const selected=signupSelectedPlan===pl.code;
@@ -834,8 +836,8 @@
     const users=pl.max_users==null?'Usuários ilimitados':`${pl.max_users} ${pl.max_users===1?'usuário':'usuários'}`;
     return `<label class="signup-plan ${selected?'selected':''}"><input type="radio" name="signupPlan" value="${pl.code}" ${selected?'checked':''} onchange="selectSignupPlan('${pl.code}')"><div class="signup-plan-head"><div><b>${pl.name}</b><small>${pl.description||''}</small></div><strong>${moneyBR(Number(pl.monthly_price_cents||0)/100)}<small>/mês</small></strong></div><div class="signup-plan-users">${users}</div><div class="signup-plan-features">${features||'<span>Recursos básicos da plataforma</span>'}</div></label>`;
   }).join('');
-  const trial=signupSettings.free_trial_enabled?`<div class="signup-trial">Comece com <b>${signupSettings.trial_days||7} dias de teste grátis</b>. Depois, mantenha sua assinatura ativa para continuar usando.</div>`:'<div class="signup-trial">A conta será criada e aguardará ativação da assinatura.</div>';
-  return `<div class="signup-screen"><div class="signup-wrap"><div class="signup-top"><button class="back-login" onclick="closeSignup()">← Voltar</button><div><span class="eyebrow">Novo assinante</span><h1>Crie sua conta</h1><p>Preencha seus dados e escolha o plano que combina com seu negócio.</p></div></div>${trial}<form class="signup-form" onsubmit="event.preventDefault();selfRegister()"><section class="signup-box"><h3>1. Seus dados</h3><div class="signup-fields"><div class="login-field"><label>Seu nome</label><input id="signupName" autocomplete="name" placeholder="Nome do responsável" required></div><div class="login-field"><label>Nome da empresa</label><input id="signupBusiness" placeholder="Ex.: Studio Bella" required maxlength="120"></div><div class="login-field"><label>Tipo de negócio</label><select id="signupSegment" required><option value="salon">Salão de beleza</option><option value="esthetic">Clínica de estética</option><option value="doctor">Consultório médico</option><option value="other">Outro</option></select></div><div class="login-field"><label>E-mail</label><input id="signupEmail" type="email" autocomplete="email" placeholder="contato@empresa.com" required></div><div class="login-field"><label>Senha</label><input id="signupPassword" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres" required></div><div class="login-field"><label>Confirmar senha</label><input id="signupPassword2" type="password" autocomplete="new-password" placeholder="Digite novamente" required></div></div></section><section class="signup-box"><h3>2. Escolha seu plano</h3><div class="signup-plans">${plans}</div></section><div id="signupError" class="login-error">${signupMessage||''}</div><button id="signupButton" class="btn primary signup-submit" type="submit">Criar minha conta e começar</button><p class="signup-footnote">Ao criar a conta, os dados ficam vinculados somente à sua empresa. O plano pode ser alterado depois pelo administrador da plataforma.</p></form></div></div>`;
+  const trial=signupSettings.free_trial_enabled?`<div class="signup-trial">Comece com <b>${signupSettings.trial_days||2} dias de teste grátis</b>. Depois, mantenha sua assinatura ativa para continuar usando.</div>`:'<div class="signup-trial">A conta será criada e aguardará ativação da assinatura.</div>';
+  return `<div class="signup-screen"><div class="signup-wrap"><div class="signup-top"><button class="back-login" onclick="closeSignup()">← Voltar</button><div><span class="eyebrow">Novo assinante</span><h1>Crie sua conta</h1><p>Preencha seus dados e escolha o plano que combina com seu negócio.</p></div></div>${trial}<form class="signup-form" onsubmit="event.preventDefault();selfRegister()"><section class="signup-box"><h3>1. Seus dados</h3><div class="signup-fields"><div class="login-field"><label>Seu nome</label><input id="signupName" autocomplete="name" placeholder="Nome do responsável" required></div><div class="login-field"><label>Nome da empresa</label><input id="signupBusiness" placeholder="Ex.: Studio Bella" required maxlength="120"></div><div class="login-field"><label>Tipo de negócio</label><select id="signupSegment" required><option value="salon">Salão de beleza</option><option value="esthetic">Clínica de estética</option><option value="doctor">Consultório médico</option><option value="other">Outro</option></select></div><div class="login-field"><label>E-mail</label><input id="signupEmail" type="email" autocomplete="email" placeholder="contato@empresa.com" required></div><div class="login-field"><label>Senha</label><input id="signupPassword" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres" required></div><div class="login-field"><label>Confirmar senha</label><input id="signupPassword2" type="password" autocomplete="new-password" placeholder="Digite novamente" required></div></div></section><section class="signup-box"><h3>2. Escolha seu plano</h3><div class="signup-plans">${plans}</div></section><div id="signupError" class="login-error">${signupMessage||''}</div><button id="signupButton" class="btn primary signup-submit" type="submit">Criar minha conta</button><p class="signup-footnote">Depois do cadastro, você será direcionado para a página de login.</p></form></div></div>`;
 }
     async function openSignup(){
   signupMode=true;signupLoading=true;signupMessage='';signupWaitingEmail='';render();
@@ -854,6 +856,19 @@
   }
   if(!signupPlans.some(p=>p.code===signupSelectedPlan))signupSelectedPlan=signupPlans[0]?.code||'';
   signupLoading=false;render();
+}
+    function finishSignupToLogin(){
+  signupMode=false;
+  signupLoading=false;
+  signupMessage='';
+  signupWaitingEmail='';
+  loginMessage='Conta criada com sucesso. Entre com seu e-mail e senha.';
+  render();
+  const input=document.getElementById('ownerUser');
+  if(input){
+    input.value=loginPrefillEmail;
+    input.focus();
+  }
 }
     function closeSignup(){
   signupMode=false;signupLoading=false;signupMessage='';signupWaitingEmail='';render();
@@ -895,16 +910,16 @@
   if(error){
     console.error(error);
     if(e)e.textContent=error.message?.toLowerCase().includes('disabled')?'Novos cadastros estão temporariamente fechados.':'Não foi possível criar a conta. Se este e-mail já estiver cadastrado, entre ou use “Esqueci minha senha”.';
-    if(btn){btn.disabled=false;btn.textContent='Criar minha conta e começar'}
+    if(btn){btn.disabled=false;btn.textContent='Criar minha conta'}
     return;
   }
+  loginPrefillEmail=email;
   signupMessage='';
-  if(data?.session?.user){
-    signupMode=false;signupWaitingEmail='';
-    await detectAgendaAccess(data.session.user);
-    return;
-  }
   signupWaitingEmail=email;
+  if(data?.session){
+    await sb.auth.signOut();
+    authUser=null;appMode=null;ownerLogged=false;companyCtx=null;
+  }
   render();
 }
     function loginView(){
