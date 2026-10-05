@@ -160,21 +160,6 @@ async function cancelClaimed(env, businessId, job, reason) {
   });
 }
 
-async function validatedDispatch(env, businessId) {
-  for (let pass = 0; pass < 5; pass += 1) {
-    const job = await rpc(env, "agenda_baileys_claim_next", {
-      p_business_id: businessId,
-      p_lease_id: null
-    });
-    if (!job) return null;
-
-    // claim_next normally receives the active lease. The internal route patches
-    // this parameter before calling this helper.
-    return job;
-  }
-  return null;
-}
-
 async function claimAndValidate(env, businessId, leaseId) {
   for (let pass = 0; pass < 5; pass += 1) {
     const job = await rpc(env, "agenda_baileys_claim_next", {
