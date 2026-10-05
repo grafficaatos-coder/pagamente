@@ -1034,7 +1034,7 @@
 
   <section class="wa-free-auto">
     <div class="wa-free-auto-top">
-      <div><span class="eyebrow">Automação sem custo</span><h3>${due.length?due.length+' mensagem(ns) pronta(s) para enviar':'Nenhuma mensagem pendente agora'}</h3><p>O sistema monta e agenda as mensagens automaticamente. Se o Baileys experimental estiver conectado, a Cloudflare poderá disparar a fila sozinha.</p></div>
+      <div><span class="eyebrow">Automação sem custo</span><h3>${due.length?due.length+' mensagem(ns) pronta(s) para enviar':'Nenhuma mensagem pendente agora'}</h3><p>O sistema monta e agenda as mensagens automaticamente. Se o Baileys experimental estiver conectado, o servidor Oracle poderá disparar a fila sozinho.</p></div>
       <div class="wa-free-count">${due.length}</div>
     </div>
     <div class="wa-free-actions">
@@ -1370,7 +1370,7 @@
   const enabled=!!document.getElementById('baileysEnabled')?.checked;
   const e=document.getElementById('baileysConfigError');
   if(enabled&&!url.toLowerCase().startsWith('https://')){
-    if(e)e.textContent='Informe a URL HTTPS publicada pela Cloudflare antes de ativar.';
+    if(e)e.textContent='Informe a URL HTTPS publicada pela Oracle antes de ativar.';
     return;
   }
   const {error}=await sb.from('agenda_platform_settings').update({
@@ -1468,9 +1468,9 @@
     <section class="panel"><div class="head"><div><span class="eyebrow">Inadimplência</span><h3>Controle automático</h3></div></div><div class="setting-row"><span><b>Bloqueio automático</b><small>Suspender após o período de tolerância</small></span><span class="toggle ${s.autoBlock?'on':''}" onclick="toggleAdminSetting('autoBlock')"></span></div><div class="setting-row"><span><b>Dias de tolerância</b><small>Depois do vencimento</small></span><button class="setting-edit" onclick="editAdminNumber('graceDays','Dias de tolerância')">${s.graceDays} dias</button></div><div class="setting-row"><span><b>Segmentos</b><small>Tipos de empresa disponíveis no cadastro</small></span><strong>Salão · Estética · Médico · Outro</strong></div></section>
   </div>
   <section class="panel baileys-platform-panel">
-    <div class="head"><div><span class="eyebrow">Experimental</span><h3>Baileys + Cloudflare</h3></div>${baileysStatus}</div>
-    <div class="meta-platform-note"><b>Automação não oficial.</b> Depois que o serviço Cloudflare Containers estiver publicado, os assinantes poderão conectar por QR Code e a fila de agendamentos poderá disparar sem tocar em “Enviar”.</div>
-    <div class="wa-form-grid"><div class="field wa-full"><b>URL do serviço Cloudflare</b><input id="baileysServiceUrl" value="${s.baileysServiceUrl||''}" placeholder="https://agenda-pro-baileys.seudominio.workers.dev"></div></div>
+    <div class="head"><div><span class="eyebrow">Experimental</span><h3>Baileys + Oracle Cloud</h3></div>${baileysStatus}</div>
+    <div class="meta-platform-note"><b>Automação não oficial.</b> Depois que o servidor Oracle Cloud estiver publicado, os assinantes poderão conectar por QR Code e a fila de agendamentos poderá disparar sem tocar em “Enviar”.</div>
+    <div class="wa-form-grid"><div class="field wa-full"><b>URL do servidor Oracle</b><input id="baileysServiceUrl" value="${s.baileysServiceUrl||''}" placeholder="https://agenda-pro-baileys.seudominio.workers.dev"></div></div>
     <label class="wa-check"><input id="baileysEnabled" type="checkbox" ${s.baileysEnabled?'checked':''}><span><b>Ativar modo Baileys para assinantes</b><small>Só ative depois que a URL acima estiver respondendo.</small></span></label>
     <div id="baileysConfigError" class="login-error"></div>
     <button class="btn primary" onclick="saveBaileysPlatformConfig()">Salvar Baileys</button>
