@@ -72,6 +72,8 @@
 
   
     .status-trial{background:#eaf0ff;color:#385aa8}.feature-off{opacity:.42}.feature-off i{color:var(--muted)}.plan-limit{display:flex;justify-content:space-between;align-items:center;margin:12px 0;padding:10px 11px;border-radius:12px;background:#faf7f8;border:1px solid var(--line)}.plan-limit span{font-size:10px;color:var(--muted);font-weight:800}.plan-limit b{font-size:12px}.limit-exceeded{color:var(--red-ink)!important}.setting-edit{border:1px solid var(--line);background:#fff;color:var(--wine);padding:7px 10px;border-radius:9px;font-size:10px;font-weight:850;cursor:pointer}.setting-edit:hover{background:#faf6f8}
+  
+    .auth-loading,.blocked-screen{min-height:100vh;display:grid;place-items:center;background:var(--bg);text-align:center}.auth-loading{gap:12px;color:var(--wine)}.blocked-card{width:min(92vw,480px);background:#fff;border:1px solid var(--line);border-radius:24px;padding:30px;box-shadow:0 24px 60px rgba(70,45,55,.12)}.blocked-card .logo{margin:0 auto 18px}.blocked-card h2{font:600 30px Georgia,serif;margin:8px 0}.blocked-card p{color:var(--muted);line-height:1.6}.blocked-plan{display:grid;grid-template-columns:1fr 1fr;gap:8px;background:#faf6f8;border:1px solid var(--line);padding:12px;border-radius:14px;margin:18px 0}.blocked-plan span{color:var(--muted);font-size:10px}.blocked-plan b{font-size:11px}.company-app .side-foot b{color:#fff}.login-card button:disabled{opacity:.6;cursor:wait}
   </style>
 </head>
 <body>
@@ -110,11 +112,16 @@
         extra:'<div class="field"><b>Forma de atendimento</b><select id="fextra"><option>Particular</option><option>Convênio</option><option>Teleconsulta</option></select></div><div class="field"><b>Convênio (opcional)</b><input id="finsurance" placeholder="Ex.: Unimed"></div>'
       }
     };
+    const SERVICE_DEFAULTS=Object.fromEntries(Object.entries(PROFILES).map(([k,v])=>[k,v.services.map(x=>[...x])]));
     let segment=localStorage.getItem('agendaProSegment')||'salon';
     if(!PROFILES[segment])segment='salon';
     let page='home',agendaView='day',A=[];
-    const OWNER_AUTH={user:'admin',pass:'agenda2026',legacyPass:'AgendaPro2026!',name:'Proprietário'};
-    let ownerLogged=sessionStorage.getItem('agendaProOwner')==='1';
+    const SUPABASE_URL='https://zmrihyzwsyxjikdknfug.supabase.co';
+    const SUPABASE_KEY='sb_publishable_nX-qLw9rEdLUvZpgXMj1LA_2gjB3umn';
+    const AGENDA_ADMIN_FUNCTION=SUPABASE_URL+'/functions/v1/agenda-admin-access';
+    let sb=null,authUser=null,appMode=null,ownerLogged=false,authLoading=true,loginMessage='';
+    let companyCtx=null;
+    let companyData={customers:[],services:[],appointments:[]};
     const CAPABILITIES={
       agenda:'Agenda online',clients:'Cadastro de clientes/pacientes',reminders:'Lembretes básicos',
       whatsapp:'WhatsApp automático',finance:'Financeiro',reports:'Relatórios',
@@ -156,9 +163,75 @@
     function resetData(){A=P().appts.map(x=>[...x])}
     resetData();
     function titles(){return {overview:['Visão geral','Administração da plataforma'],clients:['Assinantes','Empresas cadastradas na plataforma'],plans:['Planos','Planos e valores mensais'],billing:['Cobranças','Mensalidades e situação de pagamento'],settings:['Configurações','Preferências da plataforma']}}
-    function nav(){const n=[['overview','home','Visão geral'],['clients','users','Assinantes'],['plans','sparkle','Planos'],['billing','wallet','Cobranças'],['settings','more','Configurações']];return `<aside class="side"><div class="brand"><div class="logo">AP</div><div><b>Agenda Pro</b><small>PROPRIETÁRIO</small></div></div><nav class="nav">${n.map(x=>`<button class="${adminTab===x[0]?'on':''}" onclick="setAdminTab('${x[0]}')">${I[x[1]]}<span class="label">${x[2]}</span></button>`).join('')}</nav><div class="side-foot"><small>Acesso</small><b>Administrador da plataforma</b></div></aside>`}
-    function bottom(){const n=[['overview','home','Visão geral'],['clients','users','Assinantes'],['plans','sparkle','Planos'],['billing','wallet','Cobranças'],['settings','more','Mais']];return `<nav class="bottom">${n.map(x=>`<button class="${adminTab===x[0]?'on':''}" onclick="setAdminTab('${x[0]}')">${I[x[1]]}${x[2]}</button>`).join('')}</nav>`}
-    function shell(content){const t=titles()[adminTab]||titles().overview;return `<div class="app admin-owner-app">${nav()}<main class="main"><header class="top"><div class="top-left"><div class="logo mini-logo">AP</div><div><h1>${t[0]}</h1><small>${t[1]}</small></div></div><div class="top-actions"><span class="owner-session"><i class="owner-dot"></i> Proprietário</span><button class="icon-btn" onclick="toast('Nenhuma notificação nova')" aria-label="Notificações">${I.bell}</button><button class="logout-btn" onclick="ownerLogout()">Sair</button></div></header><div class="content">${content}</div></main>${bottom()}</div>`}
+    function companyTitles(){
+  const p=P();
+  return {
+    home:['Início',companyCtx?.business?.name||p.business],
+    agenda:['Agenda','Organize seus horários'],
+    clients:[p.people,'Cadastro e histórico'],
+    services:[p.serviceLabel,p.catalog],
+    cash:['Financeiro','Resumo do negócio'],
+    wa:['WhatsApp','Lembretes e confirmações'],
+    book:['Novo horário','Cadastrar atendimento']
+  };
+}
+    function hasFeature(key){
+  return appMode==='company'&&!!companyCtx&&!companyAccessBlocked()&&!!companyCtx.plan?.permissions?.[key];
+}
+    function companyAccessBlocked(){
+  if(!companyCtx)return true;
+  if(companyCtx.business?.manual_blocked)return true;
+  const st=companyCtx.subscription?.status;
+  if(st==='suspended'||st==='cancelled')return true;
+  const now=new Date();
+  if(st==='trialing'&&companyCtx.subscription?.trial_ends_at&&new Date(companyCtx.subscription.trial_ends_at)<now)return true;
+  if(st==='past_due'&&companyCtx.settings?.auto_block&&companyCtx.subscription?.current_period_end){
+    const d=new Date(companyCtx.subscription.current_period_end);
+    d.setDate(d.getDate()+Number(companyCtx.settings.grace_days||0));
+    if(now>d)return true;
+  }
+  return false;
+}
+    function segmentLabel(s){
+  return s==='salon'?'Salão de beleza':s==='esthetic'?'Clínica de estética':s==='doctor'?'Consultório médico':'Outro';
+}
+    function subscriptionLabel(){
+  const s=companyCtx?.subscription?.status;
+  return s==='trialing'?'Teste grátis':s==='past_due'?'Pagamento pendente':s==='suspended'?'Bloqueado':s==='cancelled'?'Cancelado':'Ativo';
+}
+    function nav(){
+  if(appMode==='company'){
+    const p=P(),n=[['home','home','Início']];
+    if(hasFeature('agenda'))n.push(['agenda','calendar','Agenda'],['services','sparkle',p.serviceLabel]);
+    if(hasFeature('clients'))n.push(['clients','users',p.people]);
+    if(hasFeature('finance'))n.push(['cash','wallet','Financeiro']);
+    if(hasFeature('whatsapp'))n.push(['wa','message','WhatsApp']);
+    return `<aside class="side"><div class="brand"><div class="logo">${p.initials}</div><div><b>${companyCtx?.business?.name||p.brand}</b><small>${companyCtx?.plan?.name||'PLANO'}</small></div></div><nav class="nav">${n.map(x=>`<button class="${page===x[0]?'on':''}" onclick="go('${x[0]}')">${I[x[1]]}<span class="label">${x[2]}</span></button>`).join('')}</nav><div class="side-foot"><small>Acesso da empresa</small><b>${subscriptionLabel()}</b></div></aside>`;
+  }
+  const n=[['overview','home','Visão geral'],['clients','users','Assinantes'],['plans','sparkle','Planos'],['billing','wallet','Cobranças'],['settings','more','Configurações']];
+  return `<aside class="side"><div class="brand"><div class="logo">AP</div><div><b>Agenda Pro</b><small>PROPRIETÁRIO</small></div></div><nav class="nav">${n.map(x=>`<button class="${adminTab===x[0]?'on':''}" onclick="setAdminTab('${x[0]}')">${I[x[1]]}<span class="label">${x[2]}</span></button>`).join('')}</nav><div class="side-foot"><small>Acesso</small><b>Administrador da plataforma</b></div></aside>`;
+}
+    function bottom(){
+  if(appMode==='company'){
+    const p=P(),n=[['home','home','Início']];
+    if(hasFeature('agenda'))n.push(['agenda','calendar','Agenda']);
+    if(hasFeature('clients'))n.push(['clients','users',p.people]);
+    if(hasFeature('finance'))n.push(['cash','wallet','Financeiro']);
+    if(hasFeature('whatsapp'))n.push(['wa','message','WhatsApp']);
+    const items=n.slice(0,5);
+    return `<nav class="bottom">${items.map(x=>`<button class="${page===x[0]?'on':''}" onclick="go('${x[0]}')">${I[x[1]]}${x[2]}</button>`).join('')}</nav>${hasFeature('agenda')?`<button class="fab" onclick="book()" aria-label="Novo horário">${I.plus}</button>`:''}`;
+  }
+  const n=[['overview','home','Visão geral'],['clients','users','Assinantes'],['plans','sparkle','Planos'],['billing','wallet','Cobranças'],['settings','more','Mais']];
+  return `<nav class="bottom">${n.map(x=>`<button class="${adminTab===x[0]?'on':''}" onclick="setAdminTab('${x[0]}')">${I[x[1]]}${x[2]}</button>`).join('')}</nav>`;
+}
+    function shell(content){
+  if(appMode==='company'){
+    const p=P(),t=companyTitles()[page]||companyTitles().home;
+    return `<div class="app company-app">${nav()}<main class="main"><header class="top"><div class="top-left"><div class="logo mini-logo">${p.initials}</div><div><h1>${t[0]}</h1><small>${t[1]}</small></div></div><div class="top-actions"><span class="owner-session"><i class="owner-dot"></i> ${companyCtx?.plan?.name||'Plano'}</span>${hasFeature('agenda')?'<button class="btn primary" onclick="book()">+ Novo horário</button>':''}<button class="logout-btn" onclick="ownerLogout()">Sair</button></div></header><div class="content">${content}</div></main>${bottom()}</div>`;
+  }
+  const t=titles()[adminTab]||titles().overview;
+  return `<div class="app admin-owner-app">${nav()}<main class="main"><header class="top"><div class="top-left"><div class="logo mini-logo">AP</div><div><h1>${t[0]}</h1><small>${t[1]}</small></div></div><div class="top-actions"><span class="owner-session"><i class="owner-dot"></i> Proprietário</span><button class="icon-btn" onclick="toast('Nenhuma notificação nova')" aria-label="Notificações">${I.bell}</button><button class="logout-btn" onclick="ownerLogout()">Sair</button></div></header><div class="content">${content}</div></main>${bottom()}</div>`;
+}
     function segmentSwitch(){return `<div class="segment-switch"><button class="${segment==='salon'?'on':''}" onclick="setSegment('salon')">✂️ Salão</button><button class="${segment==='esthetic'?'on':''}" onclick="setSegment('esthetic')">✨ Estética</button><button class="${segment==='doctor'?'on':''}" onclick="setSegment('doctor')">🩺 Consultório</button></div>`}
     function setSegment(s){segment=s;localStorage.setItem('agendaProSegment',s);resetData();page='home';render();toast(`Modo alterado para ${P().segment}`)}
     function greeting(){const h=new Date().getHours();return h<12?'Bom dia':h<18?'Boa tarde':'Boa noite'}
@@ -211,16 +284,110 @@
     function fillPhone(){const n=document.getElementById('fclient').value,c=P().peopleData.find(x=>x[0]===n);document.getElementById('fphone').value=c?c[1]:''}
     function saveAppointment(){const p=P(),client=document.getElementById('fclient').value,phone=document.getElementById('fphone').value,service=document.getElementById('fservice').value,pro=document.getElementById('fpro').value,date=document.getElementById('fdate').value,time=document.getElementById('ftime').value,status=document.getElementById('fstatus').value,send=document.getElementById('fsend').checked;if(!client||client==='nova'||!phone||!date||!time)return toast(`Preencha ${p.person.toLowerCase()}, WhatsApp, data e horário`);A.unshift([time,client,service,pro,status==='Pendente'?'p':'c']);page='agenda';agendaView='day';render();setTimeout(()=>toast(send?'Horário salvo · confirmação de WhatsApp simulada':'Horário salvo'),100)}
 
-    function loginView(){return `<div class="login-screen"><section class="login-brand"><div class="logo">AP</div><h1>Controle sua plataforma em um só lugar.</h1><p>Entre como proprietário para administrar assinantes, planos, mensalidades e acesso das empresas que usam o Agenda Pro.</p><div class="login-feature"><i>✓</i> Planos e valores mensais</div><div class="login-feature"><i>✓</i> Assinantes ativos e atrasados</div><div class="login-feature"><i>✓</i> Bloqueio e liberação de acesso</div></section><section class="login-panel"><form class="login-card" onsubmit="return doOwnerLogin(event)"><span class="eyebrow">Acesso do proprietário</span><h2>Entrar no Agenda Pro</h2><p>Use seu login administrativo para acessar a gestão da plataforma.</p><div class="login-field"><label>Login</label><input id="ownerUser" autocomplete="username" placeholder="Digite seu login" autofocus></div><div class="login-field"><label>Senha</label><input id="ownerPassword" type="password" autocomplete="current-password" placeholder="Digite sua senha"></div><div id="loginError" class="login-error"></div><button class="btn primary" style="width:100%;min-height:48px" type="submit">Entrar como proprietário</button><div class="login-help"><b>Versão de teste.</b> Este login funciona somente neste protótipo. Na publicação comercial, a autenticação será conectada ao banco de dados e a senha ficará protegida no servidor.</div></form></section></div>`}
-    function doOwnerLogin(ev){ev?.preventDefault();const u=(document.getElementById('ownerUser')?.value||'').trim().toLowerCase(),p=(document.getElementById('ownerPassword')?.value||'').trim(),e=document.getElementById('loginError');if(u===OWNER_AUTH.user&&(p===OWNER_AUTH.pass||p===OWNER_AUTH.legacyPass)){try{ownerLogged=true;sessionStorage.setItem('agendaProOwner','1');page='admin';render();setTimeout(()=>toast('Bem-vindo à administração da plataforma'),80)}catch(err){console.error(err);ADMIN=cloneAdmin();localStorage.setItem('agendaProAdmin',JSON.stringify(ADMIN));page='admin';try{render()}catch(err2){console.error(err2);ownerLogged=false;sessionStorage.removeItem('agendaProOwner');if(e)e.textContent='Não foi possível abrir a administração. Atualize a página e tente novamente.'}}return false}if(e)e.textContent='Login ou senha incorretos.';return false}
-    function ownerLogout(){sessionStorage.removeItem('agendaProOwner');ownerLogged=false;page='admin';adminTab='overview';render()}
-
+    function companyBlockedView(){
+  const name=companyCtx?.business?.name||'Sua empresa';
+  return `<div class="blocked-screen"><div class="blocked-card"><div class="logo">AP</div><span class="eyebrow">Acesso suspenso</span><h2>${name}</h2><p>O acesso desta empresa está bloqueado ou a assinatura não está ativa. Entre em contato com o administrador da plataforma para regularizar.</p><div class="blocked-plan"><span>Plano</span><b>${companyCtx?.plan?.name||'—'}</b><span>Status</span><b>${subscriptionLabel()}</b></div><button class="btn primary" onclick="ownerLogout()">Sair</button></div></div>`;
+}
+    async function initSupabase(){
+  try{
+    const mod=await import('https://esm.sh/@supabase/supabase-js@2.95.0');
+    sb=mod.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+    const {data}=await sb.auth.getSession();
+    authLoading=false;
+    if(data?.session?.user)await detectAgendaAccess(data.session.user);else render();
+    sb.auth.onAuthStateChange((event)=>{if(event==='SIGNED_OUT'){authUser=null;appMode=null;ownerLogged=false;companyCtx=null;render()}});
+  }catch(err){
+    console.error(err);authLoading=false;loginMessage='Não foi possível conectar ao login seguro.';render();
+  }
+}
+    async function signInAgendaPro(){
+  if(!sb)return;
+  const email=(document.getElementById('ownerUser')?.value||'').trim().toLowerCase();
+  const password=document.getElementById('ownerPassword')?.value||'';
+  const e=document.getElementById('loginError'),btn=document.getElementById('loginButton');
+  if(!email||!password){if(e)e.textContent='Digite e-mail e senha.';return}
+  if(btn){btn.disabled=true;btn.textContent='Entrando...'}
+  const {data,error}=await sb.auth.signInWithPassword({email,password});
+  if(error||!data?.user){
+    if(e)e.textContent='E-mail ou senha incorretos.';
+    if(btn){btn.disabled=false;btn.textContent='Entrar'}
+    return;
+  }
+  loginMessage='';
+  await detectAgendaAccess(data.user);
+  if(btn){btn.disabled=false;btn.textContent='Entrar'}
+}
+    async function detectAgendaAccess(user){
+  authUser=user;
+  const {data:profile}=await sb.from('profiles').select('is_platform_admin,display_name').eq('id',user.id).maybeSingle();
+  if(profile?.is_platform_admin){
+    appMode='owner';ownerLogged=true;companyCtx=null;page='admin';adminTab='overview';
+    if(typeof loadOwnerData==='function')await loadOwnerData();
+    render();return;
+  }
+  const {data:member,error:memberError}=await sb.from('agenda_members').select('business_id,role').eq('user_id',user.id).limit(1).maybeSingle();
+  if(memberError||!member){
+    await sb.auth.signOut();loginMessage='Esta conta ainda não possui acesso ao Agenda Pro.';appMode=null;render();return;
+  }
+  const [{data:business},{data:subscription},{data:settings}]=await Promise.all([
+    sb.from('agenda_businesses').select('*').eq('id',member.business_id).single(),
+    sb.from('agenda_subscriptions').select('*').eq('business_id',member.business_id).single(),
+    sb.from('agenda_platform_settings').select('*').eq('id',true).maybeSingle()
+  ]);
+  if(!business||!subscription){
+    await sb.auth.signOut();loginMessage='Cadastro da empresa incompleto. Fale com o administrador.';appMode=null;render();return;
+  }
+  const {data:plan}=await sb.from('agenda_plans').select('*').eq('id',subscription.plan_id).single();
+  if(!plan){
+    await sb.auth.signOut();loginMessage='Plano da empresa não encontrado.';appMode=null;render();return;
+  }
+  companyCtx={business,membership:member,subscription,plan,settings:settings||{auto_block:true,grace_days:5}};
+  segment=PROFILES[business.segment]?business.segment:'salon';
+  appMode='company';ownerLogged=false;page='home';
+  if(typeof loadCompanyData==='function')await loadCompanyData();
+  render();
+}
+    async function callAgendaAdmin(payload){
+  const {data}=await sb.auth.getSession();
+  const token=data?.session?.access_token;
+  if(!token)throw new Error('Sessão expirada');
+  const r=await fetch(AGENDA_ADMIN_FUNCTION,{method:'POST',headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY,'Authorization':'Bearer '+token},body:JSON.stringify(payload)});
+  const out=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(out.error||'Erro ao criar acesso');
+  return out;
+}
+    function loginView(){
+  return `<div class="login-screen"><section class="login-brand"><div class="logo">AP</div><h1>Um login para cada empresa.</h1><p>O Agenda Pro identifica automaticamente se quem entrou é o proprietário da plataforma ou uma empresa assinante.</p><div class="login-feature"><i>✓</i> Dados separados por empresa</div><div class="login-feature"><i>✓</i> Recursos liberados conforme o plano</div><div class="login-feature"><i>✓</i> Bloqueio por assinatura e limite de usuários</div></section><section class="login-panel"><form class="login-card" onsubmit="return doOwnerLogin(event)"><span class="eyebrow">Acesso seguro</span><h2>Entrar no Agenda Pro</h2><p>Use o e-mail e a senha cadastrados para sua conta.</p><div class="login-field"><label>E-mail</label><input id="ownerUser" type="email" autocomplete="username" placeholder="seuemail@empresa.com" autofocus></div><div class="login-field"><label>Senha</label><input id="ownerPassword" type="password" autocomplete="current-password" placeholder="Digite sua senha"></div><div id="loginError" class="login-error">${loginMessage||''}</div><button id="loginButton" class="btn primary" style="width:100%;min-height:48px" type="submit">Entrar</button><div class="login-help"><b>Acesso individual.</b> O dono da plataforma entra na administração. Salões, clínicas e consultórios entram diretamente na própria agenda, conforme o plano contratado.</div></form></section></div>`;
+}
+    function doOwnerLogin(ev){ev?.preventDefault();signInAgendaPro();return false}
+    function ownerLogout(){
+  if(sb)sb.auth.signOut();
+  authUser=null;appMode=null;ownerLogged=false;companyCtx=null;companyData={customers:[],services:[],appointments:[]};page='home';adminTab='overview';loginMessage='';render();
+}
     function setAgendaView(v){agendaView=v;render()}
-    function go(p){if(!ownerLogged){render();return}page='admin';adminTab=['overview','clients','plans','billing','settings'].includes(p)?p:'overview';render();scrollTo(0,0)}
-    function book(){toast('Agendamentos ficam no acesso de cada empresa cliente')}
+    function go(p){
+  if(!appMode){render();return}
+  if(appMode==='owner'){page='admin';adminTab=['overview','clients','plans','billing','settings'].includes(p)?p:'overview';render();scrollTo(0,0);return}
+  const allowed={home:true,agenda:hasFeature('agenda'),services:hasFeature('agenda'),clients:hasFeature('clients'),cash:hasFeature('finance'),wa:hasFeature('whatsapp')};
+  if(!allowed[p])return toast('Este recurso não está incluído no seu plano');
+  page=p;render();scrollTo(0,0);
+}
+    function book(){
+  if(appMode!=='company')return toast('Agendamentos ficam no acesso das empresas');
+  if(!hasFeature('agenda'))return toast('Agenda não incluída no seu plano');
+  page='book';render();scrollTo(0,0);
+}
     function toast(x){const e=document.getElementById('toast');e.textContent=x;e.hidden=false;clearTimeout(window.__toastTimer);window.__toastTimer=setTimeout(()=>e.hidden=true,1900)}
-    function render(){document.title=ownerLogged?'Agenda Pro · Administração':'Agenda Pro · Login';if(!ownerLogged){R.innerHTML=loginView();return}page='admin';R.innerHTML=admin()}
+    function render(){
+  if(authLoading){document.title='Agenda Pro';R.innerHTML='<div class="auth-loading"><div class="logo">AP</div><b>Carregando Agenda Pro...</b></div>';return}
+  if(!appMode){document.title='Agenda Pro · Login';R.innerHTML=loginView();return}
+  if(appMode==='owner'){document.title='Agenda Pro · Administração';page='admin';R.innerHTML=admin();return}
+  document.title=(companyCtx?.business?.name||'Agenda Pro')+' · Agenda Pro';
+  if(companyAccessBlocked()){R.innerHTML=companyBlockedView();return}
+  R.innerHTML=page==='book'?booking():({home,agenda,clients,services,cash,wa}[page]||home)();
+}
     render();
+    initSupabase();
   </script>
 </body>
 </html>
