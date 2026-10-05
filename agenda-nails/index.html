@@ -330,6 +330,17 @@
     @media(max-width:720px){.wa-free-auto-top{align-items:flex-start}.wa-queue-row{grid-template-columns:1fr}.wa-queue-type{width:max-content}.wa-queue-row .btn{width:100%}.wa-upcoming-row{grid-template-columns:1fr}.wa-free-actions .btn{flex:1}}
   
     .baileys-platform-panel{margin-top:12px}
+  
+    .baileys-card{margin-bottom:12px;border-color:#ead9a8;background:linear-gradient(135deg,#fffdf5,#fff)}
+    .baileys-card.connected{border-color:#c7e6d1;background:linear-gradient(135deg,#f1fbf4,#fff)}
+    .baileys-card>p,.baileys-connected p{color:var(--muted);font-size:10px;line-height:1.5}
+    .baileys-connect-btn{background:#245f4a;color:#fff;min-height:45px}.baileys-connect-btn:disabled{opacity:.6}
+    .baileys-qr{display:flex;justify-content:center;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;margin:12px auto;max-width:310px}
+    .baileys-qr svg{width:100%;height:auto}
+    .baileys-steps{display:grid;gap:4px;padding:11px 12px;background:#f7f4ea;border-radius:11px;font-size:10px;margin-bottom:10px}
+    .baileys-steps span{color:var(--muted);line-height:1.45}
+    .baileys-warning{margin-top:12px;padding:9px 11px;border-radius:10px;background:#fff6df;color:#7d5c17;font-size:9px;line-height:1.4}
+    .baileys-connected b{display:block;font-size:18px;color:#245f4a}
   </style>
 </head>
 <body>
@@ -997,6 +1008,16 @@
     ? `<b>📱 No celular</b><span>O Agenda Pro prepara tudo sozinho e avisa quando houver mensagem. Ao abrir, o WhatsApp/WhatsApp Business já vem com o texto pronto.</span>`
     : `<b>💻 No computador</b><span>O Agenda Pro prepara tudo sozinho e avisa quando houver mensagem. Ao abrir, o WhatsApp Web já vem com o texto pronto.</span>`;
 
+  const baileysEnabled=!!(companyCtx?.settings?.baileys_enabled&&companyCtx?.settings?.baileys_service_url);
+  const baileysCard=baileysEnabled?`<section class="panel baileys-card ${baileysSession.status==='connected'?'connected':''}">
+    <div class="head"><div><span class="eyebrow">Experimental · Baileys</span><h3>${baileysSession.status==='connected'?'WhatsApp conectado por QR':'Automação por QR Code'}</h3></div><span class="status-badge ${baileysSession.status==='connected'?'status-active':'status-late'}">${baileysSession.status==='connected'?'Conectado':'Experimental'}</span></div>
+    ${baileysSession.status==='connected'
+      ? `<div class="baileys-connected"><b>${baileysSession.phone?'+'+baileysSession.phone:'WhatsApp conectado'}</b><p>Confirmações, lembretes e pós-atendimento da fila podem ser enviados automaticamente.</p>${admin?`<button class="btn wa-disconnect" onclick="disconnectBaileys()">Desconectar</button>`:''}</div>`
+      : `<p>Conecte como um aparelho vinculado. A sessão fica salva nesta empresa.</p>${baileysSession.qr_svg?`<div class="baileys-qr">${baileysSession.qr_svg}</div><div class="baileys-steps"><b>No WhatsApp do celular:</b><span>Configurações/⋮ → Aparelhos conectados → Conectar um aparelho → escaneie o QR.</span></div>`:''}<div id="baileysConnectError" class="login-error">${baileysSession.last_error||''}</div>${admin?`<button id="baileysConnectBtn" class="btn baileys-connect-btn" onclick="connectBaileys()">${baileysSession.qr_svg?'Gerar novo QR':'Conectar por QR Code'}</button>`:''}`
+    }
+    <div class="baileys-warning">Baileys usa o WhatsApp Web de forma não oficial. O WhatsApp pode desconectar ou restringir esta sessão.</div>
+  </section>`:'';
+
   const connectedCard=connected
     ? `<section class="panel wa-status connected"><div class="head"><div><span class="eyebrow">Conectado ao sistema</span><h3>WhatsApp Business ativo</h3></div><span class="status-badge status-active">Conectado</span></div><div class="wa-status-grid"><div><small>Número</small><b>${conn.display_phone_number||'Conectado'}</b></div><div><small>Nome verificado</small><b>${conn.verified_name||'—'}</b></div><div><small>Qualidade</small><b>${conn.quality_rating||'—'}</b></div><div><small>Automático</small><b>${conn.auto_confirmation?'Ligado':'Desligado'}</b></div></div>${admin?`<div class="wa-connected-actions"><button class="btn wa-disconnect" onclick="disconnectWhatsAppBusiness()">Desconectar</button></div>`:''}</section>`
     : admin
@@ -1013,17 +1034,18 @@
 
   <section class="wa-free-auto">
     <div class="wa-free-auto-top">
-      <div><span class="eyebrow">Automação sem custo</span><h3>${due.length?due.length+' mensagem(ns) pronta(s) para enviar':'Nenhuma mensagem pendente agora'}</h3><p>O sistema monta e agenda as mensagens automaticamente. O WhatsApp exige apenas o envio final quando você abrir a conversa.</p></div>
+      <div><span class="eyebrow">Automação sem custo</span><h3>${due.length?due.length+' mensagem(ns) pronta(s) para enviar':'Nenhuma mensagem pendente agora'}</h3><p>O sistema monta e agenda as mensagens automaticamente. Se o Baileys experimental estiver conectado, a Cloudflare poderá disparar a fila sozinha.</p></div>
       <div class="wa-free-count">${due.length}</div>
     </div>
     <div class="wa-free-actions">
       <button class="btn ${notifOn?'secondary':'primary'}" onclick="enableWhatsappNotifications()">${notifOn?'🔔 Avisos ativados':'🔔 Ativar avisos'}</button>
-      ${due.length?`<button class="btn whatsapp-btn" onclick="openWhatsappQueueItem('${due[0].id}')">Enviar próxima</button>`:''}
+      ${due.length?`<button class="btn whatsapp-btn" onclick="openWhatsappQueueItem('${due[0].id}')">Enviar próxima manualmente</button>`:''}
     </div>
     <div class="wa-queue-list">${queueRows||'<div class="empty-state">Quando chegar a hora de uma mensagem, ela aparecerá aqui automaticamente.</div>'}</div>
     ${futureRows?`<details class="wa-upcoming"><summary>Ver próximas mensagens preparadas (${future.length})</summary><div>${futureRows}</div></details>`:''}
   </section>
 
+  ${baileysCard}
   ${connectedCard}
   ${automationSettings}
 
@@ -1079,11 +1101,13 @@
   const appointmentsPromise=hasFeature('agenda')?sb.from('agenda_appointments').select('*').eq('business_id',bid).order('starts_at',{ascending:true}):Promise.resolve({data:[],error:null});
   const whatsPromise=sb.from('agenda_whatsapp_connections').select('business_id,status,waba_id,phone_number_id,display_phone_number,verified_name,quality_rating,auto_confirmation,confirmation_template_name,template_language,connected_at,last_error,updated_at').eq('business_id',bid).maybeSingle();
   const whatsMessagesPromise=sb.from('agenda_whatsapp_messages').select('id,to_phone,message_type,status,meta_message_id,error_message,created_at').eq('business_id',bid).order('created_at',{ascending:false}).limit(10);
-  const queuePromise=sb.from('agenda_whatsapp_queue').select('*').eq('business_id',bid).in('status',['pending','opened']).order('scheduled_for',{ascending:true}).limit(100);
-  let [cr,sr,ar,wr,wm,wq]=await Promise.all([customersPromise,servicesPromise,appointmentsPromise,whatsPromise,whatsMessagesPromise,queuePromise]);
+  const queuePromise=sb.from('agenda_whatsapp_queue').select('*').eq('business_id',bid).in('status',['pending','queued','opened','failed']).order('scheduled_for',{ascending:true}).limit(100);
+  const baileysPromise=sb.from('agenda_baileys_sessions').select('business_id,status,phone,last_error,connected_at,last_seen_at,updated_at').eq('business_id',bid).maybeSingle();
+  let [cr,sr,ar,wr,wm,wq,br]=await Promise.all([customersPromise,servicesPromise,appointmentsPromise,whatsPromise,whatsMessagesPromise,queuePromise,baileysPromise]);
   companyData={customers:cr.data||[],services:sr.data||[],appointments:ar.data||[]};
   whatsappState={connection:wr.data||null,messages:wm.data||[]};
   whatsappQueue=wq.data||[];
+  baileysSession=br.data?{status:br.data.status||'disconnected',phone:br.data.phone||null,qr_svg:null,last_error:br.data.last_error||null}:{status:'disconnected',phone:null,qr_svg:null,last_error:null};
   startWhatsappQueueWatcher();
   if(hasFeature('agenda')&&!companyData.services.length){
     await ensureDefaultServices();
@@ -1649,9 +1673,10 @@
   const service=companyData.services.find(x=>x.id===service_id);
   const phone=normalizeWhatsPhone(customer?.phone);
   const autoConnected=!!(whatsappState?.connection?.status==='connected'&&whatsappState?.connection?.auto_confirmation);
+  const baileysConnected=!!(companyCtx?.settings?.baileys_enabled&&baileysSession?.status==='connected');
   let whatsWindow=null;
 
-  if(phone&&!autoConnected){
+  if(phone&&!autoConnected&&!baileysConnected){
     try{whatsWindow=window.open('about:blank','_blank')}catch(e){}
   }
 
@@ -1686,7 +1711,7 @@
       window.open(url,'_blank','noopener,noreferrer');
       await markQueueByAppointment(created.id,'confirmation','opened');
     }
-  }else if(phone){
+  }else if(phone&&!baileysConnected){
     const msg=appointmentWhatsMessage(customer,service,date,time,professional_name,status);
     const url='https://wa.me/'+phone+'?text='+encodeURIComponent(msg);
     if(whatsWindow&&!whatsWindow.closed)whatsWindow.location.href=url;
@@ -1699,6 +1724,7 @@
   render();
   if(!phone)toast('Horário salvo. Cliente sem WhatsApp cadastrado.');
   else if(automaticSent)toast('Horário salvo e confirmação enviada automaticamente');
+  else if(baileysConnected)toast('Horário salvo. A confirmação entrou na fila automática do WhatsApp.');
   else if(!autoConnected)toast('Horário salvo. Lembretes futuros já foram preparados automaticamente.');
 }
     function companyBlockedView(){
@@ -1926,6 +1952,7 @@
     function doOwnerLogin(ev){ev?.preventDefault();signInAgendaPro();return false}
     function ownerLogout(){
   if(whatsappQueueTimer){clearInterval(whatsappQueueTimer);whatsappQueueTimer=null}
+  if(baileysPollTimer){clearInterval(baileysPollTimer);baileysPollTimer=null}
   if(sb)sb.auth.signOut();
   authUser=null;appMode=null;ownerLogged=false;companyCtx=null;companyData={customers:[],services:[],appointments:[]};whatsappQueue=[];page='home';adminTab='overview';loginMessage='';render();
 }
