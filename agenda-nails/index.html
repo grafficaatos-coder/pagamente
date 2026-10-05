@@ -328,6 +328,8 @@
     .wa-queue-main b,.wa-queue-main small{display:block}.wa-queue-main small{color:var(--muted);font-size:9px;margin-top:3px}
     .wa-upcoming{margin-top:10px;border-top:1px solid var(--line);padding-top:10px}.wa-upcoming summary{cursor:pointer;color:var(--wine);font-size:10px;font-weight:900}.wa-upcoming-row{display:grid;grid-template-columns:95px 1fr auto;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:9px}.wa-upcoming-row:last-child{border-bottom:0}.wa-upcoming-row small{color:var(--muted)}
     @media(max-width:720px){.wa-free-auto-top{align-items:flex-start}.wa-queue-row{grid-template-columns:1fr}.wa-queue-type{width:max-content}.wa-queue-row .btn{width:100%}.wa-upcoming-row{grid-template-columns:1fr}.wa-free-actions .btn{flex:1}}
+  
+    .baileys-platform-panel{margin-top:12px}
   </style>
 </head>
 <body>
@@ -380,6 +382,7 @@
     let companyData={customers:[],services:[],appointments:[]};
     let whatsappState={connection:null,messages:[]},whatsappLoading=false,whatsappSetupDevice='mobile';
     let whatsappQueue=[],whatsappQueueTimer=null;
+    let baileysSession={status:'disconnected',phone:null,qr_svg:null,last_error:null},baileysPollTimer=null;
     let metaPlatformConfig={configured:false,app_id:'',config_id:''},metaPlatformLoading=false,metaEmbeddedCapture={waba_id:'',phone_number_id:''},fbSdkPromise=null,metaListenerReady=false;
     const CAPABILITIES={
       agenda:'Agenda, serviços e horários',
@@ -1257,7 +1260,9 @@
         freeTrial:cfg.free_trial_enabled??ADMIN.settings.freeTrial,
         publicSignup:cfg.public_signup_enabled??ADMIN.settings.publicSignup,
         trialDays:cfg.trial_days??ADMIN.settings.trialDays,
-        graceDays:cfg.grace_days??ADMIN.settings.graceDays
+        graceDays:cfg.grace_days??ADMIN.settings.graceDays,
+        baileysEnabled:cfg.baileys_enabled??false,
+        baileysServiceUrl:cfg.baileys_service_url||''
       };
       ADMIN.plans=plans.map(p=>({
         id:p.id,code:p.code,name:p.name,price:Number(p.monthly_price_cents||0)/100,
@@ -1335,16 +1340,117 @@
   const trials=ADMIN.clients.filter(x=>effectiveClientStatus(x)==='trial').length;
   return `<div class="section-title"><span class="eyebrow">Financeiro da plataforma</span><h2>Cobranças</h2><p>Vencimentos, testes grátis e bloqueio dos assinantes.</p></div><div class="admin-kpis"><div class="admin-kpi"><span>Total previsto</span><b>${moneyBR(total)}</b><small>mensalidades cadastradas</small></div><div class="admin-kpi"><span>Em dia</span><b>${moneyBR(received)}</b><small>assinantes ativos</small></div><div class="admin-kpi"><span>Pendente</span><b>${moneyBR(pending)}</b><small>atrasados ou bloqueados</small></div><div class="admin-kpi"><span>Em teste</span><b>${trials}</b><small>período gratuito</small></div></div>${adminClients()}`;
 }
+    async function saveBaileysPlatformConfig(){
+  let url=(document.getElementById('baileysServiceUrl')?.value||'').trim();
+  if(url.endsWith('/'))url=url.slice(0,-1);
+  const enabled=!!document.getElementById('baileysEnabled')?.checked;
+  const e=document.getElementById('baileysConfigError');
+  if(enabled&&!url.toLowerCase().startsWith('https://')){
+    if(e)e.textContent='Informe a URL HTTPS publicada pela Cloudflare antes de ativar.';
+    return;
+  }
+  const {error}=await sb.from('agenda_platform_settings').update({
+    baileys_enabled:enabled,
+    baileys_service_url:url||null,
+    updated_at:new Date().toISOString()
+  }).eq('id',true);
+  if(error){console.error(error);if(e)e.textContent='Não foi possível salvar.';return}
+  await loadOwnerData();render();toast('Configuração do Baileys salva');
+}
+    async function callBaileys(action,method='GET'){
+  let base=String(companyCtx?.settings?.baileys_service_url||'').trim();
+  if(base.endsWith('/'))base=base.slice(0,-1);
+  if(!base)throw new Error('Serviço Baileys ainda não foi publicado');
+  const {data}=await sb.auth.getSession();
+  const token=data?.session?.access_token;
+  if(!token)throw new Error('Sessão expirada');
+  const r=await fetch(base+'/v1/'+encodeURIComponent(companyCtx.business.id)+'/'+action,{
+    method,
+    headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'}
+  });
+  const out=await r.json().catch(()=>({}));
+  if(!r.ok)throw new Error(out.error||'Falha na conexão do WhatsApp');
+  return out;
+}
+    async function loadBaileysStatus(redraw=true){
+  if(!companyCtx?.settings?.baileys_enabled||!companyCtx?.settings?.baileys_service_url)return;
+  try{
+    const out=await callBaileys('status','GET');
+    baileysSession={
+      status:out.status||'disconnected',
+      phone:out.phone||null,
+      qr_svg:out.qr_svg||null,
+      last_error:out.last_error||null
+    };
+  }catch(ex){
+    console.error(ex);
+    baileysSession={status:'error',phone:null,qr_svg:null,last_error:ex.message};
+  }
+  if(redraw&&page==='wa')render();
+}
+    function startBaileysPoll(){
+  if(baileysPollTimer)clearInterval(baileysPollTimer);
+  baileysPollTimer=setInterval(async()=>{
+    if(appMode!=='company'||page!=='wa'){
+      clearInterval(baileysPollTimer);baileysPollTimer=null;return;
+    }
+    await loadBaileysStatus(true);
+    if(baileysSession.status==='connected'){
+      clearInterval(baileysPollTimer);baileysPollTimer=null;
+    }
+  },2500);
+}
+    async function connectBaileys(){
+  const btn=document.getElementById('baileysConnectBtn');
+  const err=document.getElementById('baileysConnectError');
+  if(btn){btn.disabled=true;btn.textContent='Gerando QR Code...'}
+  if(err)err.textContent='';
+  try{
+    const out=await callBaileys('connect','POST');
+    baileysSession={
+      status:out.status||'connecting',
+      phone:out.phone||null,
+      qr_svg:out.qr_svg||null,
+      last_error:out.last_error||null
+    };
+    render();
+    if(baileysSession.status!=='connected')startBaileysPoll();
+    else toast('WhatsApp conectado');
+  }catch(ex){
+    console.error(ex);
+    baileysSession={status:'error',phone:null,qr_svg:null,last_error:ex.message};
+    render();
+  }
+}
+    async function disconnectBaileys(){
+  if(!confirm('Desconectar este WhatsApp do modo automático experimental?'))return;
+  try{
+    await callBaileys('disconnect','POST');
+    baileysSession={status:'disconnected',phone:null,qr_svg:null,last_error:null};
+    render();toast('WhatsApp desconectado');
+  }catch(ex){console.error(ex);toast(ex.message||'Não foi possível desconectar')}
+}
     function adminSettings(){
   const s=ADMIN.settings;
   const metaStatus=metaPlatformConfig.configured
     ? '<span class="status-badge status-active">Configurado</span>'
     : '<span class="status-badge status-late">Falta configurar</span>';
+  const baileysStatus=s.baileysEnabled&&s.baileysServiceUrl
+    ? '<span class="status-badge status-active">Ativo</span>'
+    : '<span class="status-badge status-late">Não publicado</span>';
   return `<div class="section-title"><span class="eyebrow">Plataforma</span><h2>Configurações</h2><p>Defina cadastro público, teste grátis e regras da plataforma.</p></div>
   <div class="settings-grid">
     <section class="panel"><div class="head"><div><span class="eyebrow">Novos assinantes</span><h3>Cadastro pelo site</h3></div></div><div class="setting-row"><span><b>Cadastro público</b><small>Permitir que novos clientes criem a própria conta e escolham o plano</small></span><span class="toggle ${s.publicSignup?'on':''}" onclick="toggleAdminSetting('publicSignup')"></span></div><div class="setting-row"><span><b>Teste grátis</b><small>Liberar uso inicial sem pagamento</small></span><span class="toggle ${s.freeTrial?'on':''}" onclick="toggleAdminSetting('freeTrial')"></span></div><div class="setting-row"><span><b>Duração do teste</b><small>Período inicial</small></span><button class="setting-edit" onclick="editAdminNumber('trialDays','Dias de teste grátis')">${s.trialDays} dias</button></div></section>
     <section class="panel"><div class="head"><div><span class="eyebrow">Inadimplência</span><h3>Controle automático</h3></div></div><div class="setting-row"><span><b>Bloqueio automático</b><small>Suspender após o período de tolerância</small></span><span class="toggle ${s.autoBlock?'on':''}" onclick="toggleAdminSetting('autoBlock')"></span></div><div class="setting-row"><span><b>Dias de tolerância</b><small>Depois do vencimento</small></span><button class="setting-edit" onclick="editAdminNumber('graceDays','Dias de tolerância')">${s.graceDays} dias</button></div><div class="setting-row"><span><b>Segmentos</b><small>Tipos de empresa disponíveis no cadastro</small></span><strong>Salão · Estética · Médico · Outro</strong></div></section>
   </div>
+  <section class="panel baileys-platform-panel">
+    <div class="head"><div><span class="eyebrow">Experimental</span><h3>Baileys + Cloudflare</h3></div>${baileysStatus}</div>
+    <div class="meta-platform-note"><b>Automação não oficial.</b> Depois que o serviço Cloudflare Containers estiver publicado, os assinantes poderão conectar por QR Code e a fila de agendamentos poderá disparar sem tocar em “Enviar”.</div>
+    <div class="wa-form-grid"><div class="field wa-full"><b>URL do serviço Cloudflare</b><input id="baileysServiceUrl" value="${s.baileysServiceUrl||''}" placeholder="https://agenda-pro-baileys.seudominio.workers.dev"></div></div>
+    <label class="wa-check"><input id="baileysEnabled" type="checkbox" ${s.baileysEnabled?'checked':''}><span><b>Ativar modo Baileys para assinantes</b><small>Só ative depois que a URL acima estiver respondendo.</small></span></label>
+    <div id="baileysConfigError" class="login-error"></div>
+    <button class="btn primary" onclick="saveBaileysPlatformConfig()">Salvar Baileys</button>
+  </section>
   <section class="panel meta-platform-panel">
     <div class="head"><div><span class="eyebrow">WhatsApp dos assinantes</span><h3>Conexão simplificada com a Meta</h3></div>${metaStatus}</div>
     <div class="meta-platform-note"><b>Você configura isto uma única vez.</b> Depois, seus assinantes verão apenas o botão “Conectar meu WhatsApp Business” e farão a autorização pela janela oficial da Meta.</div>
