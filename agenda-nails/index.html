@@ -82,6 +82,9 @@
     .inline-actions .mini-btn{margin-top:2px}
     .service-card-actions{flex-wrap:wrap}.service-card-actions button{min-width:72px}
     @media(max-width:760px){.agenda-actions{align-items:stretch}.agenda-actions select{width:100%}.top-actions .logout-btn:first-of-type{display:none}}
+  
+    .forgot-link{width:100%;border:0;background:transparent;color:var(--wine);font-size:10px;font-weight:850;padding:11px 4px 4px;cursor:pointer}
+    .forgot-link:hover{text-decoration:underline}
   </style>
 </head>
 <body>
@@ -127,7 +130,7 @@
     const SUPABASE_URL='https://zmrihyzwsyxjikdknfug.supabase.co';
     const SUPABASE_KEY='sb_publishable_nX-qLw9rEdLUvZpgXMj1LA_2gjB3umn';
     const AGENDA_ADMIN_FUNCTION=SUPABASE_URL+'/functions/v1/agenda-admin-access';
-    let sb=null,authUser=null,appMode=null,ownerLogged=false,authLoading=true,loginMessage='';
+    let sb=null,authUser=null,appMode=null,ownerLogged=false,authLoading=true,loginMessage='',passwordRecovery=false;
     let companyCtx=null;
     let companyData={customers:[],services:[],appointments:[]};
     const CAPABILITIES={
@@ -705,17 +708,21 @@
   return `<div class="blocked-screen"><div class="blocked-card"><div class="logo">AP</div><span class="eyebrow">Acesso suspenso</span><h2>${name}</h2><p>O acesso desta empresa está bloqueado ou a assinatura não está ativa. Entre em contato com o administrador da plataforma para regularizar.</p><div class="blocked-plan"><span>Plano</span><b>${companyCtx?.plan?.name||'—'}</b><span>Status</span><b>${subscriptionLabel()}</b></div><button class="btn primary" onclick="ownerLogout()">Sair</button></div></div>`;
 }
     async function initSupabase(){
-  try{
-    const mod=await import('https://esm.sh/@supabase/supabase-js@2.95.0');
-    sb=mod.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-    const {data}=await sb.auth.getSession();
-    authLoading=false;
-    if(data?.session?.user)await detectAgendaAccess(data.session.user);else render();
-    sb.auth.onAuthStateChange((event)=>{if(event==='SIGNED_OUT'){authUser=null;appMode=null;ownerLogged=false;companyCtx=null;render()}});
-  }catch(err){
-    console.error(err);authLoading=false;loginMessage='Não foi possível conectar ao login seguro.';render();
-  }
-}
+      try{
+        const mod=await import('https://esm.sh/@supabase/supabase-js@2.95.0');
+        sb=mod.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
+        sb.auth.onAuthStateChange(async(event,session)=>{
+          if(event==='PASSWORD_RECOVERY'){passwordRecovery=true;authLoading=false;render();return}
+          if(event==='SIGNED_OUT'){authUser=null;appMode=null;ownerLogged=false;companyCtx=null;passwordRecovery=false;render()}
+        });
+        const {data}=await sb.auth.getSession();
+        authLoading=false;
+        if(passwordRecovery){render();return}
+        if(data?.session?.user)await detectAgendaAccess(data.session.user);else render();
+      }catch(err){
+        console.error(err);authLoading=false;loginMessage='Não foi possível conectar ao login seguro.';render();
+      }
+    }
     async function signInAgendaPro(){
   if(!sb)return;
   const email=(document.getElementById('ownerUser')?.value||'').trim().toLowerCase();
@@ -772,8 +779,32 @@
   if(!r.ok)throw new Error(out.error||'Erro ao criar acesso');
   return out;
 }
+    function resetPasswordView(){
+  return `<div class="login-screen"><section class="login-brand"><div class="logo">AP</div><h1>Crie uma nova senha.</h1><p>Use uma senha com pelo menos 8 caracteres e não compartilhe o acesso.</p><div class="login-feature"><i>✓</i> Senha protegida pelo Supabase Auth</div><div class="login-feature"><i>✓</i> Sessão individual por usuário</div></section><section class="login-panel"><form class="login-card" onsubmit="event.preventDefault();finishPasswordReset()"><span class="eyebrow">Recuperação de acesso</span><h2>Nova senha</h2><div class="login-field"><label>Nova senha</label><input id="newPassword" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres"></div><div class="login-field"><label>Confirmar senha</label><input id="newPassword2" type="password" autocomplete="new-password" placeholder="Digite novamente"></div><div id="loginError" class="login-error">${loginMessage||''}</div><button class="btn primary" style="width:100%;min-height:48px" type="submit">Salvar nova senha</button></form></section></div>`;
+}
+    async function requestPasswordReset(){
+  if(!sb)return;
+  const email=(document.getElementById('ownerUser')?.value||'').trim().toLowerCase()||prompt('Digite o e-mail da sua conta:');
+  if(!email)return;
+  const redirectTo=location.origin+location.pathname;
+  const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo});
+  const e=document.getElementById('loginError');
+  if(error){console.error(error);if(e)e.textContent='Não foi possível enviar a recuperação. Confira o e-mail e tente novamente.';return}
+  if(e)e.textContent='Enviamos um link de recuperação para o e-mail informado.';
+}
+    async function finishPasswordReset(){
+  const p=document.getElementById('newPassword')?.value||'';
+  const p2=document.getElementById('newPassword2')?.value||'';
+  const e=document.getElementById('loginError');
+  if(p.length<8){if(e)e.textContent='A senha precisa ter pelo menos 8 caracteres.';return}
+  if(p!==p2){if(e)e.textContent='As senhas não conferem.';return}
+  const {error}=await sb.auth.updateUser({password:p});
+  if(error){console.error(error);if(e)e.textContent='Não foi possível atualizar a senha.';return}
+  passwordRecovery=false;loginMessage='Senha alterada. Entre com sua nova senha.';
+  await sb.auth.signOut();appMode=null;ownerLogged=false;authUser=null;render();
+}
     function loginView(){
-  return `<div class="login-screen"><section class="login-brand"><div class="logo">AP</div><h1>Um login para cada empresa.</h1><p>O Agenda Pro identifica automaticamente se quem entrou é o proprietário da plataforma ou uma empresa assinante.</p><div class="login-feature"><i>✓</i> Dados separados por empresa</div><div class="login-feature"><i>✓</i> Recursos liberados conforme o plano</div><div class="login-feature"><i>✓</i> Bloqueio por assinatura e limite de usuários</div></section><section class="login-panel"><form class="login-card" onsubmit="return doOwnerLogin(event)"><span class="eyebrow">Acesso seguro</span><h2>Entrar no Agenda Pro</h2><p>Use o e-mail e a senha cadastrados para sua conta.</p><div class="login-field"><label>E-mail</label><input id="ownerUser" type="email" autocomplete="username" placeholder="seuemail@empresa.com" autofocus></div><div class="login-field"><label>Senha</label><input id="ownerPassword" type="password" autocomplete="current-password" placeholder="Digite sua senha"></div><div id="loginError" class="login-error">${loginMessage||''}</div><button id="loginButton" class="btn primary" style="width:100%;min-height:48px" type="submit">Entrar</button><div class="login-help"><b>Acesso individual.</b> O dono da plataforma entra na administração. Salões, clínicas e consultórios entram diretamente na própria agenda, conforme o plano contratado.</div></form></section></div>`;
+  return `<div class="login-screen"><section class="login-brand"><div class="logo">AP</div><h1>Um login para cada empresa.</h1><p>O Agenda Pro identifica automaticamente se quem entrou é o proprietário da plataforma ou uma empresa assinante.</p><div class="login-feature"><i>✓</i> Dados separados por empresa</div><div class="login-feature"><i>✓</i> Recursos liberados conforme o plano</div><div class="login-feature"><i>✓</i> Bloqueio por assinatura e limite de usuários</div></section><section class="login-panel"><form class="login-card" onsubmit="return doOwnerLogin(event)"><span class="eyebrow">Acesso seguro</span><h2>Entrar no Agenda Pro</h2><p>Use o e-mail e a senha cadastrados para sua conta.</p><div class="login-field"><label>E-mail</label><input id="ownerUser" type="email" autocomplete="username" placeholder="seuemail@empresa.com" autofocus></div><div class="login-field"><label>Senha</label><input id="ownerPassword" type="password" autocomplete="current-password" placeholder="Digite sua senha"></div><div id="loginError" class="login-error">${loginMessage||''}</div><button id="loginButton" class="btn primary" style="width:100%;min-height:48px" type="submit">Entrar</button><button class="forgot-link" type="button" onclick="requestPasswordReset()">Esqueci minha senha</button><div class="login-help"><b>Acesso individual.</b> O proprietário entra na administração. Salões, clínicas e consultórios entram somente no painel da própria empresa.</div></form></section></div>`;
 }
     function doOwnerLogin(ev){ev?.preventDefault();signInAgendaPro();return false}
     function ownerLogout(){
@@ -797,6 +828,7 @@
     function toast(x){const e=document.getElementById('toast');e.textContent=x;e.hidden=false;clearTimeout(window.__toastTimer);window.__toastTimer=setTimeout(()=>e.hidden=true,1900)}
     function render(){
   if(authLoading){document.title='Agenda Pro';R.innerHTML='<div class="auth-loading"><div class="logo">AP</div><b>Carregando Agenda Pro...</b></div>';return}
+  if(passwordRecovery){document.title='Agenda Pro · Nova senha';R.innerHTML=resetPasswordView();return}
   if(!appMode){document.title='Agenda Pro · Login';R.innerHTML=loginView();return}
   if(appMode==='owner'){document.title='Agenda Pro · Administração';page='admin';R.innerHTML=admin();return}
   document.title=(companyCtx?.business?.name||'Agenda Pro')+' · Agenda Pro';
