@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [ "${EUID}" -eq 0 ]; then
+  SUDO=""
+else
+  SUDO="sudo"
+fi
+
+echo "Agenda Pro - instalação Baileys Oracle Cloud"
+echo
+
+$SUDO apt-get update
+$SUDO apt-get install -y docker.io git curl ca-certificates
+
+if ! docker compose version >/dev/null 2>&1; then
+  $SUDO apt-get install -y docker-compose-v2 2>/dev/null ||   $SUDO apt-get install -y docker-compose-plugin
+fi
+
+$SUDO systemctl enable --now docker
+$SUDO usermod -aG docker "$USER" || true
+
+INSTALL_DIR="/opt/agenda-pro-baileys"
+if [ ! -d "$INSTALL_DIR/.git" ]; then
+  $SUDO git clone https://github.com/grafficaatos-coder/pagamente.git "$INSTALL_DIR"
+else
+  $SUDO git -C "$INSTALL_DIR" pull --ff-only
+fi
+
+$SUDO chown -R "$USER":"$USER" "$INSTALL_DIR"
+cd "$INSTALL_DIR/agenda-nails/baileys-oracle"
+
+PUBLIC_IP="$(curl -4fsS https://api.ipify.org)"
+if [ -z "$PUBLIC_IP" ]; then
+  echo "Não foi possível descobrir o IP público da VM."
+  exit 1
+fi
+
+PUBLIC_HOST="${PUBLIC_IP}.sslip.io"
+
+echo
+echo "Cole agora a SUPABASE SERVICE ROLE KEY."
+echo "O valor não aparecerá na tela e será salvo somente nesta VM."
+read -r -s SERVICE_KEY
+echo
+
+if [ -z "$SERVICE_KEY" ]; then
+  echo "Service Role vazia. Instalação cancelada."
+  exit 1
+fi
+
+umask 077
+cat > .env <<EOF
+SUPABASE_URL=https://zmrihyzwsyxjikdknfug.supabase.co
+SUPABASE_PUBLISHABLE_KEY=sb_publishable_nX-qLw9rEdLUvZpgXMj1LA_2gjB3umn
+SUPABASE_SERVICE_ROLE_KEY=$SERVICE_KEY
+PORT=8080
+DATA_DIR=/data
+AGENDA_ORIGIN=https://agenda-nails-grafficaatos-3591.vercel.app
+PUBLIC_HOST=$PUBLIC_HOST
+LOG_LEVEL=warn
+EOF
+
+mkdir -p data
+
+if command -v ufw >/dev/null 2>&1; then
+  $SUDO ufw allow 22/tcp || true
+  $SUDO ufw allow 80/tcp || true
+  $SUDO ufw allow 443/tcp || true
+fi
+
+$SUDO docker compose build --pull
+$SUDO docker compose up -d
+
+echo
+echo "Aguardando o serviço..."
+for i in $(seq 1 36); do
+  if curl -kfsS "https://$PUBLIC_HOST/health" >/dev/null 2>&1; then
+    echo
+    echo "PRONTO"
+    echo "URL_DO_BAILEYS=https://$PUBLIC_HOST"
+    echo
+    echo "Copie essa URL e use no Agenda Pro > Proprietário > Configurações."
+    exit 0
+  fi
+  sleep 5
+done
+
+echo
+echo "O serviço subiu, mas o HTTPS ainda não respondeu."
+echo "Confirme se as portas TCP 80 e 443 estão liberadas na Oracle Cloud."
+echo "Depois teste: https://$PUBLIC_HOST/health"
