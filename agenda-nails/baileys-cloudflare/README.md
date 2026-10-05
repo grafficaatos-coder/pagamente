@@ -149,3 +149,35 @@ Se o resultado ficar ambíguo após o início do envio, o job é marcado como fa
 Baileys implementa o protocolo do WhatsApp Web e não é a API oficial da Meta.
 O WhatsApp pode alterar o protocolo, desconectar sessões ou restringir números.
 Por isso o Agenda Pro mantém também o modo manual e a integração oficial da Meta.
+
+
+## Deploy automático pelo GitHub
+
+O repositório possui:
+
+```text
+.github/workflows/deploy-agenda-baileys-cloudflare.yml
+```
+
+Cadastre apenas estes três GitHub Actions Secrets no repositório:
+
+```text
+CLOUDFLARE_API_TOKEN
+CLOUDFLARE_ACCOUNT_ID
+SUPABASE_SERVICE_ROLE_KEY
+```
+
+Depois abra **GitHub > Actions > Deploy Agenda Pro Baileys to Cloudflare > Run workflow**.
+
+O workflow executa automaticamente:
+
+1. cria o bucket R2 `agenda-pro-whatsapp-sessions` se ainda não existir;
+2. configura os secrets do Worker;
+3. deriva um token interno sem expor a service role ao Container;
+4. publica Worker + Durable Object + Container;
+5. testa o endpoint `/health`;
+6. identifica a URL `workers.dev`;
+7. grava a URL em `agenda_platform_settings.baileys_service_url`;
+8. ativa `baileys_enabled=true`.
+
+Assim o assinante passa a ver **Conectar por QR Code** na aba WhatsApp do Agenda Pro.
