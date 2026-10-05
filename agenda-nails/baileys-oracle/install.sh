@@ -42,6 +42,10 @@ install_ubuntu() {
 }
 
 install_oracle_linux() {
+  # Oracle Linux pode iniciar dnf-makecache automaticamente e bloquear o instalador.
+  $SUDO systemctl disable --now dnf-makecache.timer >/dev/null 2>&1 || true
+  $SUDO systemctl stop dnf-makecache.service >/dev/null 2>&1 || true
+  $SUDO dnf clean all >/dev/null 2>&1 || true
   $SUDO dnf -y install dnf-plugins-core git curl ca-certificates
   if ! command -v docker >/dev/null 2>&1; then
     $SUDO dnf config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
