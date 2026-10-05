@@ -1,0 +1,36 @@
+services:
+  baileys:
+    build: .
+    container_name: agenda-pro-baileys
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - ./data:/data
+    networks:
+      - agenda-net
+
+  caddy:
+    image: caddy:2.10-alpine
+    container_name: agenda-pro-caddy
+    restart: unless-stopped
+    depends_on:
+      - baileys
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - PUBLIC_HOST=${PUBLIC_HOST}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - agenda-net
+
+networks:
+  agenda-net:
+
+volumes:
+  caddy_data:
+  caddy_config:
