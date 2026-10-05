@@ -399,6 +399,88 @@
   const q=String(v||'').toLowerCase();
   document.querySelectorAll('.client-real-card').forEach(el=>el.style.display=(el.dataset.search||'').includes(q)?'':'none');
 }
+    
+    async function loadOwnerData(){
+      if(!sb)return;
+      const [plansRes,bizRes,subRes,membersRes,settingsRes]=await Promise.all([
+        sb.from('agenda_plans').select('*').order('monthly_price_cents'),
+        sb.from('agenda_businesses').select('*').order('created_at',{ascending:false}),
+        sb.from('agenda_subscriptions').select('*'),
+        sb.from('agenda_members').select('business_id,user_id,role'),
+        sb.from('agenda_platform_settings').select('*').eq('id',true).maybeSingle()
+      ]);
+      const firstError=plansRes.error||bizRes.error||subRes.error||membersRes.error||settingsRes.error;
+      if(firstError){console.error(firstError);throw firstError}
+      const plans=plansRes.data||[],businesses=bizRes.data||[],subs=subRes.data||[],members=membersRes.data||[];
+      const cfg=settingsRes.data||{};
+      ADMIN.settings={
+        ...ADMIN.settings,
+        autoBlock:cfg.auto_block??ADMIN.settings.autoBlock,
+        freeTrial:cfg.free_trial_enabled??ADMIN.settings.freeTrial,
+        trialDays:cfg.trial_days??ADMIN.settings.trialDays,
+        graceDays:cfg.grace_days??ADMIN.settings.graceDays
+      };
+      ADMIN.plans=plans.map(p=>({
+        id:p.id,code:p.code,name:p.name,price:Number(p.monthly_price_cents||0)/100,
+        active:!!p.visible,maxUsers:p.max_users??999,desc:p.description||'',
+        permissions:p.permissions||{},popular:p.code==='profissional'
+      }));
+      const planById=new Map(plans.map(p=>[p.id,p]));
+      const subByBiz=new Map(subs.map(s=>[s.business_id,s]));
+      ADMIN.clients=businesses.map(b=>{
+        const s=subByBiz.get(b.id),pl=planById.get(s?.plan_id);
+        const currentUsers=members.filter(m=>m.business_id===b.id).length;
+        return {
+          id:b.id,businessId:b.id,name:b.name,segment:segmentLabel(b.segment),segmentKey:b.segment,
+          plan:pl?.code||'essencial',planId:pl?.id,
+          status:s?.status==='trialing'?'trial':s?.status==='past_due'?'late':s?.status==='suspended'||b.manual_blocked?'blocked':'active',
+          due:s?.current_period_end?new Date(s.current_period_end).toLocaleDateString('pt-BR'):'—',
+          monthly:Number(pl?.monthly_price_cents||0)/100,currentUsers,
+          trialUntil:s?.trial_ends_at?new Date(s.trial_ends_at).toLocaleDateString('pt-BR'):null,
+          manualBlocked:!!b.manual_blocked,subscription:s
+        };
+      });
+    }
+
+    async function editClientUsers(id){
+      const x=ADMIN.clients.find(y=>y.id===id);if(!x)return;
+      const pl=ADMIN.plans.find(p=>p.code===x.plan);
+      if(pl&&pl.maxUsers<999&&x.currentUsers>=pl.maxUsers)return toast('Limite de usuários deste plano atingido');
+      const name=prompt('Nome do novo usuário/profissional:');if(!name)return;
+      const email=prompt('E-mail do novo usuário:');if(!email)return;
+      const password=prompt('Senha inicial (mínimo 8 caracteres):');if(!password||password.length<8)return toast('Senha muito curta');
+      const roleChoice=prompt('Perfil:\n1 - Administrador da empresa\n2 - Profissional\n3 - Visualização','2');
+      const role=roleChoice==='1'?'admin':roleChoice==='3'?'viewer':'professional';
+      try{
+        await callAgendaAdmin({action:'create_member',business_id:id,email:email.trim(),password,display_name:name.trim(),role});
+        await loadOwnerData();render();toast('Novo usuário criado');
+      }catch(err){toast(err.message||'Erro ao criar usuário')}
+    }
+
+    async function editPlanUsers(id){
+      const pl=ADMIN.plans.find(p=>p.id===id);if(!pl)return;
+      const v=prompt('Limite de usuários do plano '+pl.name+'. Digite 999 para ilimitado:',String(pl.maxUsers));
+      if(v===null)return;
+      const n=Math.max(1,Number(v));if(!Number.isFinite(n))return toast('Quantidade inválida');
+      const {error}=await sb.from('agenda_plans').update({max_users:n>=999?null:Math.round(n),updated_at:new Date().toISOString()}).eq('id',id);
+      if(error){console.error(error);return toast('Não foi possível atualizar')}
+      await loadOwnerData();render();toast('Limite atualizado');
+    }
+
+    async function editPlanFeatures(id){
+      const pl=ADMIN.plans.find(p=>p.id===id);if(!pl)return;
+      const entries=Object.entries(CAPABILITIES);
+      const list=entries.map(([k,label],i)=>(i+1)+' - '+label+' '+(pl.permissions?.[k]?'✓':'')).join('\n');
+      const current=entries.map(([k],i)=>pl.permissions?.[k]?i+1:null).filter(Boolean).join(',');
+      const v=prompt('Recursos do plano '+pl.name+':\n'+list+'\n\nDigite os números liberados, separados por vírgula:',current);
+      if(v===null)return;
+      const selected=new Set(v.split(',').map(z=>Number(z.trim())).filter(n=>n>=1&&n<=entries.length));
+      const permissions={};entries.forEach(([k],i)=>permissions[k]=selected.has(i+1));
+      const {error}=await sb.from('agenda_plans').update({permissions,updated_at:new Date().toISOString()}).eq('id',id);
+      if(error){console.error(error);return toast('Não foi possível atualizar recursos')}
+      await loadOwnerData();render();toast('Permissões atualizadas');
+    }
+
     function adminOverview(){
   const active=ADMIN.clients.filter(x=>effectiveClientStatus(x)==='active').length;
   const trial=ADMIN.clients.filter(x=>effectiveClientStatus(x)==='trial').length;
