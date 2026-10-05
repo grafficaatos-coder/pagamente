@@ -85,6 +85,20 @@
   
     .forgot-link{width:100%;border:0;background:transparent;color:var(--wine);font-size:10px;font-weight:850;padding:11px 4px 4px;cursor:pointer}
     .forgot-link:hover{text-decoration:underline}
+  
+    .signup-main-btn{width:100%;min-height:46px;margin-top:10px;border:1px solid var(--wine);border-radius:10px;background:#fff;color:var(--wine);font-weight:900;cursor:pointer}
+    .signup-main-btn:hover{background:#fbf3f6}
+    .signup-screen{min-height:100vh;background:linear-gradient(180deg,#fbf8f9,#f6edf1);padding:28px 18px}
+    .signup-wrap{max-width:1040px;margin:0 auto}.signup-top{display:flex;gap:20px;align-items:flex-start;margin-bottom:18px}.signup-top h1{font:600 36px Georgia,serif;margin:4px 0}.signup-top p{margin:0;color:var(--muted)}
+    .back-login{border:1px solid var(--line);background:#fff;color:var(--wine);border-radius:10px;padding:9px 12px;font-weight:850;cursor:pointer}
+    .signup-trial{background:#fff7e8;border:1px solid #efdcae;color:#73530d;padding:13px 15px;border-radius:13px;margin-bottom:14px}
+    .signup-form{display:grid;gap:14px}.signup-box{background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px}.signup-box h3{margin:0 0 15px;font-size:16px}
+    .signup-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.signup-fields .login-field select{width:100%;border:1px solid var(--line);border-radius:10px;padding:12px;background:#fff;color:var(--ink)}
+    .signup-plans{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.signup-plan{border:1px solid var(--line);border-radius:15px;padding:15px;cursor:pointer;background:#fff;transition:.18s}.signup-plan:hover,.signup-plan.selected{border-color:var(--wine);box-shadow:0 0 0 2px rgba(111,31,60,.08)}.signup-plan input{position:absolute;opacity:0;pointer-events:none}
+    .signup-plan-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}.signup-plan-head b{font-size:15px}.signup-plan-head small{display:block;color:var(--muted);font-size:9px;margin-top:4px;line-height:1.35}.signup-plan-head strong{color:var(--wine);font-size:17px;white-space:nowrap}.signup-plan-head strong small{display:inline;color:var(--muted)}
+    .signup-plan-users{font-size:10px;font-weight:850;margin:13px 0 9px;padding:7px 8px;border-radius:9px;background:var(--rose)}.signup-plan-features{display:grid;gap:5px}.signup-plan-features span{font-size:10px;color:var(--muted)}
+    .signup-submit{min-height:50px;font-size:13px}.signup-submit:disabled{opacity:.6;cursor:wait}.signup-footnote{text-align:center;color:var(--muted);font-size:9px;margin:0 10px 20px}
+    @media(max-width:760px){.signup-screen{padding:18px 12px}.signup-top{display:block}.back-login{margin-bottom:14px}.signup-top h1{font-size:30px}.signup-fields,.signup-plans{grid-template-columns:1fr}.signup-box{padding:15px}}
   </style>
 </head>
 <body>
@@ -130,7 +144,7 @@
     const SUPABASE_URL='https://zmrihyzwsyxjikdknfug.supabase.co';
     const SUPABASE_KEY='sb_publishable_nX-qLw9rEdLUvZpgXMj1LA_2gjB3umn';
     const AGENDA_ADMIN_FUNCTION=SUPABASE_URL+'/functions/v1/agenda-admin-access';
-    let sb=null,authUser=null,appMode=null,ownerLogged=false,authLoading=true,loginMessage='',passwordRecovery=false;
+    let sb=null,authUser=null,appMode=null,ownerLogged=false,authLoading=true,loginMessage='',passwordRecovery=false,signupMode=false,signupLoading=false,signupMessage='',signupWaitingEmail='',signupPlans=[],signupSettings={public_signup_enabled:true,free_trial_enabled:true,trial_days:7},signupSelectedPlan='profissional';
     let companyCtx=null;
     let companyData={customers:[],services:[],appointments:[]};
     const CAPABILITIES={
@@ -139,7 +153,7 @@
       finance:'Financeiro por atendimentos concluídos'
     };
     const DEFAULT_ADMIN={
-      settings:{autoBlock:true,freeTrial:true,trialDays:7,graceDays:5},
+      settings:{autoBlock:true,freeTrial:true,publicSignup:true,trialDays:7,graceDays:5},
       plans:[
         {id:'essencial',name:'Essencial',price:79.90,active:true,maxUsers:1,desc:'Para profissionais autônomos e agendas pequenas.',permissions:{agenda:true,clients:true,reminders:true,whatsapp:false,finance:false,reports:false,publicBooking:false,multiunit:false,advancedReports:false,prioritySupport:false}},
         {id:'profissional',name:'Profissional',price:129.90,active:true,popular:true,maxUsers:5,desc:'Para equipes que precisam de automação e gestão.',permissions:{agenda:true,clients:true,reminders:true,whatsapp:true,finance:true,reports:true,publicBooking:true,multiunit:false,advancedReports:false,prioritySupport:false}},
@@ -520,6 +534,7 @@
         ...ADMIN.settings,
         autoBlock:cfg.auto_block??ADMIN.settings.autoBlock,
         freeTrial:cfg.free_trial_enabled??ADMIN.settings.freeTrial,
+        publicSignup:cfg.public_signup_enabled??ADMIN.settings.publicSignup,
         trialDays:cfg.trial_days??ADMIN.settings.trialDays,
         graceDays:cfg.grace_days??ADMIN.settings.graceDays
       };
@@ -599,7 +614,10 @@
   const trials=ADMIN.clients.filter(x=>effectiveClientStatus(x)==='trial').length;
   return `<div class="section-title"><span class="eyebrow">Financeiro da plataforma</span><h2>Cobranças</h2><p>Vencimentos, testes grátis e bloqueio dos assinantes.</p></div><div class="admin-kpis"><div class="admin-kpi"><span>Total previsto</span><b>${moneyBR(total)}</b><small>mensalidades cadastradas</small></div><div class="admin-kpi"><span>Em dia</span><b>${moneyBR(received)}</b><small>assinantes ativos</small></div><div class="admin-kpi"><span>Pendente</span><b>${moneyBR(pending)}</b><small>atrasados ou bloqueados</small></div><div class="admin-kpi"><span>Em teste</span><b>${trials}</b><small>período gratuito</small></div></div>${adminClients()}`;
 }
-    function adminSettings(){const s=ADMIN.settings;return `<div class="section-title"><span class="eyebrow">Plataforma</span><h2>Configurações</h2><p>Defina as regras de teste grátis e inadimplência.</p></div><div class="settings-grid"><section class="panel"><div class="head"><div><span class="eyebrow">Marca</span><h3>Identidade da plataforma</h3></div></div><div class="setting-row"><span><b>Nome comercial</b><small>Nome exibido no sistema</small></span><strong>Agenda Pro</strong></div><div class="setting-row"><span><b>Segmentos permitidos</b><small>Tipos de empresa aceitos</small></span><strong>Salão · Estética · Médico</strong></div></section><section class="panel"><div class="head"><div><span class="eyebrow">Acesso</span><h3>Regras automáticas</h3></div></div><div class="setting-row"><span><b>Bloqueio por inadimplência</b><small>Suspender após o período de tolerância</small></span><span class="toggle ${s.autoBlock?'on':''}" onclick="toggleAdminSetting('autoBlock')"></span></div><div class="setting-row"><span><b>Dias de tolerância</b><small>Depois do vencimento</small></span><button class="setting-edit" onclick="editAdminNumber('graceDays','Dias de tolerância')">${s.graceDays} dias</button></div><div class="setting-row"><span><b>Teste grátis</b><small>Permitir novos clientes em avaliação</small></span><span class="toggle ${s.freeTrial?'on':''}" onclick="toggleAdminSetting('freeTrial')"></span></div><div class="setting-row"><span><b>Duração do teste</b><small>Período sem cobrança</small></span><button class="setting-edit" onclick="editAdminNumber('trialDays','Dias de teste grátis')">${s.trialDays} dias</button></div></section></div><div class="context-note"><b>Automação ativa:</b> depois do vencimento o cliente fica atrasado. Passando ${s.graceDays} dias, o acesso é bloqueado automaticamente quando essa opção estiver ligada.</div>`}
+    function adminSettings(){
+  const s=ADMIN.settings;
+  return `<div class="section-title"><span class="eyebrow">Plataforma</span><h2>Configurações</h2><p>Defina cadastro público, teste grátis e regras de inadimplência.</p></div><div class="settings-grid"><section class="panel"><div class="head"><div><span class="eyebrow">Novos assinantes</span><h3>Cadastro pelo site</h3></div></div><div class="setting-row"><span><b>Cadastro público</b><small>Permitir que novos clientes criem a própria conta e escolham o plano</small></span><span class="toggle ${s.publicSignup?'on':''}" onclick="toggleAdminSetting('publicSignup')"></span></div><div class="setting-row"><span><b>Teste grátis</b><small>Liberar uso inicial sem pagamento</small></span><span class="toggle ${s.freeTrial?'on':''}" onclick="toggleAdminSetting('freeTrial')"></span></div><div class="setting-row"><span><b>Duração do teste</b><small>Período inicial</small></span><button class="setting-edit" onclick="editAdminNumber('trialDays','Dias de teste grátis')">${s.trialDays} dias</button></div></section><section class="panel"><div class="head"><div><span class="eyebrow">Inadimplência</span><h3>Controle automático</h3></div></div><div class="setting-row"><span><b>Bloqueio automático</b><small>Suspender após o período de tolerância</small></span><span class="toggle ${s.autoBlock?'on':''}" onclick="toggleAdminSetting('autoBlock')"></span></div><div class="setting-row"><span><b>Dias de tolerância</b><small>Depois do vencimento</small></span><button class="setting-edit" onclick="editAdminNumber('graceDays','Dias de tolerância')">${s.graceDays} dias</button></div><div class="setting-row"><span><b>Segmentos</b><small>Tipos de empresa disponíveis no cadastro</small></span><strong>Salão · Estética · Médico · Outro</strong></div></section></div><div class="context-note"><b>Cadastro automático:</b> quando estiver ligado, o novo assinante cria a conta sozinho, escolhe um plano e aparece imediatamente em “Assinantes” no seu painel.</div>`;
+}
     function moneyBR(v){return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
     function setAdminTab(v){adminTab=v;render()}
     async function editPlan(id){
@@ -665,7 +683,7 @@
   alert(`${x.name}\n\nPlano: ${pl?.name||'—'}\nStatus: ${statusLabel(effectiveClientStatus(x))}\nUsuários: ${x.currentUsers}/${planUserLimit(pl)}\n\nRecursos liberados:\n• ${items.join('\n• ')}`);
 }
     async function toggleAdminSetting(key){
-  const map={autoBlock:'auto_block',freeTrial:'free_trial_enabled'};
+  const map={autoBlock:'auto_block',freeTrial:'free_trial_enabled',publicSignup:'public_signup_enabled'};
   const field=map[key];if(!field)return;
   const next=!ADMIN.settings[key];
   const {error}=await sb.from('agenda_platform_settings').update({[field]:next,updated_at:new Date().toISOString()}).eq('id',true);
@@ -803,8 +821,94 @@
   passwordRecovery=false;loginMessage='Senha alterada. Entre com sua nova senha.';
   await sb.auth.signOut();appMode=null;ownerLogged=false;authUser=null;render();
 }
+    function signupView(){
+  if(signupLoading){
+    return `<div class="auth-loading"><div class="logo">AP</div><b>Carregando planos...</b></div>`;
+  }
+  if(signupWaitingEmail){
+    return `<div class="login-screen"><section class="login-brand"><div class="logo">AP</div><h1>Conta criada.</h1><p>Sua empresa e o plano escolhido já foram cadastrados.</p><div class="login-feature"><i>✓</i> Empresa criada</div><div class="login-feature"><i>✓</i> Plano reservado</div><div class="login-feature"><i>✓</i> Dados separados das outras empresas</div></section><section class="login-panel"><div class="login-card"><span class="eyebrow">Confirme seu acesso</span><h2>Verifique seu e-mail</h2><p>Enviamos a confirmação para <b>${signupWaitingEmail}</b>. Depois de confirmar, volte para entrar no sistema.</p><button class="btn primary" style="width:100%;min-height:48px" onclick="closeSignup()">Voltar para entrar</button></div></section></div>`;
+  }
+  const plans=signupPlans.map(pl=>{
+    const selected=signupSelectedPlan===pl.code;
+    const features=Object.entries(CAPABILITIES).filter(([k])=>pl.permissions?.[k]).map(([,v])=>`<span>✓ ${v}</span>`).join('');
+    const users=pl.max_users==null?'Usuários ilimitados':`${pl.max_users} ${pl.max_users===1?'usuário':'usuários'}`;
+    return `<label class="signup-plan ${selected?'selected':''}"><input type="radio" name="signupPlan" value="${pl.code}" ${selected?'checked':''} onchange="selectSignupPlan('${pl.code}')"><div class="signup-plan-head"><div><b>${pl.name}</b><small>${pl.description||''}</small></div><strong>${moneyBR(Number(pl.monthly_price_cents||0)/100)}<small>/mês</small></strong></div><div class="signup-plan-users">${users}</div><div class="signup-plan-features">${features||'<span>Recursos básicos da plataforma</span>'}</div></label>`;
+  }).join('');
+  const trial=signupSettings.free_trial_enabled?`<div class="signup-trial">Comece com <b>${signupSettings.trial_days||7} dias de teste grátis</b>. Depois, mantenha sua assinatura ativa para continuar usando.</div>`:'<div class="signup-trial">A conta será criada e aguardará ativação da assinatura.</div>';
+  return `<div class="signup-screen"><div class="signup-wrap"><div class="signup-top"><button class="back-login" onclick="closeSignup()">← Voltar</button><div><span class="eyebrow">Novo assinante</span><h1>Crie sua conta</h1><p>Preencha seus dados e escolha o plano que combina com seu negócio.</p></div></div>${trial}<form class="signup-form" onsubmit="event.preventDefault();selfRegister()"><section class="signup-box"><h3>1. Seus dados</h3><div class="signup-fields"><div class="login-field"><label>Seu nome</label><input id="signupName" autocomplete="name" placeholder="Nome do responsável" required></div><div class="login-field"><label>Nome da empresa</label><input id="signupBusiness" placeholder="Ex.: Studio Bella" required maxlength="120"></div><div class="login-field"><label>Tipo de negócio</label><select id="signupSegment" required><option value="salon">Salão de beleza</option><option value="esthetic">Clínica de estética</option><option value="doctor">Consultório médico</option><option value="other">Outro</option></select></div><div class="login-field"><label>E-mail</label><input id="signupEmail" type="email" autocomplete="email" placeholder="contato@empresa.com" required></div><div class="login-field"><label>Senha</label><input id="signupPassword" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres" required></div><div class="login-field"><label>Confirmar senha</label><input id="signupPassword2" type="password" autocomplete="new-password" placeholder="Digite novamente" required></div></div></section><section class="signup-box"><h3>2. Escolha seu plano</h3><div class="signup-plans">${plans}</div></section><div id="signupError" class="login-error">${signupMessage||''}</div><button id="signupButton" class="btn primary signup-submit" type="submit">Criar minha conta e começar</button><p class="signup-footnote">Ao criar a conta, os dados ficam vinculados somente à sua empresa. O plano pode ser alterado depois pelo administrador da plataforma.</p></form></div></div>`;
+}
+    async function openSignup(){
+  signupMode=true;signupLoading=true;signupMessage='';signupWaitingEmail='';render();
+  const [plansRes,settingsRes]=await Promise.all([
+    sb.from('agenda_plans').select('code,name,monthly_price_cents,max_users,permissions,description,visible,active').eq('active',true).eq('visible',true).order('monthly_price_cents'),
+    sb.from('agenda_platform_settings').select('public_signup_enabled,free_trial_enabled,trial_days').eq('id',true).maybeSingle()
+  ]);
+  if(plansRes.error||settingsRes.error){
+    console.error(plansRes.error||settingsRes.error);
+    signupLoading=false;signupMessage='Não foi possível carregar os planos. Tente novamente.';render();return;
+  }
+  signupPlans=plansRes.data||[];
+  signupSettings={...signupSettings,...(settingsRes.data||{})};
+  if(!signupSettings.public_signup_enabled){
+    signupLoading=false;signupMessage='Novos cadastros estão temporariamente fechados.';render();return;
+  }
+  if(!signupPlans.some(p=>p.code===signupSelectedPlan))signupSelectedPlan=signupPlans[0]?.code||'';
+  signupLoading=false;render();
+}
+    function closeSignup(){
+  signupMode=false;signupLoading=false;signupMessage='';signupWaitingEmail='';render();
+}
+    function selectSignupPlan(code){
+  signupSelectedPlan=code;render();
+}
+    async function selfRegister(){
+  if(!sb||signupLoading)return;
+  const name=(document.getElementById('signupName')?.value||'').trim();
+  const business=(document.getElementById('signupBusiness')?.value||'').trim();
+  const segment=document.getElementById('signupSegment')?.value||'';
+  const email=(document.getElementById('signupEmail')?.value||'').trim().toLowerCase();
+  const password=document.getElementById('signupPassword')?.value||'';
+  const password2=document.getElementById('signupPassword2')?.value||'';
+  const e=document.getElementById('signupError'),btn=document.getElementById('signupButton');
+  if(!signupSettings.public_signup_enabled){if(e)e.textContent='Novos cadastros estão temporariamente fechados.';return}
+  if(name.length<2||business.length<2||!email){if(e)e.textContent='Preencha seu nome, empresa e e-mail.';return}
+  if(password.length<8){if(e)e.textContent='A senha precisa ter pelo menos 8 caracteres.';return}
+  if(password!==password2){if(e)e.textContent='As senhas não conferem.';return}
+  if(!signupPlans.some(p=>p.code===signupSelectedPlan)){if(e)e.textContent='Escolha um plano válido.';return}
+  if(btn){btn.disabled=true;btn.textContent='Criando conta...'}
+  const redirectTo=location.origin+location.pathname;
+  const {data,error}=await sb.auth.signUp({
+    email,password,
+    options:{
+      emailRedirectTo:redirectTo,
+      data:{
+        agenda_pro_signup:true,
+        display_name:name,
+        contact_name:name,
+        business_name:business,
+        company_name:business,
+        segment,
+        plan_code:signupSelectedPlan
+      }
+    }
+  });
+  if(error){
+    console.error(error);
+    if(e)e.textContent=error.message?.toLowerCase().includes('disabled')?'Novos cadastros estão temporariamente fechados.':'Não foi possível criar a conta. Se este e-mail já estiver cadastrado, entre ou use “Esqueci minha senha”.';
+    if(btn){btn.disabled=false;btn.textContent='Criar minha conta e começar'}
+    return;
+  }
+  signupMessage='';
+  if(data?.session?.user){
+    signupMode=false;signupWaitingEmail='';
+    await detectAgendaAccess(data.session.user);
+    return;
+  }
+  signupWaitingEmail=email;
+  render();
+}
     function loginView(){
-  return `<div class="login-screen"><section class="login-brand"><div class="logo">AP</div><h1>Um login para cada empresa.</h1><p>O Agenda Pro identifica automaticamente se quem entrou é o proprietário da plataforma ou uma empresa assinante.</p><div class="login-feature"><i>✓</i> Dados separados por empresa</div><div class="login-feature"><i>✓</i> Recursos liberados conforme o plano</div><div class="login-feature"><i>✓</i> Bloqueio por assinatura e limite de usuários</div></section><section class="login-panel"><form class="login-card" onsubmit="return doOwnerLogin(event)"><span class="eyebrow">Acesso seguro</span><h2>Entrar no Agenda Pro</h2><p>Use o e-mail e a senha cadastrados para sua conta.</p><div class="login-field"><label>E-mail</label><input id="ownerUser" type="email" autocomplete="username" placeholder="seuemail@empresa.com" autofocus></div><div class="login-field"><label>Senha</label><input id="ownerPassword" type="password" autocomplete="current-password" placeholder="Digite sua senha"></div><div id="loginError" class="login-error">${loginMessage||''}</div><button id="loginButton" class="btn primary" style="width:100%;min-height:48px" type="submit">Entrar</button><button class="forgot-link" type="button" onclick="requestPasswordReset()">Esqueci minha senha</button><div class="login-help"><b>Acesso individual.</b> O proprietário entra na administração. Salões, clínicas e consultórios entram somente no painel da própria empresa.</div></form></section></div>`;
+  return `<div class="login-screen"><section class="login-brand"><div class="logo">AP</div><h1>Agenda profissional para seu negócio.</h1><p>Salões, clínicas de estética e consultórios podem criar a própria conta, escolher o plano e começar a organizar os atendimentos.</p><div class="login-feature"><i>✓</i> Conta separada para cada empresa</div><div class="login-feature"><i>✓</i> Plano e limite de usuários controlados automaticamente</div><div class="login-feature"><i>✓</i> Dados protegidos por empresa</div></section><section class="login-panel"><form class="login-card" onsubmit="return doOwnerLogin(event)"><span class="eyebrow">Já tenho conta</span><h2>Entrar no Agenda Pro</h2><p>Use seu e-mail e senha.</p><div class="login-field"><label>E-mail</label><input id="ownerUser" type="email" autocomplete="username" placeholder="seuemail@empresa.com" autofocus></div><div class="login-field"><label>Senha</label><input id="ownerPassword" type="password" autocomplete="current-password" placeholder="Digite sua senha"></div><div id="loginError" class="login-error">${loginMessage||''}</div><button id="loginButton" class="btn primary" style="width:100%;min-height:48px" type="submit">Entrar</button><button class="signup-main-btn" type="button" onclick="openSignup()">Criar minha conta</button><button class="forgot-link" type="button" onclick="requestPasswordReset()">Esqueci minha senha</button><div class="login-help"><b>É assinante novo?</b> Clique em “Criar minha conta”, escolha o plano e faça seu cadastro sem precisar falar com o administrador.</div></form></section></div>`;
 }
     function doOwnerLogin(ev){ev?.preventDefault();signInAgendaPro();return false}
     function ownerLogout(){
@@ -829,6 +933,7 @@
     function render(){
   if(authLoading){document.title='Agenda Pro';R.innerHTML='<div class="auth-loading"><div class="logo">AP</div><b>Carregando Agenda Pro...</b></div>';return}
   if(passwordRecovery){document.title='Agenda Pro · Nova senha';R.innerHTML=resetPasswordView();return}
+  if(signupMode){document.title='Agenda Pro · Criar conta';R.innerHTML=signupView();return}
   if(!appMode){document.title='Agenda Pro · Login';R.innerHTML=loginView();return}
   if(appMode==='owner'){document.title='Agenda Pro · Administração';page='admin';R.innerHTML=admin();return}
   document.title=(companyCtx?.business?.name||'Agenda Pro')+' · Agenda Pro';
