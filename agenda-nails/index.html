@@ -770,7 +770,9 @@
   }
   const {data:member,error:memberError}=await sb.from('agenda_members').select('business_id,role').eq('user_id',user.id).limit(1).maybeSingle();
   if(memberError||!member){
-    await sb.auth.signOut();loginMessage='Esta conta ainda não possui acesso ao Agenda Pro.';appMode=null;render();return;
+    await sb.auth.signOut();
+    loginMessage='Este e-mail já existe, mas ainda não possui uma empresa cadastrada no Agenda Pro. Para criar uma nova conta do Agenda Pro, use outro e-mail.';
+    appMode=null;render();return;
   }
   const [{data:business},{data:subscription},{data:settings}]=await Promise.all([
     sb.from('agenda_businesses').select('*').eq('id',member.business_id).single(),
@@ -909,7 +911,15 @@
   });
   if(error){
     console.error(error);
-    if(e)e.textContent=error.message?.toLowerCase().includes('disabled')?'Novos cadastros estão temporariamente fechados.':'Não foi possível criar a conta. Se este e-mail já estiver cadastrado, entre ou use “Esqueci minha senha”.';
+    if(e)e.textContent=error.message?.toLowerCase().includes('disabled')?'Novos cadastros estão temporariamente fechados.':'Não foi possível criar a conta. Confira os dados e tente novamente.';
+    if(btn){btn.disabled=false;btn.textContent='Criar minha conta'}
+    return;
+  }
+  const repeated=!!data?.user&&Array.isArray(data.user.identities)&&data.user.identities.length===0;
+  if(repeated){
+    signupWaitingEmail='';
+    signupMessage='Este e-mail já possui um cadastro em outro sistema e não pode ser usado para criar uma nova conta do Agenda Pro. Use outro e-mail.';
+    if(e)e.textContent=signupMessage;
     if(btn){btn.disabled=false;btn.textContent='Criar minha conta'}
     return;
   }
