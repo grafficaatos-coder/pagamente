@@ -113,22 +113,35 @@
     let page='home',agendaView='day',A=[];
     const OWNER_AUTH={user:'admin',pass:'agenda2026',legacyPass:'AgendaPro2026!',name:'Proprietário'};
     let ownerLogged=sessionStorage.getItem('agendaProOwner')==='1';
+    const CAPABILITIES={
+      agenda:'Agenda online',clients:'Cadastro de clientes/pacientes',reminders:'Lembretes básicos',
+      whatsapp:'WhatsApp automático',finance:'Financeiro',reports:'Relatórios',
+      publicBooking:'Página pública de agendamento',multiunit:'Multiunidade',
+      advancedReports:'Relatórios avançados',prioritySupport:'Suporte prioritário'
+    };
     const DEFAULT_ADMIN={
+      settings:{autoBlock:true,freeTrial:true,trialDays:7,graceDays:5},
       plans:[
-        {id:'essencial',name:'Essencial',price:79.90,active:true,desc:'Para profissionais autônomos e agendas pequenas.',features:['1 usuário','Agenda online','Cadastro de clientes/pacientes','Lembretes básicos']},
-        {id:'profissional',name:'Profissional',price:129.90,active:true,popular:true,desc:'Para equipes que precisam de automação e gestão.',features:['Até 5 usuários','WhatsApp automático','Financeiro e relatórios','Página pública de agendamento']},
-        {id:'premium',name:'Premium',price:199.90,active:true,desc:'Para clínicas e operações com mais recursos.',features:['Usuários ilimitados','Multiunidade','Relatórios avançados','Suporte prioritário']}
+        {id:'essencial',name:'Essencial',price:79.90,active:true,maxUsers:1,desc:'Para profissionais autônomos e agendas pequenas.',permissions:{agenda:true,clients:true,reminders:true,whatsapp:false,finance:false,reports:false,publicBooking:false,multiunit:false,advancedReports:false,prioritySupport:false}},
+        {id:'profissional',name:'Profissional',price:129.90,active:true,popular:true,maxUsers:5,desc:'Para equipes que precisam de automação e gestão.',permissions:{agenda:true,clients:true,reminders:true,whatsapp:true,finance:true,reports:true,publicBooking:true,multiunit:false,advancedReports:false,prioritySupport:false}},
+        {id:'premium',name:'Premium',price:199.90,active:true,maxUsers:999,desc:'Para clínicas e operações com mais recursos.',permissions:{agenda:true,clients:true,reminders:true,whatsapp:true,finance:true,reports:true,publicBooking:true,multiunit:true,advancedReports:true,prioritySupport:true}}
       ],
       clients:[
-        {id:1,name:'Studio Bella',segment:'Salão de beleza',plan:'profissional',status:'active',due:'10/10/2026',monthly:129.90},
-        {id:2,name:'Clínica Bella Estética',segment:'Clínica de estética',plan:'premium',status:'active',due:'12/10/2026',monthly:199.90},
-        {id:3,name:'Clínica Vida',segment:'Consultório médico',plan:'profissional',status:'late',due:'02/10/2026',monthly:129.90},
-        {id:4,name:'Espaço Ana Beauty',segment:'Salão de beleza',plan:'essencial',status:'active',due:'18/10/2026',monthly:79.90},
-        {id:5,name:'Estética Renovare',segment:'Clínica de estética',plan:'profissional',status:'blocked',due:'28/09/2026',monthly:129.90}
+        {id:1,name:'Studio Bella',segment:'Salão de beleza',plan:'profissional',status:'active',due:'10/10/2026',monthly:129.90,currentUsers:3,trialUntil:null,manualBlocked:false},
+        {id:2,name:'Clínica Bella Estética',segment:'Clínica de estética',plan:'premium',status:'active',due:'12/10/2026',monthly:199.90,currentUsers:8,trialUntil:null,manualBlocked:false},
+        {id:3,name:'Clínica Vida',segment:'Consultório médico',plan:'profissional',status:'late',due:'02/10/2026',monthly:129.90,currentUsers:4,trialUntil:null,manualBlocked:false},
+        {id:4,name:'Espaço Ana Beauty',segment:'Salão de beleza',plan:'essencial',status:'active',due:'18/10/2026',monthly:79.90,currentUsers:1,trialUntil:null,manualBlocked:false},
+        {id:5,name:'Estética Renovare',segment:'Clínica de estética',plan:'profissional',status:'blocked',due:'28/09/2026',monthly:129.90,currentUsers:2,trialUntil:null,manualBlocked:true}
       ]
     };
     function cloneAdmin(){return JSON.parse(JSON.stringify(DEFAULT_ADMIN))}
-    function normalizeAdmin(raw){const base=cloneAdmin();if(!raw||!Array.isArray(raw.plans)||!Array.isArray(raw.clients))return base;return {plans:raw.plans.length?raw.plans:base.plans,clients:raw.clients.length?raw.clients:base.clients}}
+    function normalizeAdmin(raw){
+      const base=cloneAdmin();
+      if(!raw||!Array.isArray(raw.plans)||!Array.isArray(raw.clients))return base;
+      const plans=base.plans.map(bp=>{const rp=raw.plans.find(p=>p.id===bp.id)||{};return {...bp,...rp,permissions:{...bp.permissions,...(rp.permissions||{})},maxUsers:Number(rp.maxUsers||bp.maxUsers)}});
+      const clients=raw.clients.map(x=>({...x,currentUsers:Number(x.currentUsers||1),trialUntil:x.trialUntil||null,manualBlocked:x.manualBlocked??(x.status==='blocked')}));
+      return {settings:{...base.settings,...(raw.settings||{})},plans,clients};
+    }
     let ADMIN=(()=>{try{return normalizeAdmin(JSON.parse(localStorage.getItem('agendaProAdmin')))}catch(e){return cloneAdmin()}})();
     let adminTab='overview';
     function saveAdmin(){localStorage.setItem('agendaProAdmin',JSON.stringify(ADMIN))}
