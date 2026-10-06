@@ -584,10 +584,30 @@
   const url='https://wa.me/'+phone+'?text='+encodeURIComponent(whatsCatalogMessage(first));
   window.open(url,'_blank','noopener,noreferrer');
 }
+    function servicesWhatsAppConnectionCard(){
+  const enabled=!!(companyCtx?.settings?.baileys_enabled&&companyCtx?.settings?.baileys_service_url);
+  if(!enabled)return '';
+  const admin=canAdminCompany();
+  const connected=baileysSession.status==='connected';
+  const waiting=baileysSession.status==='qr'||baileysSession.status==='connecting';
+  return `<section class="panel baileys-card services-whatsapp-card ${connected?'connected':''}">
+    <div class="head">
+      <div><span class="eyebrow">WhatsApp automático</span><h3>${connected?'WhatsApp conectado':'Conectar WhatsApp por QR Code'}</h3></div>
+      <span class="status-badge ${connected?'status-active':'status-late'}">${connected?'Conectado':waiting?'Aguardando conexão':'Desconectado'}</span>
+    </div>
+    ${connected
+      ? `<div class="baileys-connected"><b>${baileysSession.phone?'+'+baileysSession.phone:'WhatsApp conectado'}</b><p>Confirmações, lembretes e mensagens automáticas podem ser enviadas pelo servidor.</p>${admin?`<button class="btn wa-disconnect" onclick="disconnectBaileys()">Desconectar</button>`:''}</div>`
+      : `<p>Conecte o WhatsApp desta empresa para usar os envios automáticos sem deixar um computador ligado.</p>
+         ${baileysSession.qr_svg?`<div class="baileys-qr">${baileysSession.qr_svg}</div><div class="baileys-steps"><b>No celular:</b><span>WhatsApp → Aparelhos conectados → Conectar um aparelho → escaneie o QR.</span></div>`:''}
+         <div id="baileysConnectError" class="login-error">${baileysSession.last_error||''}</div>
+         ${admin?`<button id="baileysConnectBtn" class="btn baileys-connect-btn" onclick="connectBaileys()">${baileysSession.qr_svg?'Gerar novo QR':'Conectar por QR Code'}</button>`:''}`
+    }
+  </section>`;
+}
     function services(){
   const p=P();
   const cards=companyData.services.map((s,i)=>`<article class="card service service-card"><div class="service-card-top"><div class="service-icon">${SERVICE_DEFAULTS[segment]?.[i%Math.max(1,SERVICE_DEFAULTS[segment]?.length||1)]?.[3]||'✨'}</div><span class="service-status">${s.active?'Ativo':'Inativo'}</span></div><h3>${s.name}</h3><p>${s.active?'Disponível para agendamento nesta empresa.':'Oculto para novos agendamentos.'}</p><div class="service-meta"><div><small>Duração</small><b>${s.duration_minutes} min</b></div><div><small>Valor</small><b>${moneyBR(Number(s.price_cents||0)/100)}</b></div></div>${canAdminCompany()?`<div class="service-card-actions"><button onclick="editCompanyService('${s.id}')">Editar</button><button onclick="toggleCompanyService('${s.id}')">${s.active?'Desativar':'Ativar'}</button><button onclick="deleteCompanyService('${s.id}')">Excluir</button></div>`:''}</article>`).join('');
-  return shell(`<div class="services-head"><div class="section-title service-title"><span class="eyebrow">${p.catalog}</span><h2>${p.serviceLabel}</h2><p>Catálogo salvo para esta empresa.</p></div><div class="service-top-actions"><button class="btn whatsapp-btn" onclick="shareServicesWhatsApp()">WhatsApp · Enviar catálogo</button>${canAdminCompany()?`<button class="btn primary service-add" onclick="addCompanyService()">+ Novo ${p.service.toLowerCase()}</button>`:''}</div></div><div class="catalog-summary"><div><span>Itens cadastrados</span><b>${companyData.services.length}</b></div><div><span>Disponibilidade</span><b>${companyData.services.filter(x=>x.active).length} ativos</b></div><div><span>Plano</span><b>${companyCtx.plan.name}</b></div></div><div class="whatsapp-catalog-note"><b>Envio pelo WhatsApp:</b> serão enviados somente os serviços ativos, com valor e duração.</div><div class="services">${cards||'<div class="empty-state">Nenhum serviço cadastrado.</div>'}</div>`);
+  return shell(`<div class="services-head"><div class="section-title service-title"><span class="eyebrow">${p.catalog}</span><h2>${p.serviceLabel}</h2><p>Catálogo salvo para esta empresa.</p></div><div class="service-top-actions"><button class="btn whatsapp-btn" onclick="shareServicesWhatsApp()">WhatsApp · Enviar catálogo</button>${canAdminCompany()?`<button class="btn primary service-add" onclick="addCompanyService()">+ Novo ${p.service.toLowerCase()}</button>`:''}</div></div><div class="catalog-summary"><div><span>Itens cadastrados</span><b>${companyData.services.length}</b></div><div><span>Disponibilidade</span><b>${companyData.services.filter(x=>x.active).length} ativos</b></div><div><span>Plano</span><b>${companyCtx.plan.name}</b></div></div><div class="whatsapp-catalog-note"><b>Envio pelo WhatsApp:</b> serão enviados somente os serviços ativos, com valor e duração.</div>${servicesWhatsAppConnectionCard()}<div class="services">${cards||'<div class="empty-state">Nenhum serviço cadastrado.</div>'}</div>`);
 }
     function cash(){
   const serviceMap=new Map(companyData.services.map(s=>[s.id,s]));
@@ -630,7 +650,7 @@
   if(msgRes.error)console.error(msgRes.error);
   whatsappState={connection:connRes.data||null,messages:msgRes.data||[]};
   whatsappLoading=false;
-  if(redraw&&page==='wa')render();
+  if(redraw&&(page==='wa'||page==='services'))render();
 }
     function setWhatsappSetupDevice(mode){
   whatsappSetupDevice=mode==='desktop'?'desktop':'mobile';
@@ -1414,7 +1434,7 @@
     function startBaileysPoll(){
   if(baileysPollTimer)clearInterval(baileysPollTimer);
   baileysPollTimer=setInterval(async()=>{
-    if(appMode!=='company'||page!=='wa'){
+    if(appMode!=='company'||!['wa','services'].includes(page)){
       clearInterval(baileysPollTimer);baileysPollTimer=null;return;
     }
     await loadBaileysStatus(true);
