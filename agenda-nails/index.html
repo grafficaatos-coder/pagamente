@@ -1035,6 +1035,37 @@
       .toolbar .primary{min-width:116px}
     }
 
+  
+    /* Acabamento de modais e avisos v1 */
+    .app-confirm-modal{width:min(100%,470px)}
+    .app-confirm-modal .app-modal-body{display:flex;align-items:center;gap:13px;padding-top:18px;padding-bottom:18px}
+    .app-confirm-icon{width:42px;height:42px;border-radius:13px;background:#fff2f2;color:#a34141;display:grid;place-items:center;font-size:20px;font-weight:900;flex:0 0 auto}
+    .app-confirm-copy b,.app-confirm-copy span{display:block}
+    .app-confirm-copy b{font-size:12px}
+    .app-confirm-copy span{font-size:9px;color:var(--muted);margin-top:3px}
+    .app-danger-btn{background:#9d3f45;color:#fff;border:1px solid #9d3f45}
+    .app-danger-btn:hover{background:#89343a}
+    .toast{
+      z-index:260!important;
+      right:20px;
+      bottom:20px;
+      max-width:min(390px,calc(100vw - 28px));
+      padding:12px 15px;
+      border-radius:12px;
+      background:#30272b;
+      color:#fff;
+      border:1px solid rgba(255,255,255,.08);
+      box-shadow:0 16px 36px rgba(28,18,23,.24);
+      font-size:11px;
+      font-weight:720;
+      line-height:1.4;
+      animation:toastIn .18s ease;
+    }
+    @keyframes toastIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+    @media(max-width:720px){
+      .toast{left:14px!important;right:14px!important;bottom:18px!important;text-align:left!important}
+    }
+
   </style>
 </head>
 <body>
@@ -1509,7 +1540,7 @@ async function installAgendaApp(){
     function clients(){
   const p=P();
   const cards=companyData.customers.map(x=>`<div class="card client client-real-card" data-search="${x.name.toLowerCase()} ${(x.phone||'').toLowerCase()}"><div class="round">${x.name.split(' ').map(z=>z[0]).slice(0,2).join('').toUpperCase()}</div><div><b>${x.name}</b><small>${x.phone||'Sem telefone'}${x.email?' · '+x.email:''}</small><div class="inline-actions"><button class="mini-btn whats-mini" onclick="sendServicesToCustomer('${x.id}')">WhatsApp · Enviar serviços</button>${canOperateCompany()?`<button class="mini-btn" onclick="editCompanyCustomer('${x.id}')">Editar</button>`:''}${canAdminCompany()?`<button class="mini-btn danger" onclick="deleteCompanyCustomer('${x.id}')">Excluir</button>`:''}</div></div><div class="client-stat"><b>${companyData.appointments.filter(a=>a.customer_id===x.id).length}</b><small>${p.visit}</small></div></div>`).join('');
-  return shell(`<div class="section-title"><span class="eyebrow">Relacionamento</span><h2>${p.people}</h2><p>Dados pertencentes somente a ${companyCtx.business.name}.</p></div><div class="toolbar"><div class="search-wrap">${I.search}<input class="search" placeholder="Buscar ${p.person.toLowerCase()}" oninput="filterClientCards(this.value)"></div>${canOperateCompany()?`<button class="btn primary" onclick="addCompanyCustomer()">+ ${p.person}</button>`:''}</div><div class="list" id="clientCards">${cards||'<div class="empty-state">Nenhum cadastro ainda.</div>'}</div>`);
+  return shell(`<div class="section-title"><span class="eyebrow">Relacionamento</span><h2>${p.people}</h2><p>Dados pertencentes somente a ${companyCtx.business.name}.</p></div><div class="toolbar"><div class="search-wrap">${I.search}<input class="search" placeholder="Buscar ${p.person.toLowerCase()}" oninput="filterClientCards(this.value)"></div>${canOperateCompany()?`<button class="btn primary" onclick="addCompanyCustomer()">+ Novo ${p.person.toLowerCase()}</button>`:''}</div><div class="list" id="clientCards">${cards||'<div class="empty-state">Nenhum cadastro ainda.</div>'}</div>`);
 }
     function normalizeWhatsPhone(phone){
   let n=String(phone||'').replace(/\D/g,'');
@@ -1584,7 +1615,7 @@ async function installAgendaApp(){
     function services(){
   const p=P();
   const cards=companyData.services.map((s,i)=>`<article class="card service service-card"><div class="service-card-top"><div class="service-icon">${SERVICE_DEFAULTS[segment]?.[i%Math.max(1,SERVICE_DEFAULTS[segment]?.length||1)]?.[3]||'✨'}</div><span class="service-status">${s.active?'Ativo':'Inativo'}</span></div><h3>${s.name}</h3><p>${s.active?'Disponível para agendamento nesta empresa.':'Oculto para novos agendamentos.'}</p><div class="service-meta"><div><small>Duração</small><b>${s.duration_minutes} min</b></div><div><small>Valor financeiro</small><b>${moneyBR(Number(s.price_cents||0)/100)}</b></div><div><small>Preço no WhatsApp</small><b>${s.show_price_to_client===false?'Não mostrar':'Mostrar'}</b></div></div>${canAdminCompany()?`<div class="service-card-actions"><button onclick="editCompanyService('${s.id}')">Editar</button><button onclick="toggleCompanyService('${s.id}')">${s.active?'Desativar':'Ativar'}</button><button onclick="deleteCompanyService('${s.id}')">Excluir</button></div>`:''}</article>`).join('');
-  return shell(`<div class="services-head"><div class="section-title service-title"><span class="eyebrow">${p.catalog}</span><h2>${p.serviceLabel}</h2><p>Catálogo salvo para esta empresa.</p></div><div class="service-top-actions"><button id="sendCatalogAllBtn" class="btn whatsapp-btn" onclick="shareServicesWhatsApp()">WhatsApp · Enviar para todos</button>${canAdminCompany()?`<button class="btn primary service-add" onclick="addCompanyService()">+ Novo ${p.service.toLowerCase()}</button>`:''}</div></div><div class="catalog-summary"><div><span>Itens cadastrados</span><b>${companyData.services.length}</b></div><div><span>Disponibilidade</span><b>${companyData.services.filter(x=>x.active).length} ativos</b></div><div><span>Plano</span><b>${companyCtx.plan.name}</b></div></div><div class="whatsapp-catalog-note"><b>Envio automático:</b> ao clicar em “WhatsApp · Enviar para todos”, o catálogo será enviado pelo WhatsApp conectado para todos os clientes cadastrados que tenham número de WhatsApp. Serão incluídos somente os itens ativos. O valor só será mostrado quando essa opção estiver habilitada no serviço/consulta; a duração continua sendo enviada.</div><div class="services">${cards||'<div class="empty-state">Nenhum serviço cadastrado.</div>'}</div>`);
+  return shell(`<div class="services-head"><div class="section-title service-title"><span class="eyebrow">${p.catalog}</span><h2>${p.serviceLabel}</h2><p>Catálogo salvo para esta empresa.</p></div><div class="service-top-actions"><button id="sendCatalogAllBtn" class="btn whatsapp-btn" onclick="shareServicesWhatsApp()">WhatsApp · Enviar para todos</button>${canAdminCompany()?`<button class="btn primary service-add" onclick="addCompanyService()">Novo ${p.service.toLowerCase()}</button>`:''}</div></div><div class="catalog-summary"><div><span>Itens cadastrados</span><b>${companyData.services.length}</b></div><div><span>Disponibilidade</span><b>${companyData.services.filter(x=>x.active).length} ativos</b></div><div><span>Plano</span><b>${companyCtx.plan.name}</b></div></div><div class="whatsapp-catalog-note"><b>Envio automático:</b> ao clicar em “WhatsApp · Enviar para todos”, o catálogo será enviado pelo WhatsApp conectado para todos os clientes cadastrados que tenham número de WhatsApp. Serão incluídos somente os itens ativos. O valor só será mostrado quando essa opção estiver habilitada no serviço/consulta; a duração continua sendo enviada.</div><div class="services">${cards||'<div class="empty-state">Nenhum serviço cadastrado.</div>'}</div>`);
 }
     function financeToday(){
   return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
@@ -1635,11 +1666,13 @@ async function installAgendaApp(){
     async function deleteFinanceEntry(id){
   if(!canAdminCompany())return toast('Somente administrador pode excluir lançamentos');
   const x=companyData.financialEntries.find(e=>e.id===id);if(!x)return;
-  if(!confirm('Excluir este lançamento financeiro?'))return;
+  const ok=await askAppConfirm({title:'Excluir lançamento financeiro?',message:(x.description||'Este lançamento')+' será removido do caixa.',confirmLabel:'Excluir lançamento'});
+  if(!ok)return;
   const {error}=await sb.from('agenda_financial_entries').delete().eq('id',id).eq('business_id',companyCtx.business.id);
   if(error){console.error(error);return toast('Não foi possível excluir')}
   await loadCompanyData();render();toast('Lançamento excluído');
 }
+
     function cash(){
   const serviceMap=new Map(companyData.services.map(s=>[s.id,s]));
   const customerMap=new Map(companyData.customers.map(x=>[x.id,x]));
@@ -2289,6 +2322,30 @@ async function installAgendaApp(){
   document.addEventListener('keydown',appModalKeyHandler);
   setTimeout(()=>layer.querySelector('[autofocus],input,select,textarea')?.focus(),40);
 }
+    function askAppConfirm({title,message,confirmLabel='Excluir'}){
+  return new Promise(resolve=>{
+    closeAppModal();
+    const layer=document.createElement('div');
+    layer.id='appModalLayer';
+    layer.className='app-modal-layer';
+    layer.innerHTML=`<div class="app-modal-backdrop"></div><section class="app-modal app-confirm-modal" role="alertdialog" aria-modal="true"><div class="app-modal-head"><div class="app-modal-title"><span class="eyebrow">Confirmação</span><h2>${appModalEscape(title)}</h2><p>${appModalEscape(message)}</p></div><button class="app-modal-close" type="button" data-cancel aria-label="Fechar">×</button></div><div class="app-modal-body"><div class="app-confirm-icon">!</div><div class="app-confirm-copy"><b>Esta ação precisa da sua confirmação.</b><span>Revise antes de continuar.</span></div></div><div class="app-modal-actions"><button class="btn secondary" type="button" data-cancel>Cancelar</button><button class="btn app-danger-btn" type="button" data-confirm>${appModalEscape(confirmLabel)}</button></div></section>`;
+    document.body.appendChild(layer);
+    document.body.classList.add('app-modal-open');
+    let done=false;
+    const finish=value=>{
+      if(done)return;done=true;
+      const el=document.getElementById('appModalLayer');if(el)el.remove();
+      document.body.classList.remove('app-modal-open');
+      resolve(value);
+    };
+    layer.querySelector('.app-modal-backdrop')?.addEventListener('click',()=>finish(false));
+    layer.querySelectorAll('[data-cancel]').forEach(el=>el.addEventListener('click',()=>finish(false)));
+    layer.querySelector('[data-confirm]')?.addEventListener('click',()=>finish(true));
+    const key=ev=>{if(ev.key==='Escape'){document.removeEventListener('keydown',key);finish(false)}};
+    document.addEventListener('keydown',key,{once:false});
+    setTimeout(()=>layer.querySelector('[data-confirm]')?.focus(),30);
+  });
+}
     function modalMoneyValue(cents){
   return (Number(cents||0)/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 }
@@ -2447,13 +2504,14 @@ async function installAgendaApp(){
 }
 
     async function deleteCompanyCustomer(id){
-      if(!canAdminCompany())return toast('Somente administrador pode excluir');
-      const x=companyData.customers.find(y=>y.id===id);if(!x)return;
-      if(!confirm('Excluir '+x.name+'? Os agendamentos antigos permanecerão sem vínculo com o cadastro.'))return;
-      const {error}=await sb.from('agenda_customers').delete().eq('id',id).eq('business_id',companyCtx.business.id);
-      if(error){console.error(error);return toast('Não foi possível excluir')}
-      await loadCompanyData();render();toast('Cadastro excluído');
-    }
+  if(!canAdminCompany())return toast('Somente administrador pode excluir');
+  const x=companyData.customers.find(y=>y.id===id);if(!x)return;
+  const ok=await askAppConfirm({title:'Excluir '+x.name+'?',message:'Os agendamentos antigos permanecerão no histórico, mas sem vínculo com este cadastro.',confirmLabel:'Excluir cadastro'});
+  if(!ok)return;
+  const {error}=await sb.from('agenda_customers').delete().eq('id',id).eq('business_id',companyCtx.business.id);
+  if(error){console.error(error);return toast('Não foi possível excluir')}
+  await loadCompanyData();render();toast('Cadastro excluído');
+}
 
     async function editCompanyService(id){
   openServiceModal(id);
@@ -2468,13 +2526,14 @@ async function installAgendaApp(){
     }
 
     async function deleteCompanyService(id){
-      if(!canAdminCompany())return toast('Somente administrador pode excluir serviços');
-      const x=companyData.services.find(y=>y.id===id);if(!x)return;
-      if(!confirm('Excluir '+x.name+'? Os agendamentos antigos permanecerão sem vínculo com o serviço.'))return;
-      const {error}=await sb.from('agenda_services').delete().eq('id',id).eq('business_id',companyCtx.business.id);
-      if(error){console.error(error);return toast('Não foi possível excluir')}
-      await loadCompanyData();render();toast('Serviço excluído');
-    }
+  if(!canAdminCompany())return toast('Somente administrador pode excluir serviços');
+  const x=companyData.services.find(y=>y.id===id);if(!x)return;
+  const ok=await askAppConfirm({title:'Excluir '+x.name+'?',message:'Os agendamentos antigos permanecerão no histórico, mas sem vínculo com este serviço.',confirmLabel:'Excluir serviço'});
+  if(!ok)return;
+  const {error}=await sb.from('agenda_services').delete().eq('id',id).eq('business_id',companyCtx.business.id);
+  if(error){console.error(error);return toast('Não foi possível excluir')}
+  await loadCompanyData();render();toast('Serviço excluído');
+}
 
     async function updateAppointmentStatus(id,status){
       if(!canOperateCompany())return;
@@ -2489,12 +2548,13 @@ async function installAgendaApp(){
 }
 
     async function deleteAppointment(id){
-      if(!canAdminCompany())return toast('Somente administrador pode excluir');
-      if(!confirm('Excluir este agendamento?'))return;
-      const {error}=await sb.from('agenda_appointments').delete().eq('id',id).eq('business_id',companyCtx.business.id);
-      if(error){console.error(error);return toast('Não foi possível excluir')}
-      await loadCompanyData();render();toast('Agendamento excluído');
-    }
+  if(!canAdminCompany())return toast('Somente administrador pode excluir');
+  const ok=await askAppConfirm({title:'Excluir agendamento?',message:'O horário será removido definitivamente da agenda.',confirmLabel:'Excluir agendamento'});
+  if(!ok)return;
+  const {error}=await sb.from('agenda_appointments').delete().eq('id',id).eq('business_id',companyCtx.business.id);
+  if(error){console.error(error);return toast('Não foi possível excluir')}
+  await loadCompanyData();render();toast('Agendamento excluído');
+}
 
     async function addCompanyCustomer(){
   openCustomerModal(null,false);
@@ -3266,7 +3326,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-modals6',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-polish7',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
