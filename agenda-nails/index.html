@@ -1232,7 +1232,7 @@ async function installAgendaApp(){
     return `<div class="wa-queue-row">
       <div class="wa-queue-type ${item.message_type}">${queueTypeLabel(item.message_type)}</div>
       <div class="wa-queue-main"><b>${item.customer_name||'Cliente'}</b><small>${item.service_name||'Atendimento'} · ${when.toLocaleString('pt-BR')}</small></div>
-      <button class="btn whatsapp-btn" onclick="openWhatsappQueueItem('${item.id}')">Abrir WhatsApp</button>
+      <span class="status-badge status-active">Automático</span>
     </div>`;
   }).join('');
   const futureRows=future.map(item=>`<div class="wa-upcoming-row"><span>${queueTypeLabel(item.message_type)}</span><b>${item.customer_name||'Cliente'}</b><small>${new Date(item.scheduled_for).toLocaleString('pt-BR')}</small></div>`).join('');
@@ -1243,7 +1243,7 @@ async function installAgendaApp(){
 
   const baileysEnabled=!!(companyCtx?.settings?.baileys_enabled&&companyCtx?.settings?.baileys_service_url);
   const baileysCard=baileysEnabled?`<section class="panel baileys-card ${baileysSession.status==='connected'?'connected':''}">
-    <div class="head"><div><span class="eyebrow">Experimental · Baileys</span><h3>${baileysSession.status==='connected'?'WhatsApp conectado por QR':'Automação por QR Code'}</h3></div><span class="status-badge ${baileysSession.status==='connected'?'status-active':'status-late'}">${baileysSession.status==='connected'?'Conectado':'Experimental'}</span></div>
+    <div class="head"><div><span class="eyebrow">WhatsApp automático</span><h3>${baileysSession.status==='connected'?'WhatsApp conectado por QR':'Automação por QR Code'}</h3></div><span class="status-badge ${baileysSession.status==='connected'?'status-active':'status-late'}">${baileysSession.status==='connected'?'Conectado':'Experimental'}</span></div>
     ${baileysSession.status==='connected'
       ? `<div class="baileys-connected"><b>${baileysSession.phone?'+'+baileysSession.phone:'WhatsApp conectado'}</b><p>Confirmações, lembretes e pós-atendimento da fila podem ser enviados automaticamente.</p>${admin?`<button class="btn wa-disconnect" onclick="disconnectBaileys()">Desconectar</button>`:''}</div>`
       : `<p>Conecte como um aparelho vinculado. No celular, você pode usar um código e não precisa de outro aparelho para escanear QR.</p>
@@ -1267,33 +1267,22 @@ async function installAgendaApp(){
 
   const recent=(whatsappState?.messages||[]).map(m=>`<div class="wa-log-row"><span class="wa-log-dot ${m.status==='sent'?'ok':'bad'}"></span><div><b>${m.status==='sent'?'Enviado':'Falhou'}</b><small>${m.to_phone} · ${new Date(m.created_at).toLocaleString('pt-BR')}</small>${m.error_message?`<small class="wa-log-error">${m.error_message}</small>`:''}</div></div>`).join('');
 
-  return shell(`<div class="section-title"><span class="eyebrow">WhatsApp</span><h2>Central automática de mensagens</h2><p>Sem API: o Agenda Pro prepara confirmações, lembretes e pós-atendimento sozinho.</p></div>
+  return shell(`<div class="section-title"><span class="eyebrow">WhatsApp</span><h2>Central automática de mensagens</h2><p>Confirmações, lembretes e pós-atendimento enviados pelo WhatsApp conectado ao sistema.</p></div>
 
   <section class="wa-free-auto">
     <div class="wa-free-auto-top">
-      <div><span class="eyebrow">Automação sem custo</span><h3>${due.length?due.length+' mensagem(ns) pronta(s) para enviar':'Nenhuma mensagem pendente agora'}</h3><p>O sistema monta e agenda as mensagens automaticamente. Se o Baileys experimental estiver conectado, o servidor Oracle poderá disparar a fila sozinho.</p></div>
+      <div><span class="eyebrow">Automação</span><h3>${due.length?due.length+' mensagem(ns) pronta(s) para enviar':'Nenhuma mensagem pendente agora'}</h3><p>O sistema prepara e envia automaticamente as mensagens pelo WhatsApp conectado.</p></div>
       <div class="wa-free-count">${due.length}</div>
     </div>
     <div class="wa-free-actions">
       <button class="btn ${notifOn?'secondary':'primary'}" onclick="enableWhatsappNotifications()">${notifOn?'🔔 Avisos ativados':'🔔 Ativar avisos'}</button>
-      ${due.length?`<button class="btn whatsapp-btn" onclick="openWhatsappQueueItem('${due[0].id}')">Enviar próxima manualmente</button>`:''}
+
     </div>
     <div class="wa-queue-list">${queueRows||'<div class="empty-state">Quando chegar a hora de uma mensagem, ela aparecerá aqui automaticamente.</div>'}</div>
     ${futureRows?`<details class="wa-upcoming"><summary>Ver próximas mensagens preparadas (${future.length})</summary><div>${futureRows}</div></details>`:''}
   </section>
 
-  ${baileysCard}
-  ${connectedCard}
-  ${automationSettings}
-
-  <section class="wa-easy-hero"><div class="wa-easy-icon">✓</div><div><span class="eyebrow">Envio manual rápido</span><h3>Também funciona sem API</h3><p>Escolha uma cliente e envie catálogo ou mensagem livre pelo WhatsApp normal ou Business.</p></div></section>
-  <div class="wa-device-tabs"><button class="${whatsappSetupDevice==='mobile'?'on':''}" onclick="setWhatsappSetupDevice('mobile')">📱 Celular</button><button class="${whatsappSetupDevice==='desktop'?'on':''}" onclick="setWhatsappSetupDevice('desktop')">💻 Computador</button></div>
-  <div class="wa-device-help">${easyHelp}</div>
-  <section class="panel wa-quick-send"><div class="head"><div><span class="eyebrow">Enviar agora</span><h3>Escolha a cliente</h3></div><span class="status-badge status-active">Sem API</span></div><div class="wa-quick-grid"><div class="field"><b>Cliente</b><select id="waQuickCustomer" onchange="fillWhatsQuickMessage()"><option value="">Selecione</option>${customers}</select></div><div class="wa-quick-actions"><button class="btn whatsapp-btn" onclick="sendWhatsQuickCatalog()">Enviar catálogo de serviços</button></div></div><div class="field"><b>Mensagem livre</b><textarea id="waQuickMessage" placeholder="Digite uma mensagem para a cliente"></textarea></div><button class="btn primary" onclick="sendWhatsQuickMessage()">Abrir conversa no WhatsApp</button></section>
-
-  ${connected?`<section class="panel"><div class="head"><div><span class="eyebrow">Últimos envios</span><h3>Histórico automático oficial</h3></div></div>${recent||'<div class="empty-state">Nenhum envio automático registrado.</div>'}</section>`:''}
-
-  ${!connected&&admin?`<details class="wa-advanced"><summary>🛠 Conexão manual — somente suporte técnico</summary><div class="wa-advanced-body"><p>Use apenas se o botão simples não estiver disponível.</p><div class="wa-form-grid"><div class="field"><b>Phone Number ID</b><input id="waPhoneId" inputmode="numeric"></div><div class="field"><b>WABA ID</b><input id="waWabaId" inputmode="numeric"></div><div class="field wa-full"><b>Token permanente</b><input id="waToken" type="password" autocomplete="off"></div><div class="field"><b>Template</b><input id="waTemplate" placeholder="agendamento_confirmado"></div><div class="field"><b>Idioma</b><input id="waLanguage" value="pt_BR"></div></div><div id="waConnectError" class="login-error"></div><button id="waConnectBtn" class="btn secondary" onclick="connectWhatsAppBusiness()">Conectar manualmente</button></div></details>`:''}`);
+  ${baileysCard}`);
 }
     function setup(){const p=P();return shell(`<div class="section-title"><span class="eyebrow">Personalização</span><h2>Tipo de negócio</h2><p>O sistema adapta automaticamente linguagem e fluxo de agendamento.</p></div><div class="setup-grid">${Object.values(PROFILES).map(x=>`<button class="setup-card ${x.key===segment?'on':''}" onclick="setSegment('${x.key}')"><span class="big-emoji">${x.emoji}</span><b>${x.segment}</b><small>${x.key==='salon'?'Clientes, serviços, profissionais, agenda e caixa.':x.key==='esthetic'?'Clientes, procedimentos, sessões, profissionais e pacotes.':'Pacientes, consultas, médicos, convênio e teleconsulta.'}</small></button>`).join('')}</div><div class="profile-row"><div class="profile-box"><span>Empresa demonstrada</span><b>${p.business}</b></div><div class="profile-box"><span>Terminologia ativa</span><b>${p.people} · ${p.serviceLabel} · ${p.professionals}</b></div></div><div class="context-note"><b>Multiempresa:</b> na versão comercial, cada assinante terá seu próprio cadastro, logo, equipe, horários, serviços e dados isolados. Esta tela demonstra como um único produto pode atender segmentos diferentes.</div>`)}
     function more(){const p=P();return shell(`<div class="section-title"><span class="eyebrow">Configurações</span><h2>Mais opções</h2><p>Personalize o sistema para ${p.business}.</p></div><div class="more-list"><button class="more-btn" onclick="go('admin')"><div class="quick-ico">${I.wallet}</div><b>Administração da plataforma</b><small>Planos, mensalidades, assinantes e bloqueios</small></button><button class="more-btn" onclick="go('setup')"><div class="quick-ico"><span style="font-size:18px">${p.emoji}</span></div><b>Tipo de negócio</b><small>${p.segment} · alterar modo</small></button><button class="more-btn" onclick="go('services')"><div class="quick-ico">${I.sparkle}</div><b>${p.serviceLabel}</b><small>Duração, valores e catálogo</small></button><button class="more-btn" onclick="go('wa')"><div class="quick-ico">${I.message}</div><b>WhatsApp</b><small>Confirmações e lembretes</small></button><button class="more-btn" onclick="book()"><div class="quick-ico">${I.calendar}</div><b>Novo horário</b><small>Cadastre ${p.appointment.toLowerCase()}</small></button><button class="more-btn" onclick="toast('Relatórios em breve')"><div class="quick-ico">${I.chart}</div><b>Relatórios</b><small>Indicadores de ${p.business}</small></button></div>`)}
@@ -1734,7 +1723,7 @@ async function installAgendaApp(){
     <section class="panel"><div class="head"><div><span class="eyebrow">Inadimplência</span><h3>Controle automático</h3></div></div><div class="setting-row"><span><b>Bloqueio automático</b><small>Suspender após o período de tolerância</small></span><span class="toggle ${s.autoBlock?'on':''}" onclick="toggleAdminSetting('autoBlock')"></span></div><div class="setting-row"><span><b>Dias de tolerância</b><small>Depois do vencimento</small></span><button class="setting-edit" onclick="editAdminNumber('graceDays','Dias de tolerância')">${s.graceDays} dias</button></div><div class="setting-row"><span><b>Segmentos</b><small>Tipos de empresa disponíveis no cadastro</small></span><strong>Salão · Estética · Médico · Outro</strong></div></section>
   </div>
   <section class="panel baileys-platform-panel">
-    <div class="head"><div><span class="eyebrow">Experimental</span><h3>Baileys + Oracle Cloud</h3></div>${baileysStatus}</div>
+    <div class="head"><div><span class="eyebrow">Aguardando conexão</span><h3>Baileys + Oracle Cloud</h3></div>${baileysStatus}</div>
     <div class="meta-platform-note"><b>Automação não oficial.</b> Depois que o servidor Oracle Cloud estiver publicado, os assinantes poderão conectar por QR Code e a fila de agendamentos poderá disparar sem tocar em “Enviar”.</div>
     <div class="wa-form-grid"><div class="field wa-full"><b>URL do servidor Oracle</b><input id="baileysServiceUrl" value="${s.baileysServiceUrl||''}" placeholder="https://agenda-pro-baileys.seudominio.workers.dev"></div></div>
     <label class="wa-check"><input id="baileysEnabled" type="checkbox" ${s.baileysEnabled?'checked':''}><span><b>Ativar modo Baileys para assinantes</b><small>Só ative depois que a URL acima estiver respondendo.</small></span></label>
