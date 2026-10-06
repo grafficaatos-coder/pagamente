@@ -142,10 +142,9 @@ function messageText(kind,business,customer,service,appointment){
     : "";
   if(kind==="reminder"){
     const pendingConfirmation=!appointment.confirmed_by_customer_at&&appointment.status!=="cancelled";
-    return "Olá, "+first+"! 😊\n\nPassando para lembrar do seu horário na *"+business.name+"*."+
+    return "Olá, "+first+"! 😊\n\nLembrando que seu horário na *"+business.name+"* é amanhã."+
       "\n\n📅 Data: *"+when.date+"*\n🕐 Horário: *"+when.time+"*\n✨ "+terms.one+": *"+service.name+"*"+proLine+
-      (pendingConfirmation?confirmationBlock:"")+
-      "\n\nSe precisar alterar, fale com a gente por aqui.";
+      (pendingConfirmation?confirmationBlock:"");
   }
   if(kind==="followup"){
     return "Olá, "+first+"! 😊\n\nObrigado pelo seu atendimento na *"+business.name+"*."+
@@ -156,8 +155,7 @@ function messageText(kind,business,customer,service,appointment){
     "\n\n📅 *Data:* "+when.date+
     "\n🕐 *Horário:* "+when.time+
     "\n✨ *"+terms.one+":* "+service.name+
-    (professional?"\n👤 *Profissional:* "+professional:"")+
-    confirmationBlock;
+    (professional?"\n👤 *Profissional:* "+professional:"");
 }
 async function cancelClaimed(businessId,job,reason){
   await rpc("agenda_baileys_cancel_job",{
@@ -492,7 +490,7 @@ const server=http.createServer(async(req,res)=>{
   if(req.method==="OPTIONS")return json(res,204,{});
   try{
     const url=new URL(req.url||"/","http://localhost");
-    if(url.pathname==="/health")return json(res,200,{ok:true,service:"agenda-pro-baileys-oracle",version:"2026-10-06-clean-confirmation-url",sessions:sessions.size});
+    if(url.pathname==="/health")return json(res,200,{ok:true,service:"agenda-pro-baileys-oracle",version:"2026-10-06-confirm-24h",sessions:sessions.size});
     const match=url.pathname.match(/^\/v1\/([^/]+)\/(status|connect|disconnect|pair-code|send-catalog)$/);
     if(!match)return json(res,404,{error:"Rota não encontrada"});
     const businessId=decodeURIComponent(match[1]);
