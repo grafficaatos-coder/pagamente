@@ -1,4 +1,4 @@
-const CACHE_NAME='agenda-pro-shell-v18-reminder24h';
+const CACHE_NAME='agenda-pro-shell-v19-service-value-only';
 const SHELL=['/','/manifest.webmanifest','/icons/app-icon.svg','/icons/app-icon-maskable.svg'];
 
 self.addEventListener('install',event=>{
