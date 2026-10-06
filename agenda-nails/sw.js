@@ -1,4 +1,4 @@
-const CACHE_NAME='agenda-pro-shell-v39-whatsapp-clean';
+const CACHE_NAME='agenda-pro-shell-v40-qr-first';
 const SHELL=['/','/manifest.webmanifest','/icons/app-icon.svg','/icons/app-icon-maskable.svg'];
 
 self.addEventListener('install',event=>{
