@@ -462,7 +462,7 @@
     const CAPABILITIES={
       agenda:'Agenda, serviços e horários',
       clients:'Cadastro de clientes/pacientes',
-      finance:'Financeiro por atendimentos concluídos'
+      finance:'Financeiro automático por agendamentos não cancelados'
     };
     const DEFAULT_ADMIN={
       settings:{autoBlock:true,freeTrial:true,publicSignup:true,trialDays:7,graceDays:5},
@@ -786,8 +786,8 @@ async function installAgendaApp(){
 }
     function cash(){
   const serviceMap=new Map(companyData.services.map(s=>[s.id,s]));
-  const completed=companyData.appointments.filter(a=>a.status==='completed'&&financeInPeriod(a.starts_at));
-  const autoRevenue=completed.reduce((sum,a)=>sum+Number(serviceMap.get(a.service_id)?.price_cents||0),0)/100;
+  const billable=companyData.appointments.filter(a=>a.status!=='cancelled'&&financeInPeriod(a.starts_at));
+  const autoRevenue=billable.reduce((sum,a)=>sum+Number(serviceMap.get(a.service_id)?.price_cents||0),0)/100;
   const manual=(companyData.financialEntries||[]).filter(e=>financeInPeriod(e.occurred_on));
   const manualIncome=manual.filter(e=>e.type==='income').reduce((s,e)=>s+Number(e.amount_cents||0),0)/100;
   const expenses=manual.filter(e=>e.type==='expense').reduce((s,e)=>s+Number(e.amount_cents||0),0)/100;
@@ -798,7 +798,7 @@ async function installAgendaApp(){
   const filtered=manual.filter(e=>financeKind==='all'||e.type===financeKind);
   const rows=[];
   if(financeKind!=='expense'&&autoRevenue>0){
-    rows.push(`<div class="finance-item"><div class="finance-icon income">↗</div><div class="finance-item-main"><b>Atendimentos concluídos</b><small>Receita automática · ${completed.length} atendimento(s)</small></div><div class="finance-amount income">+${moneyBR(autoRevenue)}</div><span></span></div>`);
+    rows.push(`<div class="finance-item"><div class="finance-icon income">↗</div><div class="finance-item-main"><b>Agendamentos não cancelados</b><small>Receita automática · ${billable.length} atendimento(s)</small></div><div class="finance-amount income">+${moneyBR(autoRevenue)}</div><span></span></div>`);
   }
   rows.push(...filtered.map(e=>{
     const income=e.type==='income';
@@ -826,9 +826,9 @@ async function installAgendaApp(){
   return shell(`<div class="section-title"><span class="eyebrow">Financeiro</span><h2>Controle de caixa</h2><p>Acompanhe entradas, saídas e o saldo da empresa.</p></div>
   <div class="finance-toolbar"><div class="finance-actions"><button class="btn finance-add-income" onclick="openFinanceEntry('income')">+ Entrada</button><button class="btn finance-add-expense" onclick="openFinanceEntry('expense')">− Saída</button></div><div class="finance-filters"><button class="finance-filter ${financePeriod==='month'?'on':''}" onclick="setFinancePeriod('month')">Este mês</button><button class="finance-filter ${financePeriod==='all'?'on':''}" onclick="setFinancePeriod('all')">Todo período</button></div></div>
   ${form}
-  <div class="money"><div class="card finance-income"><span>Entradas</span><b>${moneyBR(totalIncome)}</b><small>${completed.length} atendimento(s) + ${incomeCount} lançamento(s)</small></div><div class="card finance-expense"><span>Saídas</span><b>${moneyBR(expenses)}</b><small>${expenseCount} lançamento(s)</small></div><div class="card finance-balance"><span>Saldo</span><b>${moneyBR(balance)}</b><small>${balance>=0?'Caixa positivo':'Caixa negativo'}</small></div><div class="card"><span>Receita automática</span><b>${moneyBR(autoRevenue)}</b><small>Atendimentos concluídos</small></div></div>
+  <div class="money"><div class="card finance-income"><span>Entradas</span><b>${moneyBR(totalIncome)}</b><small>${billable.length} atendimento(s) + ${incomeCount} lançamento(s)</small></div><div class="card finance-expense"><span>Saídas</span><b>${moneyBR(expenses)}</b><small>${expenseCount} lançamento(s)</small></div><div class="card finance-balance"><span>Saldo</span><b>${moneyBR(balance)}</b><small>${balance>=0?'Caixa positivo':'Caixa negativo'}</small></div><div class="card"><span>Receita automática</span><b>${moneyBR(autoRevenue)}</b><small>Agendamentos não cancelados</small></div></div>
   <div class="finance-grid"><section class="panel finance-history"><div class="finance-history-head"><div><span class="eyebrow">Movimentações</span><h3>Histórico</h3></div><div class="finance-filters"><button class="finance-filter ${financeKind==='all'?'on':''}" onclick="setFinanceKind('all')">Todas</button><button class="finance-filter ${financeKind==='income'?'on':''}" onclick="setFinanceKind('income')">Entradas</button><button class="finance-filter ${financeKind==='expense'?'on':''}" onclick="setFinanceKind('expense')">Saídas</button></div></div><div class="finance-list">${rows.join('')||'<div class="empty-state" style="margin:16px">Nenhuma movimentação neste período.</div>'}</div></section>
-  <aside class="finance-side"><section class="panel"><div class="head"><div><span class="eyebrow">Resumo</span><h3>Movimento do caixa</h3></div></div><div class="finance-summary"><div class="finance-row"><span>Entradas manuais</span><b>${moneyBR(manualIncome)}</b></div><div class="finance-row"><span>Receita de atendimentos</span><b>${moneyBR(autoRevenue)}</b></div><div class="finance-row"><span>Total de saídas</span><b>${moneyBR(expenses)}</b></div><div class="finance-row"><span>Saldo final</span><b>${moneyBR(balance)}</b></div></div></section><div class="finance-auto-note"><b>Receita automática</b>Quando um atendimento é marcado como concluído, o valor do serviço entra automaticamente no resumo financeiro. Entradas e saídas extras podem ser lançadas pelos botões acima.</div></aside></div>`);
+  <aside class="finance-side"><section class="panel"><div class="head"><div><span class="eyebrow">Resumo</span><h3>Movimento do caixa</h3></div></div><div class="finance-summary"><div class="finance-row"><span>Entradas manuais</span><b>${moneyBR(manualIncome)}</b></div><div class="finance-row"><span>Receita de atendimentos</span><b>${moneyBR(autoRevenue)}</b></div><div class="finance-row"><span>Total de saídas</span><b>${moneyBR(expenses)}</b></div><div class="finance-row"><span>Saldo final</span><b>${moneyBR(balance)}</b></div></div></section><div class="finance-auto-note"><b>Receita automática</b>Todo agendamento entra automaticamente no financeiro enquanto não estiver cancelado. Se o atendimento for cancelado depois, o valor é retirado automaticamente do total. Entradas e saídas extras podem ser lançadas pelos botões acima.</div></aside></div>`);
 }
     async function callAgendaWhatsApp(payload){
   if(!sb)throw new Error('Sessão indisponível');
@@ -1362,13 +1362,13 @@ async function installAgendaApp(){
       a.status==='pending'?'p':'c'
     ];
   });
-  const completed=companyData.appointments.filter(a=>a.status==='completed');
-  const revenue=completed.reduce((sum,a)=>sum+Number(serviceMap.get(a.service_id)?.price_cents||0),0)/100;
+  const billable=companyData.appointments.filter(a=>a.status!=='cancelled');
+  const revenue=billable.reduce((sum,a)=>sum+Number(serviceMap.get(a.service_id)?.price_cents||0),0)/100;
   p.metrics=[
     ['calendar','Horários',String(companyData.appointments.length),'agendamentos cadastrados'],
     ['users',p.people,String(companyData.customers.length),'cadastros da empresa'],
     ['sparkle',p.serviceLabel,String(companyData.services.length),'itens ativos'],
-    [hasFeature('finance')?'money':'chart',hasFeature('finance')?'Receita concluída':'Plano',hasFeature('finance')?moneyBR(revenue):companyCtx.plan.name,subscriptionLabel()]
+    [hasFeature('finance')?'money':'chart',hasFeature('finance')?'Receita automática':'Plano',hasFeature('finance')?moneyBR(revenue):companyCtx.plan.name,hasFeature('finance')?'agendamentos não cancelados':subscriptionLabel()]
   ];
 }
     async function changeMyPassword(){
