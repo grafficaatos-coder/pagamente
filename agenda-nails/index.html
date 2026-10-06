@@ -1066,6 +1066,52 @@
       .toast{left:14px!important;right:14px!important;bottom:18px!important;text-align:left!important}
     }
 
+  
+    /* Preferência de valor no agendamento */
+    .booking-price-setting{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      margin:0 0 16px;
+      padding:12px 14px;
+      border:1px solid var(--line);
+      border-radius:12px;
+      background:#faf9f9;
+    }
+    .booking-price-copy{min-width:0}
+    .booking-price-copy b,.booking-price-copy small{display:block}
+    .booking-price-copy b{font-size:11px;color:var(--ink)}
+    .booking-price-copy small{margin-top:3px;color:var(--muted);font-size:9px;line-height:1.4}
+    .booking-price-toggle{
+      width:46px;
+      height:26px;
+      flex:0 0 auto;
+      position:relative;
+      border:0;
+      border-radius:999px;
+      background:#d8d1d4;
+      padding:0;
+      transition:.18s ease;
+    }
+    .booking-price-toggle span{
+      position:absolute;
+      width:20px;
+      height:20px;
+      top:3px;
+      left:3px;
+      border-radius:50%;
+      background:#fff;
+      box-shadow:0 2px 6px rgba(0,0,0,.16);
+      transition:.18s ease;
+    }
+    .booking-price-toggle.on{background:var(--wine)}
+    .booking-price-toggle.on span{transform:translateX(20px)}
+    @media(max-width:560px){
+      .booking-price-setting{align-items:flex-start}
+      .booking-price-toggle{margin-top:2px}
+    }
+
   </style>
 </head>
 <body>
@@ -2950,9 +2996,39 @@ async function installAgendaApp(){
   if(error){console.error(error);return toast('Não foi possível atualizar')}
   await loadOwnerData();render();toast(label+' atualizado');
 }
+    async function toggleBookingPriceVisibility(){
+  if(!canAdminCompany())return toast('Somente administrador pode alterar esta preferência');
+  const current=companyCtx?.preferences?.show_price_on_booking!==false;
+  const next=!current;
+  const payload={
+    business_id:companyCtx.business.id,
+    show_price_on_booking:next,
+    updated_at:new Date().toISOString()
+  };
+  const {data,error}=await sb.from('agenda_business_preferences')
+    .upsert(payload,{onConflict:'business_id'})
+    .select('*')
+    .single();
+  if(error){
+    console.error(error);
+    return toast('Não foi possível alterar a exibição do valor');
+  }
+  companyCtx.preferences=data||payload;
+  render();
+  toast(next?'Valores visíveis nesta tela':'Valores ocultos nesta tela');
+}
     function booking(){
   const p=P();
-  return `<div class="booking"><div class="bookwrap"><section class="bookintro"><div class="logo">${p.initials}</div><h1>Novo horário</h1><p>Agendamento de ${companyCtx.business.name}.</p><button class="btn secondary" onclick="go('agenda')">← Voltar</button></section><section class="book"><div class="book-title"><div><span class="eyebrow">${p.segment}</span><h2>Cadastrar ${p.appointment.toLowerCase()}</h2><p>Os dados serão salvos somente nesta empresa.</p></div><span class="tag">Novo</span></div><div class="formgrid"><div class="field"><div class="field-title-row"><b>${p.person}</b><button type="button" class="inline-add-customer" onclick="addCustomerFromBooking()">+ Cadastrar ${p.person.toLowerCase()}</button></div><select id="fclient"><option value="">Selecione</option>${companyData.customers.map(x=>`<option value="${x.id}">${x.name}</option>`).join('')}</select></div><div class="field"><b>${p.service}</b><select id="fservice"><option value="">Selecione</option>${companyData.services.filter(x=>x.active).map(x=>`<option value="${x.id}">${x.name} · ${moneyBR(Number(x.price_cents||0)/100)}</option>`).join('')}</select></div><div class="field"><b>${p.professional}</b><input id="fpro" placeholder="Nome do profissional"></div><div class="field"><b>Data</b><input id="fdate" type="date"></div><div class="field"><b>Horário</b><input id="ftime" type="time"></div><div class="field"><b>Status</b><select id="fstatus"><option value="confirmed">Confirmado</option><option value="pending">Pendente</option></select></div></div><div class="field"><b>Observação administrativa</b><textarea id="fnote" placeholder="${p.notePlaceholder}"></textarea></div><div class="booking-whats-note"><b>WhatsApp fácil:</b> não precisa de API. Se a cliente tiver telefone cadastrado, ao salvar o sistema abre a conversa com a confirmação pronta. Você só toca em <b>Enviar</b>. Se a automação oficial estiver conectada, o envio pode ser feito sozinho.</div><button class="btn primary" style="width:100%;margin-top:12px;min-height:48px" onclick="saveAppointment()">Salvar horário</button></section></div></div>`;
+  const showBookingPrice=companyCtx?.preferences?.show_price_on_booking!==false;
+  const serviceOptions=companyData.services.filter(x=>x.active).map(x=>`<option value="${x.id}">${appModalEscape(x.name)}${showBookingPrice?' · '+moneyBR(Number(x.price_cents||0)/100):''}</option>`).join('');
+  const pricePreference=canAdminCompany()?`<div class="booking-price-setting">
+    <div class="booking-price-copy">
+      <b>Mostrar valor dos serviços nesta tela</b>
+      <small>${showBookingPrice?'Os valores aparecem ao lado do nome do serviço.':'Os valores ficam ocultos aqui, mas continuam no financeiro.'}</small>
+    </div>
+    <button type="button" class="booking-price-toggle ${showBookingPrice?'on':''}" onclick="toggleBookingPriceVisibility()" aria-pressed="${showBookingPrice?'true':'false'}"><span></span></button>
+  </div>`:'';
+  return `<div class="booking"><div class="bookwrap"><section class="bookintro"><div class="logo">${p.initials}</div><h1>Novo horário</h1><p>Agendamento de ${companyCtx.business.name}.</p><button class="btn secondary" onclick="go('agenda')">← Voltar</button></section><section class="book"><div class="book-title"><div><span class="eyebrow">${p.segment}</span><h2>Cadastrar ${p.appointment.toLowerCase()}</h2><p>Os dados serão salvos somente nesta empresa.</p></div><span class="tag">Novo</span></div>${pricePreference}<div class="formgrid"><div class="field"><div class="field-title-row"><b>${p.person}</b><button type="button" class="inline-add-customer" onclick="addCustomerFromBooking()">+ Cadastrar ${p.person.toLowerCase()}</button></div><select id="fclient"><option value="">Selecione</option>${companyData.customers.map(x=>`<option value="${x.id}">${appModalEscape(x.name)}</option>`).join('')}</select></div><div class="field"><b>${p.service}</b><select id="fservice"><option value="">Selecione</option>${serviceOptions}</select></div><div class="field"><b>${p.professional}</b><input id="fpro" placeholder="Nome do profissional"></div><div class="field"><b>Data</b><input id="fdate" type="date"></div><div class="field"><b>Horário</b><input id="ftime" type="time"></div><div class="field"><b>Status</b><select id="fstatus"><option value="confirmed">Confirmado</option><option value="pending">Pendente</option></select></div></div><div class="field"><b>Observação administrativa</b><textarea id="fnote" placeholder="${p.notePlaceholder}"></textarea></div><div class="booking-whats-note"><b>WhatsApp fácil:</b> não precisa de API. Se a cliente tiver telefone cadastrado, ao salvar o sistema abre a conversa com a confirmação pronta. Você só toca em <b>Enviar</b>. Se a automação oficial estiver conectada, o envio pode ser feito sozinho.</div><button class="btn primary" style="width:100%;margin-top:12px;min-height:48px" onclick="saveAppointment()">Salvar horário</button></section></div></div>`;
 }
     function fillPhone(){const n=document.getElementById('fclient').value,c=P().peopleData.find(x=>x[0]===n);document.getElementById('fphone').value=c?c[1]:''}
     async function addCustomerFromBooking(){
@@ -3102,10 +3178,11 @@ async function installAgendaApp(){
     loginMessage='Este e-mail já existe, mas ainda não possui uma empresa cadastrada no Agenda Pro. Para criar uma nova conta do Agenda Pro, use outro e-mail.';
     appMode=null;render();return;
   }
-  const [{data:business},{data:subscription},{data:settings}]=await Promise.all([
+  const [{data:business},{data:subscription},{data:settings},{data:preferences}]=await Promise.all([
     sb.from('agenda_businesses').select('*').eq('id',member.business_id).single(),
     sb.from('agenda_subscriptions').select('*').eq('business_id',member.business_id).single(),
-    sb.from('agenda_platform_settings').select('*').eq('id',true).maybeSingle()
+    sb.from('agenda_platform_settings').select('*').eq('id',true).maybeSingle(),
+    sb.from('agenda_business_preferences').select('*').eq('business_id',member.business_id).maybeSingle()
   ]);
   if(!business||!subscription){
     await sb.auth.signOut();loginMessage='Cadastro da empresa incompleto. Fale com o administrador.';appMode=null;render();return;
@@ -3114,7 +3191,14 @@ async function installAgendaApp(){
   if(!plan){
     await sb.auth.signOut();loginMessage='Plano da empresa não encontrado.';appMode=null;render();return;
   }
-  companyCtx={business,membership:member,subscription,plan,settings:settings||{auto_block:true,grace_days:5}};
+  companyCtx={
+    business,
+    membership:member,
+    subscription,
+    plan,
+    settings:settings||{auto_block:true,grace_days:5},
+    preferences:preferences||{business_id:business.id,show_price_on_booking:true}
+  };
   segment=PROFILES[business.segment]?business.segment:'salon';
   appMode='company';ownerLogged=false;page='home';
   if(typeof loadCompanyData==='function')await loadCompanyData();
@@ -3337,7 +3421,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-money9',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-bookingprice10',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
