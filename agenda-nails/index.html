@@ -3274,10 +3274,19 @@ async function installAgendaApp(){
   publicConfirmationState.loading=true;
   render();
   try{
-    const query=PUBLIC_CONFIRMATION_CODE?'?c='+encodeURIComponent(PUBLIC_CONFIRMATION_CODE):'?token='+encodeURIComponent(PUBLIC_CONFIRMATION_TOKEN);
-    const r=await fetch(AGENDA_CONFIRMATION_FUNCTION+query,{cache:'no-store'});
-    const out=await r.json().catch(()=>({}));
-    if(!r.ok)throw new Error(out.error||'Não foi possível carregar o horário');
+    let r,out;
+    if(PUBLIC_CONFIRMATION_CODE){
+      r=await fetch(SUPABASE_URL+'/rest/v1/rpc/agenda_public_confirmation',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY},
+        body:JSON.stringify({p_code:PUBLIC_CONFIRMATION_CODE,p_action:null}),
+        cache:'no-store'
+      });
+    }else{
+      r=await fetch(AGENDA_CONFIRMATION_FUNCTION+'?token='+encodeURIComponent(PUBLIC_CONFIRMATION_TOKEN),{cache:'no-store'});
+    }
+    out=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(out.error||out.message||'Não foi possível carregar o horário');
     publicConfirmationState.appointment=out.appointment||null;
     publicConfirmationState.error='';
   }catch(err){
@@ -3294,13 +3303,22 @@ async function installAgendaApp(){
   publicConfirmationState.message=action==='confirm'?'Confirmando seu horário...':'Registrando sua resposta...';
   render();
   try{
-    const r=await fetch(AGENDA_CONFIRMATION_FUNCTION,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({code:PUBLIC_CONFIRMATION_CODE||undefined,token:PUBLIC_CONFIRMATION_TOKEN||undefined,action})
-    });
+    let r;
+    if(PUBLIC_CONFIRMATION_CODE){
+      r=await fetch(SUPABASE_URL+'/rest/v1/rpc/agenda_public_confirmation',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','apikey':SUPABASE_KEY},
+        body:JSON.stringify({p_code:PUBLIC_CONFIRMATION_CODE,p_action:action})
+      });
+    }else{
+      r=await fetch(AGENDA_CONFIRMATION_FUNCTION,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({token:PUBLIC_CONFIRMATION_TOKEN,action})
+      });
+    }
     const out=await r.json().catch(()=>({}));
-    if(!r.ok)throw new Error(out.error||'Não foi possível enviar sua resposta');
+    if(!r.ok)throw new Error(out.error||out.message||'Não foi possível enviar sua resposta');
     publicConfirmationState.appointment=out.appointment||publicConfirmationState.appointment;
     publicConfirmationState.message=out.message||'Resposta registrada com sucesso';
   }catch(err){
@@ -3628,7 +3646,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-shortlink14',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-shortlink15',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
