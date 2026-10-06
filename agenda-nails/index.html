@@ -1781,6 +1781,18 @@
       }
     }
 
+  
+    /* Estado real da conexão oficial Meta */
+    .wa-platform-pending{display:grid;grid-template-columns:54px minmax(0,1fr);gap:14px;align-items:center;padding:20px;border-color:#ead9bd;background:linear-gradient(145deg,#fffdf8,#fff8ea)}
+    .wa-platform-pending-icon{width:54px;height:54px;border-radius:17px;display:grid;place-items:center;background:#fff0cc;color:#8d6522;font-size:22px;font-weight:950}
+    .wa-platform-pending h3{margin:4px 0 6px;font-size:18px}
+    .wa-platform-pending p{margin:0;color:#776b60;font-size:10px;line-height:1.55}
+    .meta-setup-steps{display:grid;gap:8px;margin:14px 0}
+    .meta-setup-steps>div{display:grid;grid-template-columns:30px minmax(0,1fr);gap:9px;align-items:center;padding:9px 10px;border-radius:11px;background:#faf7f9;border:1px solid #eee4e9}
+    .meta-setup-steps b{width:30px;height:30px;border-radius:9px;display:grid;place-items:center;background:#fff;color:var(--wine);font-size:10px}
+    .meta-setup-steps span{font-size:9px;line-height:1.45;color:#675c61}
+    .meta-config-status-line{margin-top:10px;padding:9px 11px;border-radius:10px;background:#f7f3f5;color:#6f5964;font-size:9px;font-weight:850}
+    @media(max-width:720px){.wa-platform-pending{grid-template-columns:46px minmax(0,1fr);padding:16px}.wa-platform-pending-icon{width:46px;height:46px;border-radius:14px}}
   </style>
 </head>
 <body>
@@ -1963,7 +1975,7 @@
     let whatsappState={connection:null,messages:[]},whatsappLoading=false,whatsappSetupDevice='mobile';
     let whatsappQueue=[],whatsappQueueTimer=null;
     let baileysSession={status:'disconnected',phone:null,qr_svg:null,pairing_code:null,last_error:null},baileysPollTimer=null;
-    let metaPlatformConfig={configured:false,app_id:'',config_id:''},metaPlatformLoading=false,metaEmbeddedCapture={waba_id:'',phone_number_id:''},fbSdkPromise=null,metaListenerReady=false;
+    let metaPlatformConfig={configured:false,app_id:'',config_id:''},metaPlatformLoading=false,publicMetaPlatformReady=false,metaEmbeddedCapture={waba_id:'',phone_number_id:''},fbSdkPromise=null,metaListenerReady=false;
     let deferredPwaPrompt=null;
     const CAPABILITIES={
       agenda:'Agenda, serviços e horários',
@@ -2755,9 +2767,22 @@ async function installAgendaApp(){
   }
   return out;
 }
+    async function loadPublicMetaPlatformStatus(redraw=false){
+  if(!sb||!companyCtx)return false;
+  try{
+    const cfg=await callWhatsOnboarding({action:'config'});
+    publicMetaPlatformReady=!!cfg?.configured;
+  }catch(ex){
+    console.warn('Configuração oficial da Meta ainda indisponível',ex);
+    publicMetaPlatformReady=false;
+  }
+  if(redraw&&page==='wa')render();
+  return publicMetaPlatformReady;
+}
     async function loadWhatsappStatus(redraw=true){
   if(!companyCtx||!sb||whatsappLoading)return;
   whatsappLoading=true;
+  await loadPublicMetaPlatformStatus(false);
   const bid=companyCtx.business.id;
   const [connRes,msgRes]=await Promise.all([
     sb.from('agenda_whatsapp_connections').select('business_id,status,waba_id,phone_number_id,display_phone_number,verified_name,quality_rating,auto_confirmation,confirmation_template_name,template_language,connected_at,last_error,updated_at').eq('business_id',bid).maybeSingle(),
@@ -3217,17 +3242,26 @@ async function installAgendaApp(){
   const connectedCard=connected
     ? `<section class="panel wa-status connected"><div class="head"><div><span class="eyebrow">Conectado pelo celular</span><h3>WhatsApp Business ativo</h3></div><span class="status-badge status-active">Conectado</span></div><div class="wa-status-grid"><div><small>Número</small><b>${conn.display_phone_number||'Conectado'}</b></div><div><small>Nome</small><b>${conn.verified_name||'—'}</b></div><div><small>Status</small><b>${conn.quality_rating||'Ativo'}</b></div><div><small>Envio automático</small><b>${conn.auto_confirmation?'Ligado':'Disponível'}</b></div></div>${admin?`<div class="wa-connected-actions"><button class="btn wa-disconnect" onclick="disconnectWhatsAppBusiness()">Desconectar</button></div>`:''}</section>`
     : admin
-      ? `<section class="panel wa-mobile-connect-primary">
-          <div class="wa-mobile-connect-icon">WA</div>
-          <div class="wa-mobile-connect-copy">
-            <span class="eyebrow">Recomendado para celular</span>
-            <h3>Conectar pelo celular</h3>
-            <p>Faça a conexão inteira neste aparelho, sem QR Code e sem precisar de outro celular ou computador.</p>
-            <div class="wa-mobile-benefits"><span>✓ Sem escanear QR</span><span>✓ Feito no próprio celular</span><span>✓ Conexão oficial</span></div>
-          </div>
-          <button id="waSimpleConnectBtn" class="btn primary wa-mobile-connect-btn" onclick="startWhatsEmbeddedSignup()">Conectar pelo celular</button>
-          <div id="waSimpleConnectError" class="login-error wa-simple-error"></div>
-        </section>`
+      ? publicMetaPlatformReady
+        ? `<section class="panel wa-mobile-connect-primary">
+            <div class="wa-mobile-connect-icon">WA</div>
+            <div class="wa-mobile-connect-copy">
+              <span class="eyebrow">Recomendado para celular</span>
+              <h3>Conectar pelo celular</h3>
+              <p>Faça a conexão inteira neste aparelho, sem QR Code e sem precisar de outro celular ou computador.</p>
+              <div class="wa-mobile-benefits"><span>✓ Sem escanear QR</span><span>✓ Feito no próprio celular</span><span>✓ Conexão oficial</span></div>
+            </div>
+            <button id="waSimpleConnectBtn" class="btn primary wa-mobile-connect-btn" onclick="startWhatsEmbeddedSignup()">Conectar pelo celular</button>
+            <div id="waSimpleConnectError" class="login-error wa-simple-error"></div>
+          </section>`
+        : `<section class="panel wa-platform-pending">
+            <div class="wa-platform-pending-icon">!</div>
+            <div>
+              <span class="eyebrow">Configuração da plataforma</span>
+              <h3>Conexão pelo celular ainda não ativada</h3>
+              <p>Falta a configuração única da Meta no painel do proprietário. Depois de ativada, todos os assinantes poderão conectar o próprio WhatsApp neste celular, sem QR Code.</p>
+            </div>
+          </section>`
       : '';
 
   const automationSettings=connected&&admin
@@ -3963,14 +3997,20 @@ async function installAgendaApp(){
   </section>
   <section class="panel meta-platform-panel">
     <div class="head"><div><span class="eyebrow">WhatsApp dos assinantes</span><h3>Conexão simplificada com a Meta</h3></div>${metaStatus}</div>
-    <div class="meta-platform-note"><b>Você configura isto uma única vez.</b> Depois, seus assinantes verão apenas o botão “Conectar meu WhatsApp Business” e farão a autorização pela janela oficial da Meta.</div>
+    <div class="meta-platform-note"><b>Configuração obrigatória para “Conectar pelo celular”.</b> Faça isto uma única vez. Depois, todos os assinantes poderão autorizar o próprio WhatsApp no celular, sem QR Code.</div>
+    <div class="meta-setup-steps">
+      <div><b>1</b><span>Abra ou crie seu aplicativo no Meta for Developers com o produto WhatsApp.</span></div>
+      <div><b>2</b><span>Crie uma configuração de <strong>Embedded Signup</strong> e copie o Configuration ID.</span></div>
+      <div><b>3</b><span>Cole abaixo o App ID, Configuration ID e App Secret e salve.</span></div>
+    </div>
     <div class="wa-form-grid">
       <div class="field"><b>Meta App ID</b><input id="metaAppId" value="${metaPlatformConfig.app_id||''}" placeholder="App ID"></div>
       <div class="field"><b>Configuration ID</b><input id="metaConfigId" value="${metaPlatformConfig.config_id||''}" placeholder="Configuration ID do Embedded Signup"></div>
       <div class="field wa-full"><b>Meta App Secret</b><input id="metaAppSecret" type="password" autocomplete="off" placeholder="${metaPlatformConfig.configured?'Digite novamente apenas para atualizar':'App Secret'}"></div>
     </div>
     <div id="metaConfigError" class="login-error"></div>
-    <div class="meta-platform-actions"><button class="btn secondary" onclick="openMetaApps()">Abrir Meta for Developers</button><button id="metaConfigSave" class="btn primary" onclick="saveMetaPlatformConfig()">Salvar conexão da Meta</button></div>
+    <div class="meta-platform-actions"><button class="btn secondary" onclick="openMetaApps()">Abrir Meta for Developers</button><button id="metaConfigSave" class="btn primary" onclick="saveMetaPlatformConfig()">Salvar e ativar conexão</button></div>
+    <div class="meta-config-status-line">${metaPlatformConfig.configured?'✓ Conexão pelo celular ativada para os assinantes':'Pendente: faltam as credenciais da Meta'}</div>
   </section>
   <div class="context-note"><b>Cadastro automático:</b> quando estiver ligado, o novo assinante cria a conta sozinho, escolhe um plano e aparece imediatamente em “Assinantes” no seu painel.</div>`;
 }
@@ -4843,6 +4883,7 @@ async function installAgendaApp(){
   if(!allowed[p])return toast(p==='team'?'Seu perfil não permite gerenciar usuários':'Este recurso não está incluído no seu plano');
   page=p;render();scrollTo(0,0);
   if(p==='team')setTimeout(()=>loadTeamMembers(true),0);
+  if(p==='wa')setTimeout(()=>loadPublicMetaPlatformStatus(true),0);
 }
     function book(){
   if(appMode!=='company')return toast('Agendamentos ficam no acesso das empresas');
@@ -4924,7 +4965,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-mobilefix42',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-metaconfig43',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
