@@ -1422,6 +1422,7 @@
     if(!PROFILES[segment])segment='salon';
     let page='home',agendaView='day',agendaAnchorDate=new Date(),A=[];
     const SUPABASE_URL='https://zmrihyzwsyxjikdknfug.supabase.co';
+    const AGENDA_PRO_URL='https://agenda-pro-iucw.vercel.app/';
     const SUPABASE_KEY='sb_publishable_nX-qLw9rEdLUvZpgXMj1LA_2gjB3umn';
     const AGENDA_ADMIN_FUNCTION=SUPABASE_URL+'/functions/v1/agenda-admin-access';
     const AGENDA_WHATSAPP_FUNCTION=SUPABASE_URL+'/functions/v1/agenda-whatsapp';
@@ -3799,7 +3800,7 @@ async function installAgendaApp(){
   if(!sb)return;
   const email=(document.getElementById('ownerUser')?.value||'').trim().toLowerCase()||prompt('Digite o e-mail da sua conta:');
   if(!email)return;
-  const redirectTo=location.origin+location.pathname;
+  const redirectTo=AGENDA_PRO_URL;
   const {error}=await sb.auth.resetPasswordForEmail(email,{redirectTo});
   const e=document.getElementById('loginError');
   if(error){console.error(error);if(e)e.textContent='Não foi possível enviar a recuperação. Confira o e-mail e tente novamente.';return}
@@ -3908,7 +3909,7 @@ async function installAgendaApp(){
   if(password!==password2){if(e)e.textContent='As senhas não conferem.';return}
   if(!signupPlans.some(p=>p.code===signupSelectedPlan)){if(e)e.textContent='Escolha um plano válido.';return}
   if(btn){btn.disabled=true;btn.textContent='Criando conta...'}
-  const redirectTo=location.origin+location.pathname;
+  const redirectTo=AGENDA_PRO_URL;
   const {data,error}=await sb.auth.signUp({
     email,password,
     options:{
@@ -4006,7 +4007,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-marketing24',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-authredirect25',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
