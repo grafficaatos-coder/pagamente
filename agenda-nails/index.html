@@ -1941,6 +1941,31 @@ async function installAgendaApp(){
     if(btn){btn.disabled=false;btn.textContent='WhatsApp · Enviar para todos'}
   }
 }
+    function openWhatsAppDirect(phone,message,preopenedWindow=null){
+  const normalized=normalizeWhatsPhone(phone);
+  if(!normalized)return false;
+  const encoded=encodeURIComponent(String(message||''));
+  const isMobile=/Android|iPhone|iPad|iPod/i.test(navigator.userAgent||'');
+  const url=isMobile
+    ? 'whatsapp://send?phone='+normalized+'&text='+encoded
+    : 'https://web.whatsapp.com/send?phone='+normalized+'&text='+encoded;
+  try{
+    if(preopenedWindow&&!preopenedWindow.closed){
+      preopenedWindow.location.href=url;
+    }else if(isMobile){
+      window.location.href=url;
+    }else{
+      window.open(url,'_blank','noopener,noreferrer');
+    }
+    return true;
+  }catch(err){
+    console.error(err);
+    const fallback='https://wa.me/'+normalized+'?text='+encoded;
+    window.open(fallback,'_blank','noopener,noreferrer');
+    return false;
+  }
+}
+
     function sendServicesToCustomer(id){
   const x=companyData.customers.find(c=>c.id===id);
   if(!x)return;
@@ -1949,8 +1974,7 @@ async function installAgendaApp(){
   const active=companyData.services.filter(s=>s.active);
   if(!active.length)return toast('Cadastre pelo menos um serviço ativo');
   const first=(x.name||'').trim().split(/\s+/)[0]||x.name;
-  const url='https://wa.me/'+phone+'?text='+encodeURIComponent(whatsCatalogMessage(first));
-  window.open(url,'_blank','noopener,noreferrer');
+  openWhatsAppDirect(phone,whatsCatalogMessage(first));
 }
     function servicesWhatsAppConnectionCard(){
   const enabled=!!(companyCtx?.settings?.baileys_enabled&&companyCtx?.settings?.baileys_service_url);
@@ -2425,7 +2449,7 @@ async function installAgendaApp(){
   const active=companyData.services.filter(s=>s.active);
   if(!active.length)return toast('Cadastre pelo menos um serviço ativo');
   const first=(x.name||'').trim().split(/\s+/)[0]||x.name;
-  window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(whatsCatalogMessage(first)),'_blank','noopener,noreferrer');
+  openWhatsAppDirect(phone,whatsCatalogMessage(first));
 }
     function sendWhatsQuickMessage(){
   const id=document.getElementById('waQuickCustomer')?.value;
@@ -2436,7 +2460,7 @@ async function installAgendaApp(){
   if(!x)return;
   const phone=normalizeWhatsPhone(x.phone);
   if(!phone)return toast('Esta cliente não tem WhatsApp cadastrado');
-  window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(text),'_blank','noopener,noreferrer');
+  openWhatsAppDirect(phone,text);
 }
     function fillWhatsQuickMessage(){
   const id=document.getElementById('waQuickCustomer')?.value;
@@ -2662,9 +2686,7 @@ async function installAgendaApp(){
   }).eq('id',id).eq('business_id',companyCtx.business.id);
   if(error)console.error(error);
   item.status='opened';
-  const url='https://wa.me/'+phone+'?text='+encodeURIComponent(msg);
-  if(w&&!w.closed)w.location.href=url;
-  else window.open(url,'_blank','noopener,noreferrer');
+  openWhatsAppDirect(phone,msg,w);
   if(page==='wa')render();
 }
     async function markQueueByAppointment(appointmentId,type,status){
@@ -2860,8 +2882,7 @@ async function installAgendaApp(){
   if(daysPast(x.due)<=0)return toast('A mensalidade ainda não está vencida');
   const phone=normalizeWhatsPhone(x.phone);
   if(!phone){editSubscriberPhone(id);return}
-  const url='https://wa.me/'+phone+'?text='+encodeURIComponent(billingWhatsMessage(x));
-  window.open(url,'_blank','noopener,noreferrer');
+  openWhatsAppDirect(phone,billingWhatsMessage(x));
 }
 
     async function ensureDefaultServices(){
@@ -3906,15 +3927,12 @@ async function installAgendaApp(){
       console.error(ex);
       toast('Horário salvo. O envio automático falhou; abrindo WhatsApp manual.');
       const msg=appointmentWhatsMessage(customer,service,date,time,professional_name,status);
-      const url='https://wa.me/'+phone+'?text='+encodeURIComponent(msg);
-      window.open(url,'_blank','noopener,noreferrer');
+      openWhatsAppDirect(phone,msg);
       await markQueueByAppointment(created.id,'confirmation','opened');
     }
   }else if(phone&&!baileysConnected){
     const msg=appointmentWhatsMessage(customer,service,date,time,professional_name,status);
-    const url='https://wa.me/'+phone+'?text='+encodeURIComponent(msg);
-    if(whatsWindow&&!whatsWindow.closed)whatsWindow.location.href=url;
-    else window.open(url,'_blank','noopener,noreferrer');
+    openWhatsAppDirect(phone,msg,whatsWindow);
     await markQueueByAppointment(created.id,'confirmation','opened');
   }
 
@@ -3924,7 +3942,7 @@ async function installAgendaApp(){
   if(!phone)toast('Horário salvo. Cliente sem WhatsApp cadastrado.');
   else if(automaticSent)toast('Horário salvo e mensagem de agendamento enviada automaticamente');
   else if(baileysConnected)toast('Horário salvo. Mensagem enviada agora e confirmação programada para 24h antes.');
-  else if(!autoConnected)toast('Horário salvo. Lembretes futuros já foram preparados automaticamente.');
+  else if(!autoConnected)toast('Horário salvo. WhatsApp aberto com a mensagem pronta para enviar.');
 }
     function confirmationLink(key){
   if(!key)return '';
@@ -4381,7 +4399,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-mobilemenu29',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-whatsappdirect30',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
