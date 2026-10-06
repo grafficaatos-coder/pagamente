@@ -1,4 +1,4 @@
-const CACHE_NAME='agenda-pro-shell-v25-auth-redirect';
+const CACHE_NAME='agenda-pro-shell-v26-subscriber-phone';
 const SHELL=['/','/manifest.webmanifest','/icons/app-icon.svg','/icons/app-icon-maskable.svg'];
 
 self.addEventListener('install',event=>{
