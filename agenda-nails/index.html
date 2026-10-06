@@ -67,7 +67,7 @@
 
     .segment-switch{display:flex;gap:7px;flex-wrap:wrap;margin-top:14px}.segment-switch button{border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:999px;padding:8px 11px;font-weight:850;font-size:11px}.segment-switch button.on{background:var(--wine);color:#fff;border-color:var(--wine);box-shadow:0 6px 14px rgba(101,56,75,.16)}
     .business-pill{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid var(--line);background:#fff;border-radius:999px;color:var(--wine);font-size:11px;font-weight:850}.business-pill span:first-child{font-size:15px}
-    .setup-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:14px}.setup-card{border:1px solid var(--line);background:#fff;border-radius:18px;padding:18px;text-align:left;color:var(--ink);box-shadow:0 8px 24px rgba(70,45,55,.035);transition:.18s}.setup-card:hover{transform:translateY(-2px);box-shadow:var(--shadow)}.setup-card.on{border-color:#b98b9d;box-shadow:0 0 0 3px rgba(101,56,75,.08)}.setup-card .big-emoji{font-size:28px;display:block;margin-bottom:10px}.setup-card b{display:block;font-size:15px}.setup-card small{display:block;color:var(--muted);line-height:1.5;margin-top:5px}.context-note{padding:12px 14px;border-radius:14px;background:#f7f1f4;border:1px solid var(--line);color:var(--muted);font-size:11px;line-height:1.55;margin-top:12px}.context-note b{color:var(--wine)}
+    .setup-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px;margin-top:14px}.setup-card{border:1px solid var(--line);background:#fff;border-radius:18px;padding:18px;text-align:left;color:var(--ink);box-shadow:0 8px 24px rgba(70,45,55,.035);transition:.18s}.setup-card:hover{transform:translateY(-2px);box-shadow:var(--shadow)}.setup-card.on{border-color:#b98b9d;box-shadow:0 0 0 3px rgba(101,56,75,.08)}.setup-card .big-emoji{font-size:28px;display:block;margin-bottom:10px}.setup-card b{display:block;font-size:15px}.setup-card small{display:block;color:var(--muted);line-height:1.5;margin-top:5px}.context-note{padding:12px 14px;border-radius:14px;background:#f7f1f4;border:1px solid var(--line);color:var(--muted);font-size:11px;line-height:1.55;margin-top:12px}.context-note b{color:var(--wine)}
     .profile-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}.profile-box{padding:13px;border:1px solid var(--line);border-radius:14px;background:#fff}.profile-box span{display:block;color:var(--muted);font-size:10px}.profile-box b{display:block;margin-top:4px;font-size:12px}
 
     .admin-tabs{display:flex;gap:7px;flex-wrap:wrap;margin:0 0 14px}.admin-tabs button{border:1px solid var(--line);background:#fff;color:var(--muted);padding:9px 13px;border-radius:11px;font-weight:850}.admin-tabs button.on{background:var(--wine);color:#fff;border-color:var(--wine)}
@@ -444,6 +444,122 @@
         extra:'<div class="field"><b>Forma de atendimento</b><select id="fextra"><option>Particular</option><option>Convênio</option><option>Teleconsulta</option></select></div><div class="field"><b>Convênio (opcional)</b><input id="finsurance" placeholder="Ex.: Unimed"></div>'
       }
     };
+
+    function professionalProfile({
+      key,emoji,segment,business,person='Cliente',people='Clientes',
+      service='Serviço',serviceLabel='Serviços',professional='Profissional',
+      professionals='Profissionais',appointment='Atendimento',appointments='Atendimentos',
+      visit='atendimentos',catalog='Catálogo de serviços',homeCopy='',services=[],extra=''
+    }){
+      return {
+        key,emoji,segment,business,brand:'Agenda Pro',initials:'AP',
+        person,people,service,serviceLabel,professional,professionals,
+        appointment,appointments,visit,catalog,homeCopy,finance:true,
+        pros:[],services,peopleData:[],appts:[],metrics:[],
+        notePlaceholder:'Observações administrativas do agendamento. Evite registrar informações sensíveis desnecessárias.',
+        extra
+      };
+    }
+
+    Object.assign(PROFILES,{
+      manicure:professionalProfile({
+        key:'manicure',emoji:'💅',segment:'Manicure / Nail Designer',business:'Studio de Unhas',
+        service:'Serviço',serviceLabel:'Serviços',professional:'Manicure',professionals:'Manicures',
+        appointment:'Atendimento',appointments:'Atendimentos',catalog:'Catálogo de serviços',
+        services:[['Manicure','45 min','R$ 40','💅'],['Pedicure','50 min','R$ 45','✨'],['Pé + Mão','90 min','R$ 80','🌸'],['Alongamento','120 min','R$ 160','💎'],['Manutenção','90 min','R$ 100','🪄']]
+      }),
+      barber:professionalProfile({
+        key:'barber',emoji:'💈',segment:'Barbearia',business:'Barbearia',
+        service:'Serviço',serviceLabel:'Serviços',professional:'Barbeiro(a)',professionals:'Barbeiros',
+        services:[['Corte','40 min','R$ 50','✂️'],['Barba','30 min','R$ 35','💈'],['Corte + Barba','70 min','R$ 80','✨'],['Sobrancelha','15 min','R$ 20','🪄']]
+      }),
+      psychologist:professionalProfile({
+        key:'psychologist',emoji:'🧠',segment:'Psicologia',business:'Consultório de Psicologia',
+        person:'Paciente',people:'Pacientes',service:'Sessão',serviceLabel:'Sessões',
+        professional:'Psicólogo(a)',professionals:'Psicólogos',appointment:'Sessão',appointments:'Sessões',
+        visit:'sessões',catalog:'Tipos de sessão',
+        services:[['Sessão individual','50 min','R$ 180','🧠'],['Sessão online','50 min','R$ 180','💻'],['Sessão de casal','60 min','R$ 240','🤝']],
+        extra:'<div class="field"><b>Modalidade</b><select id="fextra"><option>Presencial</option><option>Online</option></select></div>'
+      }),
+      therapist:professionalProfile({
+        key:'therapist',emoji:'🌿',segment:'Terapia',business:'Espaço Terapêutico',
+        person:'Cliente',people:'Clientes',service:'Sessão',serviceLabel:'Sessões',
+        professional:'Terapeuta',professionals:'Terapeutas',appointment:'Sessão',appointments:'Sessões',
+        visit:'sessões',catalog:'Tipos de sessão',
+        services:[['Sessão terapêutica','60 min','R$ 150','🌿'],['Sessão online','60 min','R$ 150','💻'],['Avaliação inicial','60 min','R$ 180','📋']]
+      }),
+      psychiatrist:professionalProfile({
+        key:'psychiatrist',emoji:'🧠',segment:'Psiquiatria',business:'Consultório de Psiquiatria',
+        person:'Paciente',people:'Pacientes',service:'Consulta',serviceLabel:'Consultas',
+        professional:'Psiquiatra',professionals:'Psiquiatras',appointment:'Consulta',appointments:'Consultas',
+        visit:'consultas',catalog:'Tipos de consulta',
+        services:[['Primeira consulta','60 min','R$ 450','🩺'],['Consulta de retorno','40 min','R$ 350','↩️'],['Teleconsulta','50 min','R$ 400','💻']],
+        extra:'<div class="field"><b>Forma de atendimento</b><select id="fextra"><option>Presencial</option><option>Teleconsulta</option></select></div>'
+      }),
+      physiotherapist:professionalProfile({
+        key:'physiotherapist',emoji:'🦴',segment:'Fisioterapia',business:'Clínica de Fisioterapia',
+        person:'Paciente',people:'Pacientes',service:'Sessão',serviceLabel:'Sessões',
+        professional:'Fisioterapeuta',professionals:'Fisioterapeutas',appointment:'Sessão',appointments:'Sessões',
+        visit:'sessões',catalog:'Tratamentos e sessões',
+        services:[['Avaliação fisioterapêutica','60 min','R$ 180','📋'],['Sessão de fisioterapia','50 min','R$ 140','🦴'],['Pilates clínico','50 min','R$ 120','🧘']]
+      }),
+      nutritionist:professionalProfile({
+        key:'nutritionist',emoji:'🥗',segment:'Nutrição',business:'Consultório de Nutrição',
+        person:'Paciente',people:'Pacientes',service:'Consulta',serviceLabel:'Consultas',
+        professional:'Nutricionista',professionals:'Nutricionistas',appointment:'Consulta',appointments:'Consultas',
+        visit:'consultas',catalog:'Tipos de consulta',
+        services:[['Primeira consulta','60 min','R$ 220','🥗'],['Retorno','40 min','R$ 160','↩️'],['Consulta online','50 min','R$ 200','💻']]
+      }),
+      dentist:professionalProfile({
+        key:'dentist',emoji:'🦷',segment:'Odontologia',business:'Consultório Odontológico',
+        person:'Paciente',people:'Pacientes',service:'Procedimento',serviceLabel:'Procedimentos',
+        professional:'Dentista',professionals:'Dentistas',appointment:'Consulta',appointments:'Consultas',
+        visit:'consultas',catalog:'Procedimentos e consultas',
+        services:[['Avaliação','40 min','R$ 150','🦷'],['Limpeza','60 min','R$ 220','✨'],['Consulta de retorno','30 min','R$ 0','↩️']]
+      }),
+      massage_therapist:professionalProfile({
+        key:'massage_therapist',emoji:'💆',segment:'Massoterapia',business:'Espaço de Massoterapia',
+        person:'Cliente',people:'Clientes',service:'Sessão',serviceLabel:'Sessões',
+        professional:'Massoterapeuta',professionals:'Massoterapeutas',appointment:'Sessão',appointments:'Sessões',
+        visit:'sessões',catalog:'Tipos de massagem',
+        services:[['Massagem relaxante','60 min','R$ 140','💆'],['Massagem terapêutica','60 min','R$ 160','🌿'],['Drenagem linfática','60 min','R$ 150','✨']]
+      }),
+      podiatrist:professionalProfile({
+        key:'podiatrist',emoji:'🦶',segment:'Podologia',business:'Clínica de Podologia',
+        person:'Cliente',people:'Clientes',service:'Procedimento',serviceLabel:'Procedimentos',
+        professional:'Podólogo(a)',professionals:'Podólogos',appointment:'Atendimento',appointments:'Atendimentos',
+        visit:'atendimentos',catalog:'Procedimentos',
+        services:[['Avaliação','30 min','R$ 70','🔎'],['Podologia completa','60 min','R$ 140','🦶'],['Tratamento de unha','45 min','R$ 110','✨']]
+      }),
+      personal_trainer:professionalProfile({
+        key:'personal_trainer',emoji:'🏋️',segment:'Personal Trainer',business:'Personal Trainer',
+        person:'Aluno',people:'Alunos',service:'Aula',serviceLabel:'Aulas',
+        professional:'Personal',professionals:'Profissionais',appointment:'Aula',appointments:'Aulas',
+        visit:'aulas',catalog:'Tipos de aula',
+        services:[['Treino individual','60 min','R$ 100','🏋️'],['Avaliação física','60 min','R$ 150','📋'],['Treino em dupla','60 min','R$ 140','👥']]
+      }),
+      speech_therapist:professionalProfile({
+        key:'speech_therapist',emoji:'🗣️',segment:'Fonoaudiologia',business:'Clínica de Fonoaudiologia',
+        person:'Paciente',people:'Pacientes',service:'Sessão',serviceLabel:'Sessões',
+        professional:'Fonoaudiólogo(a)',professionals:'Fonoaudiólogos',appointment:'Sessão',appointments:'Sessões',
+        visit:'sessões',catalog:'Sessões e avaliações',
+        services:[['Avaliação fonoaudiológica','60 min','R$ 220','📋'],['Sessão de terapia','50 min','R$ 170','🗣️']]
+      }),
+      occupational_therapist:professionalProfile({
+        key:'occupational_therapist',emoji:'🤲',segment:'Terapia Ocupacional',business:'Espaço de Terapia Ocupacional',
+        person:'Paciente',people:'Pacientes',service:'Sessão',serviceLabel:'Sessões',
+        professional:'Terapeuta Ocupacional',professionals:'Terapeutas Ocupacionais',appointment:'Sessão',appointments:'Sessões',
+        visit:'sessões',catalog:'Sessões e avaliações',
+        services:[['Avaliação inicial','60 min','R$ 200','📋'],['Sessão terapêutica','50 min','R$ 170','🤲']]
+      }),
+      other:professionalProfile({
+        key:'other',emoji:'📅',segment:'Outro profissional',business:'Meu Negócio',
+        service:'Serviço',serviceLabel:'Serviços',professional:'Profissional',professionals:'Profissionais',
+        appointment:'Atendimento',appointments:'Atendimentos',visit:'atendimentos',catalog:'Catálogo de serviços',
+        services:[['Atendimento','60 min','R$ 100','📅']]
+      })
+    });
+
     const SERVICE_DEFAULTS=Object.fromEntries(Object.entries(PROFILES).map(([k,v])=>[k,v.services.map(x=>[...x])]));
     let segment=localStorage.getItem('agendaProSegment')||'salon';
     if(!PROFILES[segment])segment='salon';
@@ -538,7 +654,7 @@
   return false;
 }
     function segmentLabel(s){
-  return s==='salon'?'Salão de beleza':s==='esthetic'?'Clínica de estética':s==='doctor'?'Consultório médico':'Outro';
+  return PROFILES[s]?.segment||'Outro profissional';
 }
     function subscriptionLabel(){
   if(!companyCtx)return'—';
@@ -1312,7 +1428,7 @@ async function installAgendaApp(){
 
   ${baileysCard}`);
 }
-    function setup(){const p=P();return shell(`<div class="section-title"><span class="eyebrow">Personalização</span><h2>Tipo de negócio</h2><p>O sistema adapta automaticamente linguagem e fluxo de agendamento.</p></div><div class="setup-grid">${Object.values(PROFILES).map(x=>`<button class="setup-card ${x.key===segment?'on':''}" onclick="setSegment('${x.key}')"><span class="big-emoji">${x.emoji}</span><b>${x.segment}</b><small>${x.key==='salon'?'Clientes, serviços, profissionais, agenda e caixa.':x.key==='esthetic'?'Clientes, procedimentos, sessões, profissionais e pacotes.':'Pacientes, consultas, médicos, convênio e teleconsulta.'}</small></button>`).join('')}</div><div class="profile-row"><div class="profile-box"><span>Empresa demonstrada</span><b>${p.business}</b></div><div class="profile-box"><span>Terminologia ativa</span><b>${p.people} · ${p.serviceLabel} · ${p.professionals}</b></div></div><div class="context-note"><b>Multiempresa:</b> na versão comercial, cada assinante terá seu próprio cadastro, logo, equipe, horários, serviços e dados isolados. Esta tela demonstra como um único produto pode atender segmentos diferentes.</div>`)}
+    function setup(){const p=P();return shell(`<div class="section-title"><span class="eyebrow">Personalização</span><h2>Profissão / área</h2><p>O sistema adapta automaticamente clientes ou pacientes, serviços ou sessões e o fluxo de agendamento.</p></div><div class="setup-grid">${Object.values(PROFILES).map(x=>`<button class="setup-card ${x.key===segment?'on':''}" onclick="setSegment('${x.key}')"><span class="big-emoji">${x.emoji}</span><b>${x.segment}</b><small>${x.key==='salon'?'Clientes, serviços, profissionais, agenda e caixa.':x.key==='esthetic'?'Clientes, procedimentos, sessões, profissionais e pacotes.':'Pacientes, consultas, médicos, convênio e teleconsulta.'}</small></button>`).join('')}</div><div class="profile-row"><div class="profile-box"><span>Empresa demonstrada</span><b>${p.business}</b></div><div class="profile-box"><span>Terminologia ativa</span><b>${p.people} · ${p.serviceLabel} · ${p.professionals}</b></div></div><div class="context-note"><b>Multiempresa:</b> na versão comercial, cada assinante terá seu próprio cadastro, logo, equipe, horários, serviços e dados isolados. Esta tela demonstra como um único produto pode atender segmentos diferentes.</div>`)}
     function more(){const p=P();return shell(`<div class="section-title"><span class="eyebrow">Configurações</span><h2>Mais opções</h2><p>Personalize o sistema para ${p.business}.</p></div><div class="more-list"><button class="more-btn" onclick="go('admin')"><div class="quick-ico">${I.wallet}</div><b>Administração da plataforma</b><small>Planos, mensalidades, assinantes e bloqueios</small></button><button class="more-btn" onclick="go('setup')"><div class="quick-ico"><span style="font-size:18px">${p.emoji}</span></div><b>Tipo de negócio</b><small>${p.segment} · alterar modo</small></button><button class="more-btn" onclick="go('services')"><div class="quick-ico">${I.sparkle}</div><b>${p.serviceLabel}</b><small>Duração, valores e catálogo</small></button><button class="more-btn" onclick="go('wa')"><div class="quick-ico">${I.message}</div><b>WhatsApp</b><small>Confirmações e lembretes</small></button><button class="more-btn" onclick="book()"><div class="quick-ico">${I.calendar}</div><b>Novo horário</b><small>Cadastre ${p.appointment.toLowerCase()}</small></button><button class="more-btn" onclick="toast('Relatórios em breve')"><div class="quick-ico">${I.chart}</div><b>Relatórios</b><small>Indicadores de ${p.business}</small></button></div>`)}
     function admin(){const views={overview:adminOverview,clients:adminClients,plans:adminPlans,billing:adminBilling,settings:adminSettings};return shell((views[adminTab]||adminOverview)())}
     function parseBRDate(v){if(!v)return null;const a=v.split('/').map(Number),d=a[0],m=a[1],y=a[2];if(!d||!m||!y)return null;return new Date(y,m-1,d)}
@@ -2130,7 +2246,25 @@ async function installAgendaApp(){
     return `<label class="signup-plan ${selected?'selected':''}"><input type="radio" name="signupPlan" value="${pl.code}" ${selected?'checked':''} onchange="selectSignupPlan('${pl.code}')"><div class="signup-plan-head"><div><b>${pl.name}</b><small>${pl.description||''}</small></div><strong>${moneyBR(Number(pl.monthly_price_cents||0)/100)}<small>/mês</small></strong></div><div class="signup-plan-users">${users}</div><div class="signup-plan-features">${features||'<span>Recursos básicos da plataforma</span>'}</div></label>`;
   }).join('');
   const trial=signupSettings.free_trial_enabled?`<div class="signup-trial">Comece com <b>${signupSettings.trial_days||2} dias de teste grátis</b>. Depois, mantenha sua assinatura ativa para continuar usando.</div>`:'<div class="signup-trial">A conta será criada e aguardará ativação da assinatura.</div>';
-  return `<div class="signup-screen"><div class="signup-wrap"><div class="signup-top"><button class="back-login" onclick="closeSignup()">← Voltar</button><div><span class="eyebrow">Novo assinante</span><h1>Crie sua conta</h1><p>Preencha seus dados e escolha o plano que combina com seu negócio.</p></div></div>${trial}<form class="signup-form" onsubmit="event.preventDefault();selfRegister()"><section class="signup-box"><h3>1. Seus dados</h3><div class="signup-fields"><div class="login-field"><label>Seu nome</label><input id="signupName" autocomplete="name" placeholder="Nome do responsável" required></div><div class="login-field"><label>Nome da empresa</label><input id="signupBusiness" placeholder="Ex.: Studio Bella" required maxlength="120"></div><div class="login-field"><label>Tipo de negócio</label><select id="signupSegment" required><option value="salon">Salão de beleza</option><option value="esthetic">Clínica de estética</option><option value="doctor">Consultório médico</option><option value="other">Outro</option></select></div><div class="login-field"><label>E-mail</label><input id="signupEmail" type="email" autocomplete="email" placeholder="contato@empresa.com" required></div><div class="login-field"><label>Senha</label><input id="signupPassword" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres" required></div><div class="login-field"><label>Confirmar senha</label><input id="signupPassword2" type="password" autocomplete="new-password" placeholder="Digite novamente" required></div></div></section><section class="signup-box"><h3>2. Escolha seu plano</h3><div class="signup-plans">${plans}</div></section><div id="signupError" class="login-error">${signupMessage||''}</div><button id="signupButton" class="btn primary signup-submit" type="submit">Criar minha conta</button><p class="signup-footnote">Depois do cadastro, você será direcionado para a página de login.</p></form></div></div>`;
+  return `<div class="signup-screen"><div class="signup-wrap"><div class="signup-top"><button class="back-login" onclick="closeSignup()">← Voltar</button><div><span class="eyebrow">Novo assinante</span><h1>Crie sua conta</h1><p>Preencha seus dados, escolha sua profissão e o plano que combina com seu trabalho.</p></div></div>${trial}<form class="signup-form" onsubmit="event.preventDefault();selfRegister()"><section class="signup-box"><h3>1. Seus dados</h3><div class="signup-fields"><div class="login-field"><label>Seu nome</label><input id="signupName" autocomplete="name" placeholder="Nome do responsável" required></div><div class="login-field"><label>Nome profissional ou empresa</label><input id="signupBusiness" placeholder="Ex.: Clínica Vida ou Juliana Pereira" required maxlength="120"></div><div class="login-field"><label>Profissão / área de atendimento</label><select id="signupSegment" required>
+<option value="salon">Cabeleireiro(a) / Salão de beleza</option>
+<option value="manicure">Manicure / Nail Designer</option>
+<option value="barber">Barbeiro(a) / Barbearia</option>
+<option value="esthetic">Esteticista / Clínica de estética</option>
+<option value="massage_therapist">Massoterapeuta</option>
+<option value="podiatrist">Podólogo(a)</option>
+<option value="doctor">Médico(a) / Consultório médico</option>
+<option value="psychiatrist">Psiquiatra</option>
+<option value="psychologist">Psicólogo(a)</option>
+<option value="therapist">Terapeuta</option>
+<option value="physiotherapist">Fisioterapeuta</option>
+<option value="nutritionist">Nutricionista</option>
+<option value="dentist">Dentista</option>
+<option value="speech_therapist">Fonoaudiólogo(a)</option>
+<option value="occupational_therapist">Terapeuta Ocupacional</option>
+<option value="personal_trainer">Personal Trainer</option>
+<option value="other">Outro profissional</option>
+</select></div><div class="login-field"><label>E-mail</label><input id="signupEmail" type="email" autocomplete="email" placeholder="contato@empresa.com" required></div><div class="login-field"><label>Senha</label><input id="signupPassword" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres" required></div><div class="login-field"><label>Confirmar senha</label><input id="signupPassword2" type="password" autocomplete="new-password" placeholder="Digite novamente" required></div></div></section><section class="signup-box"><h3>2. Escolha seu plano</h3><div class="signup-plans">${plans}</div></section><div id="signupError" class="login-error">${signupMessage||''}</div><button id="signupButton" class="btn primary signup-submit" type="submit">Criar minha conta</button><p class="signup-footnote">Depois do cadastro, você será direcionado para a página de login.</p></form></div></div>`;
 }
     async function openSignup(){
   signupMode=true;signupLoading=true;signupMessage='';signupWaitingEmail='';render();
@@ -2230,7 +2364,7 @@ async function installAgendaApp(){
   render();
 }
     function loginView(){
-  return `<div class="login-screen"><section class="login-brand"><div class="logo">AP</div><h1>Agenda profissional para seu negócio.</h1><p>Salões, clínicas de estética e consultórios podem criar a própria conta, escolher o plano e começar a organizar os atendimentos.</p><div class="login-feature"><i>✓</i> Conta separada para cada empresa</div><div class="login-feature"><i>✓</i> Plano e limite de usuários controlados automaticamente</div><div class="login-feature"><i>✓</i> Dados protegidos por empresa</div></section><section class="login-panel"><form class="login-card" onsubmit="return doOwnerLogin(event)"><span class="eyebrow">Já tenho conta</span><h2>Entrar no Agenda Pro</h2><p>Use seu e-mail e senha.</p><div class="login-field"><label>E-mail</label><input id="ownerUser" type="email" autocomplete="username" placeholder="seuemail@empresa.com" autofocus></div><div class="login-field"><label>Senha</label><input id="ownerPassword" type="password" autocomplete="current-password" placeholder="Digite sua senha"></div><div id="loginError" class="login-error">${loginMessage||''}</div><button id="loginButton" class="btn primary" style="width:100%;min-height:48px" type="submit">Entrar</button><button class="signup-main-btn" type="button" onclick="openSignup()">Criar minha conta</button><button class="forgot-link" type="button" onclick="requestPasswordReset()">Esqueci minha senha</button><div class="login-help"><b>É assinante novo?</b> Clique em “Criar minha conta”, escolha o plano e faça seu cadastro sem precisar falar com o administrador.</div></form></section></div>`;
+  return `<div class="login-screen"><section class="login-brand"><div class="logo">AP</div><h1>Agenda profissional para qualquer área.</h1><p>Médicos, psicólogos, terapeutas, manicures, esteticistas e outros profissionais podem criar a própria conta e adaptar o sistema ao seu tipo de atendimento.</p><div class="login-feature"><i>✓</i> Conta separada para cada empresa</div><div class="login-feature"><i>✓</i> Plano e limite de usuários controlados automaticamente</div><div class="login-feature"><i>✓</i> Dados protegidos por empresa</div></section><section class="login-panel"><form class="login-card" onsubmit="return doOwnerLogin(event)"><span class="eyebrow">Já tenho conta</span><h2>Entrar no Agenda Pro</h2><p>Use seu e-mail e senha.</p><div class="login-field"><label>E-mail</label><input id="ownerUser" type="email" autocomplete="username" placeholder="seuemail@empresa.com" autofocus></div><div class="login-field"><label>Senha</label><input id="ownerPassword" type="password" autocomplete="current-password" placeholder="Digite sua senha"></div><div id="loginError" class="login-error">${loginMessage||''}</div><button id="loginButton" class="btn primary" style="width:100%;min-height:48px" type="submit">Entrar</button><button class="signup-main-btn" type="button" onclick="openSignup()">Criar minha conta</button><button class="forgot-link" type="button" onclick="requestPasswordReset()">Esqueci minha senha</button><div class="login-help"><b>É assinante novo?</b> Clique em “Criar minha conta”, escolha o plano e faça seu cadastro sem precisar falar com o administrador.</div></form></section></div>`;
 }
     function doOwnerLogin(ev){ev?.preventDefault();signInAgendaPro();return false}
     function ownerLogout(){
