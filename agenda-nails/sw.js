@@ -1,4 +1,4 @@
-const CACHE_NAME='agenda-pro-shell-v16-confirm-close';
+const CACHE_NAME='agenda-pro-shell-v17-clean-url';
 const SHELL=['/','/manifest.webmanifest','/icons/app-icon.svg','/icons/app-icon-maskable.svg'];
 
 self.addEventListener('install',event=>{
