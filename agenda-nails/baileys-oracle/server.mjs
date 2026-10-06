@@ -398,6 +398,30 @@ class WhatsSession{
       this.broadcastBusy=false;
     }
   }
+  async pairingCode(phone){
+    if(this.state==="online"){
+      throw Object.assign(new Error("Este WhatsApp já está conectado."),{status:409});
+    }
+    const normalized=normalizePhone(phone);
+    if(normalized.length<12||normalized.length>13){
+      throw Object.assign(new Error("Informe o número com DDD, por exemplo 41999999999."),{status:400});
+    }
+    if(!this.leaseOwned)await this.acquireLease();
+    if(!this.leaseOwned){
+      throw Object.assign(new Error("A conexão está sendo usada por outro processo. Tente novamente em alguns segundos."),{status:409});
+    }
+    if(!this.sock&&!this.connectBusy)await this.connectSocket();
+    const start=Date.now();
+    while(Date.now()-start<8000&&!this.sock)await sleep(200);
+    if(!this.sock||typeof this.sock.requestPairingCode!=="function"){
+      throw Object.assign(new Error("Não foi possível iniciar o pareamento pelo celular."),{status:503});
+    }
+    const code=await this.sock.requestPairingCode(normalized);
+    const clean=String(code||"").replace(/\s+/g,"").trim();
+    if(!clean)throw Object.assign(new Error("O WhatsApp não gerou o código de pareamento."),{status:502});
+    await upsertSession(this.businessId,{status:"qr",pairing_code:clean,last_error:null});
+    return clean;
+  }
   status(){
     return {
       status:this.state==="online"?"connected":
@@ -451,12 +475,12 @@ const server=http.createServer(async(req,res)=>{
   try{
     const url=new URL(req.url||"/","http://localhost");
     if(url.pathname==="/health")return json(res,200,{ok:true,service:"agenda-pro-baileys-oracle",sessions:sessions.size});
-    const match=url.pathname.match(/^\/v1\/([^/]+)\/(status|connect|disconnect|send-catalog)$/);
+    const match=url.pathname.match(/^\/v1\/([^/]+)\/(status|connect|disconnect|pair-code|send-catalog)$/);
     if(!match)return json(res,404,{error:"Rota não encontrada"});
     const businessId=decodeURIComponent(match[1]);
     const action=match[2];
     const access=await verifyMember(req,businessId);
-    if(["connect","disconnect","send-catalog"].includes(action)&&!["owner","admin"].includes(access.role)){
+    if(["connect","disconnect","pair-code","send-catalog"].includes(action)&&!["owner","admin"].includes(access.role)){
       return json(res,403,{error:"Somente o administrador da empresa pode executar esta ação no WhatsApp"});
     }
     if(action==="connect"){
@@ -464,6 +488,12 @@ const server=http.createServer(async(req,res)=>{
       const start=Date.now();
       while(Date.now()-start<12000&&!["online","waiting_qr","error"].includes(s.state))await sleep(250);
       return json(res,200,{ok:true,...s.status()});
+    }
+    if(action==="pair-code"){
+      const payload=await bodyJson(req);
+      const s=await ensureSession(businessId);
+      const code=await s.pairingCode(payload.phone||"");
+      return json(res,200,{ok:true,status:"qr",pairing_code:code});
     }
     if(action==="send-catalog"){
       const s=sessions.get(businessId);
