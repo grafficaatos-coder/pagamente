@@ -484,7 +484,7 @@ const server=http.createServer(async(req,res)=>{
   if(req.method==="OPTIONS")return json(res,204,{});
   try{
     const url=new URL(req.url||"/","http://localhost");
-    if(url.pathname==="/health")return json(res,200,{ok:true,service:"agenda-pro-baileys-oracle",sessions:sessions.size});
+    if(url.pathname==="/health")return json(res,200,{ok:true,service:"agenda-pro-baileys-oracle",version:"2026-10-06-price-optional",sessions:sessions.size});
     const match=url.pathname.match(/^\/v1\/([^/]+)\/(status|connect|disconnect|pair-code|send-catalog)$/);
     if(!match)return json(res,404,{error:"Rota não encontrada"});
     const businessId=decodeURIComponent(match[1]);
