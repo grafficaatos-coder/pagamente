@@ -1617,6 +1617,16 @@
       }
     }
 
+  
+    /* Pareamento WhatsApp mais confiável */
+    .wa-code-actions{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+    .wa-new-code{min-height:42px;padding-inline:18px}
+    .wa-code-warning{margin:13px 0;padding:10px 12px;border-radius:11px;background:#fff7e7;border:1px solid #efdfb7;color:#775d22;font-size:9px;line-height:1.5;text-align:left}
+    @media(max-width:520px){
+      .wa-code-actions{display:grid;grid-template-columns:1fr 1fr}
+      .wa-code-actions .btn{width:100%;padding-left:8px;padding-right:8px}
+    }
+
   </style>
 </head>
 <body>
@@ -3005,13 +3015,17 @@ async function installAgendaApp(){
             <div class="wa-connect-progress"><span class="done">1</span><i></i><span class="active">2</span><i></i><span>3</span></div>
             <span class="wa-step-label">PASSO 2 DE 3</span>
             <h4>Digite este código no WhatsApp</h4>
-            <div class="wa-pair-code">${baileysSession.pairing_code}</div>
-            <button class="btn secondary wa-copy-code" onclick="copyBaileysCode()">Copiar código</button>
+            <div class="wa-pair-code">${String(baileysSession.pairing_code||'').replace(/(.{4})(?=.)/,'$1-')}</div>
+            <div class="wa-code-actions">
+              <button class="btn secondary wa-copy-code" onclick="copyBaileysCode()">Copiar código</button>
+              <button class="btn secondary wa-new-code" onclick="regenerateBaileysCode()">Gerar novo código</button>
+            </div>
             <div class="wa-simple-steps">
               <div><b>1</b><span>Abra o <strong>WhatsApp</strong>.</span></div>
               <div><b>2</b><span>Entre em <strong>Aparelhos conectados → Conectar um aparelho</strong>.</span></div>
-              <div><b>3</b><span>Toque em <strong>Conectar com número de telefone</strong> e digite o código acima.</span></div>
+              <div><b>3</b><span>Toque em <strong>Conectar com número de telefone</strong> e digite <strong>este código novo</strong>.</span></div>
             </div>
+            <div class="wa-code-warning">Use somente o código mostrado agora. Se o WhatsApp disser que não foi possível conectar, toque em <b>Gerar novo código</b> e tente novamente.</div>
             <div class="wa-waiting-line"><span></span>Aguardando a conexão...</div>
             <button class="btn primary wa-verify-btn" onclick="verifyBaileysNow()">Já conectei · verificar agora</button>
           </div>`
@@ -3706,27 +3720,49 @@ async function installAgendaApp(){
     render();
   }
 }
-    async function connectBaileysByPhone(){
+    async function connectBaileysByPhone(forcedPhone=''){
   const input=document.getElementById('baileysPhone');
   const btn=document.getElementById('baileysPhoneBtn');
   const err=document.getElementById('baileysConnectError');
-  const phone=normalizeWhatsPhone(input?.value||'');
+  const phone=normalizeWhatsPhone(forcedPhone||input?.value||baileysPreferredPhone());
   if(!phone)return toast('Digite o número do WhatsApp com DDD');
-  if(btn){btn.disabled=true;btn.textContent='Gerando código...'}
+  if(btn){btn.disabled=true;btn.textContent='Preparando conexão...'}
   if(err)err.textContent='';
   try{
+    // Sempre encerra uma tentativa antiga antes de pedir outro código.
+    try{
+      await callBaileys('disconnect','POST');
+    }catch(resetError){
+      console.warn('Não foi possível limpar a sessão anterior',resetError);
+    }
+    baileysSession={status:'disconnected',phone:null,qr_svg:null,pairing_code:null,last_error:null};
+    await new Promise(resolve=>setTimeout(resolve,700));
+
     const out=await callBaileys('pair-code','POST',{phone});
-    baileysSession={...baileysSession,status:out.status||'qr',pairing_code:out.pairing_code||null,last_error:null};
+    const code=String(out.pairing_code||'').replace(/\s/g,'').toUpperCase();
+    if(!code)throw new Error('O servidor não gerou um código de conexão. Tente novamente.');
+    baileysSession={
+      ...baileysSession,
+      status:out.status||'qr',
+      phone:out.phone||phone,
+      pairing_code:code,
+      last_error:null
+    };
     render();
     startBaileysPoll();
+    toast('Novo código gerado. Use este código agora no WhatsApp.');
   }catch(ex){
     console.error(ex);
-    if(err)err.textContent=ex.message||'Não foi possível gerar o código';
+    baileysSession={status:'disconnected',phone:null,qr_svg:null,pairing_code:null,last_error:ex.message};
+    render();
     toast(ex.message||'Não foi possível gerar o código');
   }finally{
     const b=document.getElementById('baileysPhoneBtn');
     if(b){b.disabled=false;b.textContent='Gerar código de conexão'}
   }
+}
+    function regenerateBaileysCode(){
+  return connectBaileysByPhone(baileysPreferredPhone());
 }
     async function disconnectBaileys(){
   if(!confirm('Desconectar este WhatsApp do modo automático experimental?'))return;
@@ -4680,7 +4716,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-mobilewidth36',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-pairreset37',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
