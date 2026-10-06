@@ -110,6 +110,14 @@ EOF
 
 mkdir -p data
 
+for required in SUPABASE_URL SUPABASE_PUBLISHABLE_KEY SUPABASE_SERVICE_ROLE_KEY PUBLIC_HOST; do
+  value="$(grep -E "^\${required}=" .env | tail -n1 | cut -d= -f2- || true)"
+  if [ -z "$value" ]; then
+    echo "Configuração obrigatória ausente no .env: $required"
+    exit 1
+  fi
+done
+
 if command -v ufw >/dev/null 2>&1; then
   $SUDO ufw allow 22/tcp || true
   $SUDO ufw allow 80/tcp || true
