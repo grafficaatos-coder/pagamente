@@ -1,4 +1,4 @@
-const CACHE_NAME='agenda-pro-shell-v34-easy-whatsapp';
+const CACHE_NAME='agenda-pro-shell-v35-baileys-proxy';
 const SHELL=['/','/manifest.webmanifest','/icons/app-icon.svg','/icons/app-icon-maskable.svg'];
 
 self.addEventListener('install',event=>{
