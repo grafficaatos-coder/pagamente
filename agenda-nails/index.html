@@ -1192,6 +1192,25 @@
     /* Serviços sem duração visível */
     .service-meta{grid-template-columns:repeat(2,minmax(0,1fr))}
     .service-meta>div:first-child b{font-size:15px;color:var(--wine)}
+  
+    /* Gerenciador profissional de planos */
+    .plan-manager-section{display:grid;gap:14px}
+    .plan-manager-section+.plan-manager-section{margin-top:22px;padding-top:20px;border-top:1px solid var(--line)}
+    .plan-manager-section-head b,.plan-manager-section-head small{display:block}
+    .plan-manager-section-head b{font-size:13px;color:var(--ink)}
+    .plan-manager-section-head small{font-size:9px;color:var(--muted);margin-top:3px}
+    .plan-manager-options{margin-top:0}
+    .app-toggle-row.locked{opacity:.72;background:#f6f5f5}
+    .app-toggle-row.locked .app-switch{pointer-events:none}
+    .plan-actions-manage .plan-manage-btn{grid-column:span 2}
+    .plan-actions-manage{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+    .plan-actions-manage .btn{width:100%;min-width:0}
+    .plan-actions-manage .plan-delete{grid-column:span 2}
+    @media(max-width:640px){
+      .plan-actions-manage{grid-template-columns:1fr}
+      .plan-actions-manage .plan-manage-btn,.plan-actions-manage .plan-delete{grid-column:auto}
+    }
+
   </style>
 </head>
 <body>
@@ -2348,7 +2367,7 @@ async function installAgendaApp(){
     function userLimitOk(c){const pl=getPlan(c);return pl.maxUsers>=999||Number(c.currentUsers||0)<=pl.maxUsers}
     function planAccessSummary(c){const pl=getPlan(c),s=effectiveClientStatus(c),items=planFeatureLabels(pl);return c.name+"\n\nPlano: "+pl.name+"\nStatus: "+statusLabel(s)+"\nUsuários: "+(c.currentUsers||0)+"/"+planUserLimit(pl)+"\n\nRecursos liberados:\n• "+items.join("\n• ")+(userLimitOk(c)?"":"\n\nATENÇÃO: limite de usuários excedido.")}
     function adminPlans(){
-  return `<div class="section-title"><span class="eyebrow">Regras de acesso</span><h2>Planos e permissões</h2><p>Edite nome, descrição, preço, usuários e recursos. Planos sem assinantes também podem ser excluídos.</p></div><div class="plans-grid">${ADMIN.plans.map(pl=>`<article class="card plan-card ${pl.popular?'popular':''}"><div class="plan-head"><div><span class="eyebrow">Plano</span><h3>${pl.name}</h3></div><span class="status-badge ${pl.active?'status-active':'status-blocked'}">${pl.active?'Visível':'Oculto'}</span></div><div class="plan-price">${moneyBR(pl.price)} <small>/mês</small></div><div class="plan-desc">${pl.desc}</div><div class="plan-limit"><span>Limite de usuários</span><b>${planUserLimit(pl)}</b></div><div class="feature-list">${Object.entries(CAPABILITIES).map(([k,label])=>`<div class="feature ${pl.permissions&&pl.permissions[k]?'':'feature-off'}"><i>${pl.permissions&&pl.permissions[k]?'✓':'—'}</i><span>${label}</span></div>`).join('')}</div><div class="plan-actions plan-actions-manage"><button class="btn secondary" onclick="editPlanDetails('${pl.id}')">Editar</button><button class="btn secondary" onclick="editPlan('${pl.id}')">Preço</button><button class="btn secondary" onclick="editPlanUsers('${pl.id}')">Usuários</button><button class="btn secondary" onclick="editPlanFeatures('${pl.id}')">Recursos</button><button class="btn ${pl.active?'secondary':'primary'}" onclick="togglePlan('${pl.id}')">${pl.active?'Ocultar':'Mostrar'}</button><button class="btn plan-delete" onclick="deletePlan('${pl.id}')">Excluir</button></div></article>`).join('')}</div><div class="context-note" style="margin-top:14px"><b>Regra aplicada:</b> um plano que esteja sendo usado por algum assinante não pode ser excluído. Primeiro troque o assinante para outro plano.</div>`;
+  return `<div class="section-title"><span class="eyebrow">Regras de acesso</span><h2>Planos e permissões</h2><p>Edite nome, descrição, preço, usuários e recursos. Planos sem assinantes também podem ser excluídos.</p></div><div class="plans-grid">${ADMIN.plans.map(pl=>`<article class="card plan-card ${pl.popular?'popular':''}"><div class="plan-head"><div><span class="eyebrow">Plano</span><h3>${pl.name}</h3></div><span class="status-badge ${pl.active?'status-active':'status-blocked'}">${pl.active?'Visível':'Oculto'}</span></div><div class="plan-price">${moneyBR(pl.price)} <small>/mês</small></div><div class="plan-desc">${pl.desc}</div><div class="plan-limit"><span>Limite de usuários</span><b>${planUserLimit(pl)}</b></div><div class="feature-list">${Object.entries(CAPABILITIES).map(([k,label])=>`<div class="feature ${pl.permissions&&pl.permissions[k]?'':'feature-off'}"><i>${pl.permissions&&pl.permissions[k]?'✓':'—'}</i><span>${label}</span></div>`).join('')}</div><div class="plan-actions plan-actions-manage"><button class="btn primary plan-manage-btn" onclick="openPlanManager('${pl.id}')">Gerenciar plano</button><button class="btn ${pl.active?'secondary':'primary'}" onclick="togglePlan('${pl.id}')">${pl.active?'Ocultar':'Mostrar'}</button><button class="btn plan-delete" onclick="deletePlan('${pl.id}')">Excluir</button></div></article>`).join('')}</div><div class="context-note" style="margin-top:14px"><b>Regra aplicada:</b> um plano que esteja sendo usado por algum assinante não pode ser excluído. Primeiro troque o assinante para outro plano.</div>`;
 }
     function adminClients(){
   return `<section class="panel"><div class="head"><div><span class="eyebrow">Clientes da plataforma</span><h3>Assinantes</h3></div><button class="btn primary" onclick="addDemoClient()">+ Novo assinante</button></div><div style="overflow-x:auto"><table class="client-table"><thead><tr><th>Empresa</th><th>Plano</th><th>Usuários</th><th>Mensalidade</th><th>Vencimento</th><th>Status</th><th>Ações</th></tr></thead><tbody>${ADMIN.clients.map(x=>{const pl=ADMIN.plans.find(p=>p.code===x.plan)||ADMIN.plans[0],s=effectiveClientStatus(x);return `<tr><td data-label="Empresa"><b>${x.name}</b><small>${x.segment} · ${String(x.id).slice(0,8)}</small></td><td data-label="Plano"><b>${pl?.name||'—'}</b><small onclick="changeClientPlan('${x.id}')" style="cursor:pointer;color:var(--wine);font-weight:800">Trocar plano</small></td><td data-label="Usuários"><b>${x.currentUsers}/${planUserLimit(pl)}</b><small onclick="editClientUsers('${x.id}')" style="cursor:pointer;color:var(--wine);font-weight:800">+ usuário</small></td><td data-label="Mensalidade">${moneyBR(x.monthly)}</td><td data-label="Vencimento"><b>${x.due}</b>${x.trialUntil&&s==='trial'?`<small>Teste até ${x.trialUntil}</small>`:''}</td><td data-label="Status"><span class="status-badge ${statusClass(s)}">${statusLabel(s)}</span></td><td data-label="Ações"><div class="table-actions"><button class="mini-btn" onclick="viewClientAccess('${x.id}')">Ver acesso</button><button class="mini-btn" onclick="markPaid('${x.id}')">Marcar pago</button><button class="mini-btn ${s==='blocked'?'':'danger'}" onclick="toggleClient('${x.id}')">${x.manualBlocked?'Desbloquear':'Bloquear'}</button></div></td></tr>`}).join('')||'<tr><td colspan="7">Nenhum assinante cadastrado.</td></tr>'}</tbody></table></div></section>`;
@@ -2794,30 +2813,9 @@ async function installAgendaApp(){
       }catch(err){toast(err.message||'Erro ao criar usuário')}
     }
 
-    async function editPlanUsers(id){
-      const pl=ADMIN.plans.find(p=>p.id===id);if(!pl)return;
-      const v=prompt('Limite de usuários do plano '+pl.name+'. Digite 999 para ilimitado:',String(pl.maxUsers));
-      if(v===null)return;
-      const n=Math.max(1,Number(v));if(!Number.isFinite(n))return toast('Quantidade inválida');
-      const {error}=await sb.from('agenda_plans').update({max_users:n>=999?null:Math.round(n),updated_at:new Date().toISOString()}).eq('id',id);
-      if(error){console.error(error);return toast('Não foi possível atualizar')}
-      await loadOwnerData();render();toast('Limite atualizado');
-    }
+    async function editPlanUsers(id){openPlanManager(id)}
 
-    async function editPlanFeatures(id){
-      const pl=ADMIN.plans.find(p=>p.id===id);if(!pl)return;
-      const entries=Object.entries(CAPABILITIES).filter(([k])=>k!=='finance');
-      const list=entries.map(([k,label],i)=>(i+1)+' - '+label+' '+(pl.permissions?.[k]?'✓':'')).join('\n');
-      const current=entries.map(([k],i)=>pl.permissions?.[k]?i+1:null).filter(Boolean).join(',');
-      const v=prompt('Financeiro já está incluído em todos os planos.\n\nRecursos opcionais do plano '+pl.name+':\n'+list+'\n\nDigite os números liberados, separados por vírgula:',current);
-      if(v===null)return;
-      const selected=new Set(v.split(',').map(z=>Number(z.trim())).filter(n=>n>=1&&n<=entries.length));
-      const permissions={...(pl.permissions||{}),finance:true};
-      entries.forEach(([k],i)=>permissions[k]=selected.has(i+1));
-      const {error}=await sb.from('agenda_plans').update({permissions,updated_at:new Date().toISOString()}).eq('id',id);
-      if(error){console.error(error);return toast('Não foi possível atualizar recursos')}
-      await loadOwnerData();render();toast('Permissões atualizadas');
-    }
+    async function editPlanFeatures(id){openPlanManager(id)}
 
     function adminOverview(){
   const active=ADMIN.clients.filter(x=>effectiveClientStatus(x)==='active').length;
@@ -2990,22 +2988,83 @@ async function installAgendaApp(){
   closeMobileMenu();adminTab=v;render();
   if(v==='settings')loadMetaPlatformConfig();
 }
-    async function editPlanDetails(id){
-  const pl=ADMIN.plans.find(p=>p.id===id);if(!pl)return;
-  const name=prompt('Nome do plano:',pl.name);
-  if(name===null)return;
-  const cleanName=name.trim();
-  if(cleanName.length<2)return toast('Digite um nome válido');
-  const desc=prompt('Descrição do plano:',pl.desc||'');
-  if(desc===null)return;
-  const {error}=await sb.from('agenda_plans').update({
-    name:cleanName,
-    description:desc.trim(),
-    updated_at:new Date().toISOString()
-  }).eq('id',id);
-  if(error){console.error(error);return toast('Não foi possível editar o plano')}
-  await loadOwnerData();render();toast('Plano editado com sucesso');
+    function togglePlanUnlimitedField(){
+  const unlimited=!!document.getElementById('planUnlimited')?.checked;
+  const input=document.getElementById('planUsers');
+  if(input){
+    input.disabled=unlimited;
+    input.style.opacity=unlimited?'.55':'1';
+  }
 }
+    function openPlanManager(id){
+  const pl=ADMIN.plans.find(p=>p.id===id);if(!pl)return;
+  const optional=Object.entries(CAPABILITIES).filter(([k])=>k!=='finance');
+  const resourceRows=optional.map(([key,label])=>`
+    <div class="app-toggle-row">
+      <div class="app-toggle-copy"><b>${appModalEscape(label)}</b><small>Disponível para assinantes deste plano.</small></div>
+      <label class="app-switch"><input class="plan-feature-check" data-key="${appModalEscape(key)}" type="checkbox" ${pl.permissions?.[key]?'checked':''}><span></span></label>
+    </div>`).join('');
+  const unlimited=Number(pl.maxUsers||999)>=999;
+  openAppModal({
+    title:'Gerenciar plano',
+    subtitle:'Edite todas as informações do plano '+pl.name+' em uma única tela.',
+    submitLabel:'Salvar alterações',
+    size:'wide',
+    content:`<div class="plan-manager-section">
+      <div class="plan-manager-section-head"><b>Dados principais</b><small>Nome, descrição e valor mensal.</small></div>
+      <div class="app-modal-grid">
+        <div class="app-modal-field full"><label>Nome do plano *</label><input id="planName" value="${appModalEscape(pl.name||'')}" placeholder="Ex.: Profissional" autofocus></div>
+        <div class="app-modal-field full"><label>Descrição</label><textarea id="planDescription" placeholder="Descreva para quem este plano é indicado.">${appModalEscape(pl.desc||'')}</textarea></div>
+        <div class="app-modal-field"><label>Preço mensal *</label><input id="planPrice" inputmode="numeric" value="${appModalEscape(modalMoneyValue(Math.round(Number(pl.price||0)*100)))}" placeholder="0,00" oninput="formatCurrencyField(this)" autocomplete="off"></div>
+        <div class="app-modal-field"><label>Limite de usuários</label><input id="planUsers" type="number" min="1" step="1" value="${unlimited?'':Math.max(1,Number(pl.maxUsers||1))}" placeholder="Ex.: 5" ${unlimited?'disabled':''}></div>
+      </div>
+      <div class="app-modal-toggles plan-manager-options">
+        <div class="app-toggle-row"><div class="app-toggle-copy"><b>Usuários ilimitados</b><small>Não aplica limite de usuários neste plano.</small></div><label class="app-switch"><input id="planUnlimited" type="checkbox" ${unlimited?'checked':''} onchange="togglePlanUnlimitedField()"><span></span></label></div>
+        <div class="app-toggle-row"><div class="app-toggle-copy"><b>Mostrar no cadastro público</b><small>Quando desligado, novos clientes não verão este plano.</small></div><label class="app-switch"><input id="planVisible" type="checkbox" ${pl.active?'checked':''}><span></span></label></div>
+      </div>
+    </div>
+    <div class="plan-manager-section">
+      <div class="plan-manager-section-head"><b>Recursos do plano</b><small>Escolha o que os assinantes poderão usar.</small></div>
+      <div class="app-modal-toggles">
+        <div class="app-toggle-row locked"><div class="app-toggle-copy"><b>${appModalEscape(CAPABILITIES.finance||'Financeiro')}</b><small>Incluído em todos os planos.</small></div><label class="app-switch"><input type="checkbox" checked disabled><span></span></label></div>
+        ${resourceRows}
+      </div>
+    </div>`,
+    onSubmit:async()=>{
+      const name=(document.getElementById('planName')?.value||'').trim();
+      const description=(document.getElementById('planDescription')?.value||'').trim();
+      const price=parseModalMoney(document.getElementById('planPrice')?.value||'0');
+      const unlimited=!!document.getElementById('planUnlimited')?.checked;
+      const users=unlimited?null:Number(document.getElementById('planUsers')?.value||0);
+      const visible=!!document.getElementById('planVisible')?.checked;
+      if(name.length<2){toast('Digite um nome válido');document.getElementById('planName')?.focus();return}
+      if(!Number.isFinite(price)||price<0){toast('Digite um preço válido');document.getElementById('planPrice')?.focus();return}
+      if(!unlimited&&(!Number.isFinite(users)||users<1)){toast('Informe o limite de usuários');document.getElementById('planUsers')?.focus();return}
+      const permissions={...(pl.permissions||{}),finance:true};
+      document.querySelectorAll('.plan-feature-check').forEach(input=>{
+        permissions[input.dataset.key]=!!input.checked;
+      });
+      const {error}=await sb.from('agenda_plans').update({
+        name,
+        description,
+        monthly_price_cents:Math.round(price*100),
+        max_users:unlimited?null:Math.round(users),
+        permissions,
+        visible,
+        updated_at:new Date().toISOString()
+      }).eq('id',id);
+      if(error){console.error(error);toast('Não foi possível salvar o plano');return}
+      closeAppModal();
+      await loadOwnerData();
+      render();
+      toast('Plano atualizado com sucesso');
+    }
+  });
+}
+    async function editPlanDetails(id){
+  openPlanManager(id);
+}
+
     async function deletePlan(id){
   const pl=ADMIN.plans.find(p=>p.id===id);if(!pl)return;
   if(ADMIN.plans.length<=1)return toast('É necessário manter pelo menos um plano');
@@ -3021,14 +3080,7 @@ async function installAgendaApp(){
   }
   await loadOwnerData();render();toast('Plano excluído');
 }
-    async function editPlan(id){
-  const pl=ADMIN.plans.find(p=>p.id===id);if(!pl)return;
-  const v=prompt(`Novo valor mensal do plano ${pl.name}:`,String(pl.price).replace('.',','));if(v===null)return;
-  const n=Number(v.replace('.','').replace(',','.'));if(!Number.isFinite(n)||n<0)return toast('Digite um valor válido');
-  const {error}=await sb.from('agenda_plans').update({monthly_price_cents:Math.round(n*100),updated_at:new Date().toISOString()}).eq('id',id);
-  if(error)return toast('Não foi possível atualizar o plano');
-  await loadOwnerData();render();toast('Preço atualizado');
-}
+    async function editPlan(id){openPlanManager(id)}
     async function togglePlan(id){
   const pl=ADMIN.plans.find(p=>p.id===id);if(!pl)return;
   const {error}=await sb.from('agenda_plans').update({visible:!pl.active,updated_at:new Date().toISOString()}).eq('id',id);
@@ -3670,7 +3722,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-servicesvalue19',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-planmanager20',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
