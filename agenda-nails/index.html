@@ -1652,6 +1652,7 @@
     const AGENDA_ADMIN_FUNCTION=SUPABASE_URL+'/functions/v1/agenda-admin-access';
     const AGENDA_WHATSAPP_FUNCTION=SUPABASE_URL+'/functions/v1/agenda-whatsapp';
     const AGENDA_WHATSAPP_ONBOARDING_FUNCTION=SUPABASE_URL+'/functions/v1/agenda-whatsapp-onboarding';
+    const AGENDA_BAILEYS_PROXY_FUNCTION=SUPABASE_URL+'/functions/v1/agenda-baileys-proxy';
     const AGENDA_CONFIRMATION_FUNCTION=SUPABASE_URL+'/functions/v1/agenda-confirmation';
     const CONFIRMATION_PARAMS=new URLSearchParams(location.search);
     const PUBLIC_CONFIRMATION_CODE=(CONFIRMATION_PARAMS.get('c')||'').trim();
@@ -3498,20 +3499,29 @@ async function installAgendaApp(){
   await loadOwnerData();render();toast('Configuração do Baileys salva');
 }
     async function callBaileys(action,method='GET',payload=null){
-  let base=String(companyCtx?.settings?.baileys_service_url||'').trim();
-  if(base.endsWith('/'))base=base.slice(0,-1);
-  if(!base)throw new Error('Serviço Baileys ainda não foi publicado');
   const {data}=await sb.auth.getSession();
   const token=data?.session?.access_token;
   if(!token)throw new Error('Sessão expirada');
-  const options={
-    method,
-    headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'}
-  };
-  if(payload!==null)options.body=JSON.stringify(payload);
-  const r=await fetch(base+'/v1/'+encodeURIComponent(companyCtx.business.id)+'/'+action,options);
+  let r;
+  try{
+    r=await fetch(AGENDA_BAILEYS_PROXY_FUNCTION,{
+      method:'POST',
+      headers:{
+        'Authorization':'Bearer '+token,
+        'apikey':SUPABASE_KEY,
+        'Content-Type':'application/json'
+      },
+      body:JSON.stringify({action,method,payload})
+    });
+  }catch(ex){
+    console.error(ex);
+    throw new Error('Não foi possível acessar o serviço do WhatsApp. Tente novamente em instantes.');
+  }
   const out=await r.json().catch(()=>({}));
-  if(!r.ok)throw new Error(out.error||'Falha na conexão do WhatsApp');
+  if(!r.ok){
+    const msg=out.error||'Falha na conexão do WhatsApp';
+    throw new Error(msg);
+  }
   return out;
 }
     async function loadBaileysStatus(redraw=true){
@@ -3529,7 +3539,7 @@ async function installAgendaApp(){
     if(baileysSession.status==='connected')baileysSession.pairing_code=null;
   }catch(ex){
     console.error(ex);
-    baileysSession={status:'error',phone:null,qr_svg:null,last_error:ex.message};
+    baileysSession={status:'disconnected',phone:null,qr_svg:null,pairing_code:null,last_error:ex.message};
   }
   if(redraw&&(page==='wa'||page==='services'))render();
 }
@@ -4541,7 +4551,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-easywa34',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-baileysproxy35',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
