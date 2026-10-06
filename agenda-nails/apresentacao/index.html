@@ -1,0 +1,340 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>Agenda Pro — Agenda, clientes, financeiro e confirmações em um só lugar</title>
+  <meta name="description" content="Agenda Pro organiza horários, clientes, serviços, financeiro e confirmações de atendimento em um sistema simples, profissional e fácil de usar.">
+  <meta name="theme-color" content="#4b2f3d">
+  <meta property="og:title" content="Agenda Pro — Gestão simples para quem vive de atendimento">
+  <meta property="og:description" content="Agenda, clientes, serviços, financeiro e confirmações em um só lugar.">
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="pt_BR">
+  <style>
+    *{box-sizing:border-box}
+    html{scroll-behavior:smooth}
+    body{margin:0;font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:#fbfafb;color:#241f22;line-height:1.5}
+    a{text-decoration:none;color:inherit}
+    button,a{font:inherit}
+    :root{
+      --wine:#563447;
+      --wine2:#70465a;
+      --wine3:#3b2731;
+      --rose:#f4ecef;
+      --rose2:#eadde2;
+      --green:#23734b;
+      --ink:#241f22;
+      --muted:#766d72;
+      --line:#e9e3e6;
+      --bg:#fbfafb;
+      --white:#fff;
+      --shadow:0 22px 60px rgba(58,38,47,.10);
+    }
+    .container{width:min(1180px,calc(100% - 40px));margin:auto}
+    .topbar{position:sticky;top:0;z-index:30;background:rgba(251,250,251,.88);backdrop-filter:blur(18px);border-bottom:1px solid rgba(233,227,230,.8)}
+    .nav{height:72px;display:flex;align-items:center;justify-content:space-between;gap:20px}
+    .brand{display:flex;align-items:center;gap:11px;font-weight:850;letter-spacing:-.03em}
+    .brand-logo{width:42px;height:42px;border-radius:13px;background:linear-gradient(145deg,#6f465a,#49303c);color:#fff;display:grid;place-items:center;box-shadow:0 9px 18px rgba(76,44,59,.16);font-size:13px}
+    .brand span{font-size:18px}
+    .navlinks{display:flex;align-items:center;gap:24px;color:#655d61;font-size:13px}
+    .navlinks a:hover{color:var(--wine)}
+    .nav-actions{display:flex;align-items:center;gap:10px}
+    .btn{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:10px 17px;border-radius:11px;border:1px solid transparent;font-weight:800;font-size:13px;transition:.18s ease;cursor:pointer}
+    .btn:hover{transform:translateY(-1px)}
+    .btn.primary{background:var(--wine);color:#fff;box-shadow:0 10px 24px rgba(86,52,71,.18)}
+    .btn.secondary{background:#fff;border-color:var(--line);color:#4d4549}
+    .btn.light{background:#fff;color:var(--wine)}
+    .eyebrow{text-transform:uppercase;letter-spacing:.15em;font-size:10px;font-weight:900;color:#8b6375}
+    .hero{padding:86px 0 64px;overflow:hidden;position:relative}
+    .hero:before{content:"";position:absolute;width:560px;height:560px;border-radius:50%;background:radial-gradient(circle,rgba(112,70,90,.13),rgba(112,70,90,0) 68%);right:-170px;top:-210px;pointer-events:none}
+    .hero-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(440px,.9fr);gap:60px;align-items:center}
+    .hero h1{font-size:clamp(42px,6vw,72px);line-height:.98;margin:14px 0 22px;letter-spacing:-.065em;max-width:780px}
+    .hero h1 em{font-style:normal;color:var(--wine)}
+    .hero p{font-size:18px;line-height:1.65;color:#6e656a;max-width:680px;margin:0}
+    .hero-actions{display:flex;gap:12px;flex-wrap:wrap;margin-top:30px}
+    .hero-note{display:flex;gap:18px;flex-wrap:wrap;margin-top:24px;color:#756c71;font-size:12px}
+    .hero-note span{display:flex;align-items:center;gap:7px}
+    .hero-note i{width:20px;height:20px;border-radius:50%;background:#edf7f1;color:var(--green);display:grid;place-items:center;font-style:normal;font-size:11px;font-weight:900}
+    .product-shell{position:relative}
+    .product-card{background:#fff;border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);overflow:hidden;transform:rotate(1deg)}
+    .mock-top{height:60px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;padding:0 18px;background:#fff}
+    .mock-dot{width:8px;height:8px;border-radius:50%;background:#d8cbd1}
+    .mock-brand{margin-left:8px;font-size:11px;font-weight:800;color:#5a4d53}
+    .mock-body{display:grid;grid-template-columns:112px 1fr;min-height:420px}
+    .mock-side{background:linear-gradient(180deg,#392831,#4a303d);padding:18px 11px}
+    .mock-side .m-logo{width:34px;height:34px;border-radius:10px;background:#775267;color:#fff;display:grid;place-items:center;font-size:9px;font-weight:900;margin-bottom:20px}
+    .m-nav{height:31px;border-radius:8px;margin:6px 0;background:rgba(255,255,255,.07)}
+    .m-nav.on{background:#fff}
+    .mock-main{padding:22px;background:#f7f7f8}
+    .mock-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+    .mock-head b{font-size:15px}
+    .mock-chip{font-size:8px;background:#fff;border:1px solid var(--line);padding:6px 8px;border-radius:8px}
+    .mock-kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+    .mock-kpi{background:#fff;border:1px solid var(--line);border-radius:12px;padding:11px}
+    .mock-kpi span{display:block;font-size:7px;color:#847a80;margin-bottom:9px}
+    .mock-kpi b{font-size:14px}
+    .mock-content{display:grid;grid-template-columns:1.2fr .8fr;gap:10px;margin-top:10px}
+    .mock-panel{background:#fff;border:1px solid var(--line);border-radius:13px;padding:12px;min-height:155px}
+    .mock-line{height:10px;border-radius:999px;background:#eee9eb;margin:10px 0}
+    .mock-line.short{width:62%}.mock-line.tiny{width:42%}
+    .appointment{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid #f0ecee}
+    .appointment:last-child{border-bottom:0}
+    .appointment time{font-size:8px;font-weight:900;color:var(--wine)}
+    .appointment div{flex:1}
+    .appointment b,.appointment span{display:block}
+    .appointment b{font-size:8px}.appointment span{font-size:7px;color:#8a8085}
+    .status{font-size:6px!important;padding:4px 6px;border-radius:999px;background:#edf7f1;color:#25734c!important;width:auto!important}
+    .float-card{position:absolute;right:-26px;bottom:32px;width:210px;background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 16px 38px rgba(55,35,44,.16);padding:15px;transform:rotate(-3deg)}
+    .float-card b{font-size:11px;display:block;margin-bottom:4px}.float-card span{font-size:9px;color:var(--muted);display:block}.float-card .ok{margin-top:10px;padding:8px;border-radius:9px;background:#eff8f3;color:#27714c;font-size:9px;font-weight:800}
+    .strip{padding:24px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:#fff}
+    .segments{display:flex;gap:9px;justify-content:center;flex-wrap:wrap}
+    .segments span{padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:#fcfbfc;color:#6f676b;font-size:11px;font-weight:700}
+    .section{padding:88px 0}
+    .section.alt{background:#fff}
+    .section-head{max-width:700px;margin:0 auto 42px;text-align:center}
+    .section-head h2{font-size:clamp(32px,4vw,48px);line-height:1.05;letter-spacing:-.05em;margin:12px 0 14px}
+    .section-head p{margin:0;color:var(--muted);font-size:16px}
+    .features{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+    .feature{padding:24px;border:1px solid var(--line);border-radius:18px;background:#fff;box-shadow:0 8px 24px rgba(50,34,42,.035)}
+    .feature-icon{width:42px;height:42px;border-radius:13px;background:var(--rose);color:var(--wine);display:grid;place-items:center;font-size:18px;margin-bottom:18px}
+    .feature h3{margin:0 0 8px;font-size:17px;letter-spacing:-.025em}.feature p{margin:0;color:var(--muted);font-size:12px;line-height:1.65}
+    .workflow{display:grid;grid-template-columns:.85fr 1.15fr;gap:48px;align-items:center}
+    .phone{width:min(330px,100%);margin:auto;background:#171717;border-radius:34px;padding:11px;box-shadow:0 26px 60px rgba(31,20,25,.2)}
+    .phone-screen{background:#0f2d24;border-radius:27px;overflow:hidden;min-height:590px}
+    .wa-head{height:64px;background:#1f2d2a;color:#fff;display:flex;align-items:center;padding:0 15px;gap:10px}
+    .wa-avatar{width:36px;height:36px;border-radius:50%;background:#70465a;display:grid;place-items:center;font-size:10px;font-weight:900}
+    .wa-chat{padding:16px 12px;background:radial-gradient(circle at 20% 10%,rgba(255,255,255,.025),transparent 20%),#102b23;min-height:526px}
+    .bubble{margin-left:auto;background:#145b43;color:#fff;border-radius:9px 0 9px 9px;padding:11px 12px;width:88%;font-size:11px;line-height:1.55;box-shadow:0 3px 8px rgba(0,0,0,.12)}
+    .bubble+.bubble{margin-top:12px}
+    .confirm-link{display:inline-block;margin-top:9px;color:#61d897;text-decoration:underline;font-weight:700}
+    .steps{display:grid;gap:18px}
+    .step{display:grid;grid-template-columns:48px 1fr;gap:16px;align-items:start}
+    .step-num{width:48px;height:48px;border-radius:14px;background:var(--wine);color:#fff;display:grid;place-items:center;font-weight:900}
+    .step h3{margin:1px 0 6px;font-size:19px}.step p{margin:0;color:var(--muted);font-size:13px;line-height:1.6}
+    .benefits{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}
+    .benefit{display:flex;gap:14px;padding:18px;border:1px solid var(--line);border-radius:15px;background:#fff}
+    .benefit i{width:30px;height:30px;border-radius:9px;background:#eff8f3;color:var(--green);display:grid;place-items:center;font-style:normal;font-weight:900;flex:0 0 auto}
+    .benefit b,.benefit span{display:block}.benefit b{font-size:13px}.benefit span{font-size:11px;color:var(--muted);margin-top:3px}
+    .pricing{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;align-items:stretch}
+    .plan{background:#fff;border:1px solid var(--line);border-radius:20px;padding:25px;position:relative}
+    .plan.popular{border-color:#aa8395;box-shadow:0 20px 48px rgba(75,45,59,.12);transform:translateY(-8px)}
+    .popular-badge{position:absolute;top:16px;right:16px;background:var(--wine);color:#fff;border-radius:999px;padding:5px 8px;font-size:8px;font-weight:900;text-transform:uppercase;letter-spacing:.08em}
+    .plan h3{font-size:20px;margin:0 0 5px}.plan .desc{color:var(--muted);font-size:11px;min-height:34px}.price{font-size:36px;font-weight:900;letter-spacing:-.05em;margin:18px 0 2px}.price small{font-size:12px;font-weight:700;color:var(--muted);letter-spacing:0}.plan ul{list-style:none;padding:0;margin:20px 0;display:grid;gap:9px}.plan li{font-size:11px;color:#5e555a;display:flex;gap:8px}.plan li:before{content:"✓";color:var(--green);font-weight:900}.plan .btn{width:100%}
+    .trial-note{text-align:center;margin-top:22px;font-size:11px;color:var(--muted)}
+    .faq{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    details{border:1px solid var(--line);border-radius:14px;background:#fff;padding:15px 17px}
+    summary{cursor:pointer;font-size:13px;font-weight:850;list-style:none}summary::-webkit-details-marker{display:none}
+    details p{font-size:11px;color:var(--muted);margin:10px 0 0;line-height:1.6}
+    .cta{padding:72px 0}
+    .cta-card{background:linear-gradient(135deg,#402a35,#613b4e);color:#fff;border-radius:26px;padding:54px;display:grid;grid-template-columns:1fr auto;gap:30px;align-items:center;overflow:hidden;position:relative}
+    .cta-card:after{content:"";position:absolute;width:320px;height:320px;border-radius:50%;right:-120px;top:-130px;background:rgba(255,255,255,.06)}
+    .cta-card h2{font-size:38px;line-height:1.05;letter-spacing:-.05em;margin:0 0 10px;max-width:720px}.cta-card p{margin:0;color:rgba(255,255,255,.76);font-size:14px}
+    footer{padding:30px 0 50px;color:#8a8085;font-size:11px}
+    .footer{display:flex;justify-content:space-between;gap:20px;align-items:center}
+    .mobile-menu{display:none}
+    @media(max-width:980px){
+      .hero-grid,.workflow{grid-template-columns:1fr}
+      .hero{padding-top:64px}.hero-grid{gap:44px}.product-shell{width:min(720px,100%);margin:auto}
+      .features{grid-template-columns:repeat(2,1fr)}
+      .pricing{grid-template-columns:1fr}.plan.popular{transform:none}
+      .cta-card{grid-template-columns:1fr}
+    }
+    @media(max-width:720px){
+      .container{width:min(100% - 28px,1180px)}
+      .nav{height:64px}.navlinks{display:none}.nav-actions .secondary{display:none}.brand span{font-size:16px}
+      .hero{padding:54px 0 46px}.hero h1{font-size:44px}.hero p{font-size:15px}.hero-actions .btn{flex:1;min-width:145px}
+      .mock-body{grid-template-columns:74px 1fr}.mock-side{padding:14px 8px}.mock-kpis{grid-template-columns:repeat(2,1fr)}.mock-content{grid-template-columns:1fr}.mock-panel:nth-child(2){display:none}.product-card{transform:none}.float-card{right:-5px;bottom:16px;width:175px}
+      .section{padding:66px 0}.section-head{margin-bottom:30px}.section-head p{font-size:14px}
+      .features,.benefits,.faq{grid-template-columns:1fr}
+      .phone{width:min(300px,92vw)}
+      .cta-card{padding:34px 24px;border-radius:20px}.cta-card h2{font-size:31px}
+      .footer{flex-direction:column;align-items:flex-start}
+    }
+    @media(max-width:420px){
+      .hero h1{font-size:39px}.mock-side{display:none}.mock-body{grid-template-columns:1fr}.mock-main{padding:14px}.float-card{display:none}
+      .hero-actions{display:grid}.hero-actions .btn{width:100%}
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="container nav">
+      <a class="brand" href="#inicio"><span class="brand-logo">AP</span><span>Agenda Pro</span></a>
+      <nav class="navlinks">
+        <a href="#recursos">Recursos</a>
+        <a href="#whatsapp">WhatsApp</a>
+        <a href="#planos">Planos</a>
+        <a href="#duvidas">Dúvidas</a>
+      </nav>
+      <div class="nav-actions">
+        <a class="btn secondary" href="https://agenda-pro-iucw.vercel.app/">Entrar</a>
+        <a class="btn primary" href="https://agenda-pro-iucw.vercel.app/">Começar agora</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" id="inicio">
+      <div class="container hero-grid">
+        <div>
+          <span class="eyebrow">Gestão para quem vive de atendimento</span>
+          <h1>Sua agenda, seus clientes e seu financeiro <em>em um só lugar.</em></h1>
+          <p>Organize horários, serviços, clientes, recebimentos e confirmações com uma experiência simples, profissional e fácil de usar no computador ou no celular.</p>
+          <div class="hero-actions">
+            <a class="btn primary" href="https://agenda-pro-iucw.vercel.app/">Começar agora</a>
+            <a class="btn secondary" href="#recursos">Conhecer recursos</a>
+          </div>
+          <div class="hero-note">
+            <span><i>✓</i> Funciona no celular</span>
+            <span><i>✓</i> Cadastro por empresa</span>
+            <span><i>✓</i> Dados organizados e separados</span>
+          </div>
+        </div>
+        <div class="product-shell">
+          <div class="product-card">
+            <div class="mock-top"><span class="mock-dot"></span><span class="mock-dot"></span><span class="mock-dot"></span><span class="mock-brand">Agenda Pro</span></div>
+            <div class="mock-body">
+              <aside class="mock-side">
+                <div class="m-logo">AP</div>
+                <div class="m-nav on"></div><div class="m-nav"></div><div class="m-nav"></div><div class="m-nav"></div><div class="m-nav"></div>
+              </aside>
+              <div class="mock-main">
+                <div class="mock-head"><b>Visão geral</b><span class="mock-chip">Hoje</span></div>
+                <div class="mock-kpis">
+                  <div class="mock-kpi"><span>Horários</span><b>8</b></div>
+                  <div class="mock-kpi"><span>Clientes</span><b>124</b></div>
+                  <div class="mock-kpi"><span>Serviços</span><b>12</b></div>
+                  <div class="mock-kpi"><span>A receber</span><b>R$ 860</b></div>
+                </div>
+                <div class="mock-content">
+                  <div class="mock-panel">
+                    <b style="font-size:10px">Próximos horários</b>
+                    <div class="appointment"><time>09:00</time><div><b>Mariana Costa</b><span>Corte + Escova</span></div><span class="status">Confirmado</span></div>
+                    <div class="appointment"><time>10:30</time><div><b>Juliana Alves</b><span>Coloração</span></div><span class="status">Pendente</span></div>
+                    <div class="appointment"><time>14:00</time><div><b>Camila Rocha</b><span>Manicure</span></div><span class="status">Confirmado</span></div>
+                  </div>
+                  <div class="mock-panel"><b style="font-size:10px">Resumo financeiro</b><div class="mock-line"></div><div class="mock-line short"></div><div class="mock-line"></div><div class="mock-line tiny"></div></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="float-card"><b>✓ Cliente confirmou</b><span>O status foi atualizado automaticamente na agenda.</span><div class="ok">Confirmação recebida</div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="strip">
+      <div class="container segments">
+        <span>Salões de beleza</span><span>Clínicas</span><span>Psicólogos</span><span>Terapeutas</span><span>Esteticistas</span><span>Consultórios</span><span>Profissionais autônomos</span>
+      </div>
+    </section>
+
+    <section class="section" id="recursos">
+      <div class="container">
+        <div class="section-head"><span class="eyebrow">Tudo organizado</span><h2>Menos planilhas. Menos mensagens perdidas. Mais controle.</h2><p>O Agenda Pro reúne as tarefas principais do dia a dia em uma interface simples e rápida.</p></div>
+        <div class="features">
+          <article class="feature"><div class="feature-icon">◫</div><h3>Agenda completa</h3><p>Visualize seus horários, altere status, edite atendimentos e acompanhe confirmações em poucos cliques.</p></article>
+          <article class="feature"><div class="feature-icon">◎</div><h3>Clientes organizados</h3><p>Cadastre nome, WhatsApp, e-mail e mantenha as informações de cada cliente dentro da empresa.</p></article>
+          <article class="feature"><div class="feature-icon">✦</div><h3>Serviços personalizados</h3><p>Defina nome, duração, valor, disponibilidade e controle quando o preço deve aparecer.</p></article>
+          <article class="feature"><div class="feature-icon">R$</div><h3>Financeiro</h3><p>Acompanhe entradas, saídas, valores recebidos e valores a receber de forma simples.</p></article>
+          <article class="feature"><div class="feature-icon">↗</div><h3>WhatsApp integrado</h3><p>Envie informações do agendamento e lembretes de confirmação sem precisar copiar os dados manualmente.</p></article>
+          <article class="feature"><div class="feature-icon">▣</div><h3>Funciona no celular</h3><p>Acesse pelo navegador ou instale como aplicativo para usar no dia a dia com mais praticidade.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt" id="whatsapp">
+      <div class="container workflow">
+        <div class="phone">
+          <div class="phone-screen">
+            <div class="wa-head"><div class="wa-avatar">J</div><div><b style="font-size:11px">Julli</b><div style="font-size:8px;color:#b8c9c4">online</div></div></div>
+            <div class="wa-chat">
+              <div class="bubble">Olá, Juliana! ✨<br>Seu horário foi agendado.<br><br>📅 Data: <b>07/10/2026</b><br>🕐 Horário: <b>14:00</b><br>✨ Serviço: <b>Coloração</b></div>
+              <div class="bubble">Olá, Juliana! 😊<br><br>Lembrando que seu horário é amanhã.<br><br>📅 07/10/2026 às 14:00<br>✨ Coloração<br><br><b>Confirme seu horário:</b><br><span class="confirm-link">agenda-pro-iucw.vercel.app/?c=8f31a2c9</span></div>
+            </div>
+          </div>
+        </div>
+        <div>
+          <span class="eyebrow">Confirmação inteligente</span>
+          <h2 style="font-size:clamp(32px,4vw,48px);line-height:1.06;letter-spacing:-.05em;margin:12px 0 26px">O cliente confirma e a sua agenda se atualiza.</h2>
+          <div class="steps">
+            <div class="step"><div class="step-num">1</div><div><h3>Você cadastra o horário</h3><p>O cliente recebe os dados do agendamento logo após o cadastro.</p></div></div>
+            <div class="step"><div class="step-num">2</div><div><h3>24 horas antes, o sistema lembra</h3><p>Uma nova mensagem é preparada com um link curto para confirmar o atendimento.</p></div></div>
+            <div class="step"><div class="step-num">3</div><div><h3>O status muda automaticamente</h3><p>Ao confirmar, o horário passa de Pendente para Confirmado dentro do Agenda Pro.</p></div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="container">
+        <div class="section-head"><span class="eyebrow">Feito para facilitar</span><h2>Mais profissional para você. Mais simples para o cliente.</h2></div>
+        <div class="benefits">
+          <div class="benefit"><i>✓</i><div><b>Menos faltas e esquecimentos</b><span>Lembretes e confirmações ajudam a manter a agenda mais previsível.</span></div></div>
+          <div class="benefit"><i>✓</i><div><b>Informações em um único lugar</b><span>Agenda, clientes, serviços e financeiro trabalham juntos.</span></div></div>
+          <div class="benefit"><i>✓</i><div><b>Visual profissional</b><span>Interface limpa, moderna e adaptada para computador e celular.</span></div></div>
+          <div class="benefit"><i>✓</i><div><b>Preparado para crescer</b><span>Planos para profissional autônomo, equipes e operações maiores.</span></div></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section alt" id="planos">
+      <div class="container">
+        <div class="section-head"><span class="eyebrow">Planos</span><h2>Escolha o plano ideal para o seu momento.</h2><p>Comece pequeno e evolua conforme sua equipe cresce.</p></div>
+        <div class="pricing">
+          <article class="plan">
+            <h3>Essencial</h3><div class="desc">Para profissional autônomo: agenda, clientes e serviços.</div>
+            <div class="price">R$ 79,90 <small>/mês</small></div>
+            <ul><li>1 usuário</li><li>Agenda e horários</li><li>Clientes e serviços</li><li>Financeiro</li></ul>
+            <a class="btn secondary" href="https://agenda-pro-iucw.vercel.app/">Começar</a>
+          </article>
+          <article class="plan popular">
+            <span class="popular-badge">Mais escolhido</span>
+            <h3>Profissional</h3><div class="desc">Para equipes que precisam de mais usuários e organização.</div>
+            <div class="price">R$ 129,90 <small>/mês</small></div>
+            <ul><li>Até 5 usuários</li><li>Agenda e clientes</li><li>Serviços e financeiro</li><li>Ideal para equipes</li></ul>
+            <a class="btn primary" href="https://agenda-pro-iucw.vercel.app/">Começar</a>
+          </article>
+          <article class="plan">
+            <h3>Premium</h3><div class="desc">Para operações maiores, com usuários ilimitados.</div>
+            <div class="price">R$ 199,90 <small>/mês</small></div>
+            <ul><li>Usuários ilimitados</li><li>Todos os recursos principais</li><li>Mais espaço para a operação crescer</li><li>Gestão centralizada</li></ul>
+            <a class="btn secondary" href="https://agenda-pro-iucw.vercel.app/">Começar</a>
+          </article>
+        </div>
+        <p class="trial-note">Cadastro público disponível. Período de teste pode variar conforme a configuração vigente da plataforma.</p>
+      </div>
+    </section>
+
+    <section class="section" id="duvidas">
+      <div class="container">
+        <div class="section-head"><span class="eyebrow">Dúvidas frequentes</span><h2>O que você precisa saber antes de começar.</h2></div>
+        <div class="faq">
+          <details><summary>Funciona no celular?</summary><p>Sim. O Agenda Pro é responsivo e pode ser usado no navegador do celular. Também pode ser instalado como aplicativo compatível.</p></details>
+          <details><summary>Serve somente para salão de beleza?</summary><p>Não. O sistema foi pensado para vários tipos de atendimento, incluindo clínicas, terapeutas, psicólogos, esteticistas, consultórios e profissionais autônomos.</p></details>
+          <details><summary>Posso cadastrar meus próprios serviços?</summary><p>Sim. Você define nome, duração, valor, status ativo e também pode controlar onde o preço aparece.</p></details>
+          <details><summary>O cliente consegue confirmar o horário?</summary><p>Sim. O sistema pode enviar um link de confirmação. Quando o cliente confirma, o status do agendamento é atualizado automaticamente.</p></details>
+          <details><summary>Os dados de uma empresa aparecem para outra?</summary><p>Não. Cada empresa trabalha com seus próprios cadastros, clientes, serviços e agendamentos.</p></details>
+          <details><summary>Preciso instalar programa no computador?</summary><p>Não. Basta acessar pelo navegador. Isso facilita o uso em diferentes computadores e celulares.</p></details>
+        </div>
+      </div>
+    </section>
+
+    <section class="cta">
+      <div class="container">
+        <div class="cta-card">
+          <div><h2>Transforme sua agenda em uma operação mais organizada.</h2><p>Comece a usar o Agenda Pro e tenha seus atendimentos sob controle.</p></div>
+          <a class="btn light" href="https://agenda-pro-iucw.vercel.app/">Acessar Agenda Pro</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container footer">
+      <div class="brand"><span class="brand-logo">AP</span><span>Agenda Pro</span></div>
+      <span>Agenda, clientes, serviços e financeiro para profissionais de atendimento.</span>
+    </div>
+  </footer>
+</body>
+</html>
