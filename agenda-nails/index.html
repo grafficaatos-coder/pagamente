@@ -1178,6 +1178,16 @@
       .public-confirm-body{padding:20px}
     }
 
+      /* Status automático do agendamento */
+    .booking-status-fixed{
+      min-height:57px;display:flex;flex-direction:column;justify-content:center;gap:4px;
+      padding:10px 13px;border:1px solid var(--line);border-radius:11px;background:#faf9f9;
+    }
+    .booking-status-fixed>div{display:flex;align-items:center;gap:8px}
+    .booking-status-fixed strong{font-size:12px;color:#6d4b2f}
+    .booking-status-fixed small{font-size:9px;color:var(--muted);line-height:1.35}
+    .booking-status-dot{width:8px;height:8px;border-radius:50%;background:#d59a43;box-shadow:0 0 0 4px rgba(213,154,67,.12);flex:0 0 auto}
+
   </style>
 </head>
 <body>
@@ -1346,7 +1356,7 @@
     const PUBLIC_CONFIRMATION_CODE=(CONFIRMATION_PARAMS.get('c')||'').trim();
     const PUBLIC_CONFIRMATION_TOKEN=(CONFIRMATION_PARAMS.get('confirm')||'').trim();
     const PUBLIC_CONFIRMATION_KEY=PUBLIC_CONFIRMATION_CODE||PUBLIC_CONFIRMATION_TOKEN;
-    let publicConfirmationState={loading:!!PUBLIC_CONFIRMATION_KEY,requested:false,submitting:false,error:'',appointment:null,message:''};
+    let publicConfirmationState={loading:!!PUBLIC_CONFIRMATION_KEY,requested:false,submitting:false,error:'',appointment:null,message:'',autoClosing:false};
     let sb=null,authUser=null,appMode=null,ownerLogged=false,authLoading=true,loginMessage='',passwordRecovery=false,signupMode=false,signupLoading=false,signupMessage='',signupWaitingEmail='',signupPlans=[],signupSettings={public_signup_enabled:true,free_trial_enabled:true,trial_days:7},signupSelectedPlan='profissional',loginPrefillEmail='';
     let companyCtx=null;
     let companyData={customers:[],services:[],appointments:[],financialEntries:[]};
@@ -3124,7 +3134,7 @@ async function installAgendaApp(){
     </div>
     <button type="button" class="booking-price-toggle ${showBookingPrice?'on':''}" onclick="toggleBookingPriceVisibility()" aria-pressed="${showBookingPrice?'true':'false'}"><span></span></button>
   </div>`:'';
-  return `<div class="booking"><div class="bookwrap"><section class="bookintro"><div class="logo">${p.initials}</div><h1>Novo horário</h1><p>Agendamento de ${companyCtx.business.name}.</p><button class="btn secondary" onclick="go('agenda')">← Voltar</button></section><section class="book"><div class="book-title"><div><span class="eyebrow">${p.segment}</span><h2>Cadastrar ${p.appointment.toLowerCase()}</h2><p>Os dados serão salvos somente nesta empresa.</p></div><span class="tag">Novo</span></div>${pricePreference}<div class="formgrid"><div class="field"><div class="field-title-row"><b>${p.person}</b><button type="button" class="inline-add-customer" onclick="addCustomerFromBooking()">+ Cadastrar ${p.person.toLowerCase()}</button></div><select id="fclient"><option value="">Selecione</option>${companyData.customers.map(x=>`<option value="${x.id}">${appModalEscape(x.name)}</option>`).join('')}</select></div><div class="field"><b>${p.service}</b><select id="fservice"><option value="">Selecione</option>${serviceOptions}</select></div><div class="field"><b>${p.professional}</b><input id="fpro" placeholder="Nome do profissional"></div><div class="field"><b>Data</b><input id="fdate" type="date"></div><div class="field"><b>Horário</b><input id="ftime" type="time"></div><div class="field"><b>Status</b><select id="fstatus"><option value="pending">Pendente</option><option value="confirmed">Confirmado</option></select></div></div><div class="field"><b>Observação administrativa</b><textarea id="fnote" placeholder="${p.notePlaceholder}"></textarea></div><div class="booking-whats-note"><b>WhatsApp fácil:</b> não precisa de API. Se a cliente tiver telefone cadastrado, ao salvar o sistema abre a conversa com a confirmação pronta. Você só toca em <b>Enviar</b>. Se a automação oficial estiver conectada, o envio pode ser feito sozinho.</div><button class="btn primary" style="width:100%;margin-top:12px;min-height:48px" onclick="saveAppointment()">Salvar horário</button></section></div></div>`;
+  return `<div class="booking"><div class="bookwrap"><section class="bookintro"><div class="logo">${p.initials}</div><h1>Novo horário</h1><p>Agendamento de ${companyCtx.business.name}.</p><button class="btn secondary" onclick="go('agenda')">← Voltar</button></section><section class="book"><div class="book-title"><div><span class="eyebrow">${p.segment}</span><h2>Cadastrar ${p.appointment.toLowerCase()}</h2><p>Os dados serão salvos somente nesta empresa.</p></div><span class="tag">Novo</span></div>${pricePreference}<div class="formgrid"><div class="field"><div class="field-title-row"><b>${p.person}</b><button type="button" class="inline-add-customer" onclick="addCustomerFromBooking()">+ Cadastrar ${p.person.toLowerCase()}</button></div><select id="fclient"><option value="">Selecione</option>${companyData.customers.map(x=>`<option value="${x.id}">${appModalEscape(x.name)}</option>`).join('')}</select></div><div class="field"><b>${p.service}</b><select id="fservice"><option value="">Selecione</option>${serviceOptions}</select></div><div class="field"><b>${p.professional}</b><input id="fpro" placeholder="Nome do profissional"></div><div class="field"><b>Data</b><input id="fdate" type="date"></div><div class="field"><b>Horário</b><input id="ftime" type="time"></div><div class="field"><b>Status</b><div class="booking-status-fixed"><div><span class="booking-status-dot"></span><strong>Pendente</strong></div><small>Aguardando confirmação do cliente</small></div></div></div><div class="field"><b>Observação administrativa</b><textarea id="fnote" placeholder="${p.notePlaceholder}"></textarea></div><div class="booking-whats-note"><b>WhatsApp fácil:</b> não precisa de API. Se a cliente tiver telefone cadastrado, ao salvar o sistema abre a conversa com a confirmação pronta. Você só toca em <b>Enviar</b>. Se a automação oficial estiver conectada, o envio pode ser feito sozinho.</div><button class="btn primary" style="width:100%;margin-top:12px;min-height:48px" onclick="saveAppointment()">Salvar horário</button></section></div></div>`;
 }
     function fillPhone(){const n=document.getElementById('fclient').value,c=P().peopleData.find(x=>x[0]===n);document.getElementById('fphone').value=c?c[1]:''}
     async function addCustomerFromBooking(){
@@ -3159,7 +3169,7 @@ async function installAgendaApp(){
   const professional_name=(document.getElementById('fpro')?.value||'').trim();
   const date=document.getElementById('fdate')?.value;
   const time=document.getElementById('ftime')?.value;
-  const status=document.getElementById('fstatus')?.value||'confirmed';
+  const status='pending';
   const notes=document.getElementById('fnote')?.value||'';
   if(!customer_id||!service_id||!date||!time)return toast('Preencha cliente, serviço, data e horário');
 
@@ -3260,11 +3270,11 @@ async function installAgendaApp(){
         ${a.professional_name?`<div class="public-confirm-row"><span>Profissional</span><b>${appModalEscape(a.professional_name)}</b></div>`:''}
       </div>
       <div class="public-confirm-status ${statusClass}">${appModalEscape(s.message||publicConfirmationStatusText(a))}</div>
-      ${completed?'':`<div class="public-confirm-actions">
+      ${(completed||s.autoClosing)?'':`<div class="public-confirm-actions">
         <button class="btn confirm-yes" onclick="submitPublicConfirmation('confirm')" ${s.submitting?'disabled':''}>✓ Confirmar horário</button>
         <button class="btn confirm-no" onclick="submitPublicConfirmation('cancel')" ${s.submitting?'disabled':''}>Não poderei comparecer</button>
       </div>`}
-      <p class="public-confirm-foot">Sua resposta é enviada diretamente para a agenda do estabelecimento.</p>
+      <p class="public-confirm-foot">${s.autoClosing?'Resposta registrada. Esta tela será fechada automaticamente.':'Sua resposta é enviada diretamente para a agenda do estabelecimento.'}</p>
     </div>
   </div></div>`;
 }
@@ -3297,6 +3307,21 @@ async function installAgendaApp(){
     render();
   }
 }
+    function autoClosePublicConfirmation(){
+  setTimeout(()=>{
+    try{window.close()}catch(e){}
+    setTimeout(()=>{
+      if(document.visibilityState==='hidden')return;
+      try{
+        if(history.length>1){
+          history.back();
+          return;
+        }
+      }catch(e){}
+      try{location.replace('about:blank')}catch(e){}
+    },450);
+  },1400);
+}
     async function submitPublicConfirmation(action){
   if(!PUBLIC_CONFIRMATION_KEY||publicConfirmationState.submitting)return;
   publicConfirmationState.submitting=true;
@@ -3321,6 +3346,8 @@ async function installAgendaApp(){
     if(!r.ok)throw new Error(out.error||out.message||'Não foi possível enviar sua resposta');
     publicConfirmationState.appointment=out.appointment||publicConfirmationState.appointment;
     publicConfirmationState.message=out.message||'Resposta registrada com sucesso';
+    publicConfirmationState.autoClosing=true;
+    setTimeout(()=>autoClosePublicConfirmation(),80);
   }catch(err){
     console.error(err);
     publicConfirmationState.message=err?.message||'Não foi possível enviar sua resposta';
@@ -3646,7 +3673,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-shortlink15',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-confirmclose16',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
