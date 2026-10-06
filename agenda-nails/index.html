@@ -1932,6 +1932,9 @@ async function installAgendaApp(){
   const cards=companyData.customers.map(x=>`<div class="card client client-real-card" data-search="${x.name.toLowerCase()} ${(x.phone||'').toLowerCase()}"><div class="round">${x.name.split(' ').map(z=>z[0]).slice(0,2).join('').toUpperCase()}</div><div><b>${x.name}</b><small>${x.phone||'Sem telefone'}${x.email?' · '+x.email:''}</small><div class="inline-actions"><button class="mini-btn whats-mini" onclick="sendServicesToCustomer('${x.id}')">WhatsApp · Enviar serviços</button>${canOperateCompany()?`<button class="mini-btn" onclick="editCompanyCustomer('${x.id}')">Editar</button>`:''}${canAdminCompany()?`<button class="mini-btn danger" onclick="deleteCompanyCustomer('${x.id}')">Excluir</button>`:''}</div></div><div class="client-stat"><b>${companyData.appointments.filter(a=>a.customer_id===x.id).length}</b><small>${p.visit}</small></div></div>`).join('');
   return shell(`<div class="section-title"><span class="eyebrow">Relacionamento</span><h2>${p.people}</h2><p>Dados pertencentes somente a ${companyCtx.business.name}.</p></div><div class="toolbar"><div class="search-wrap">${I.search}<input class="search" placeholder="Buscar ${p.person.toLowerCase()}" oninput="filterClientCards(this.value)"></div>${canOperateCompany()?`<button class="btn primary" onclick="addCompanyCustomer()">+ Novo ${p.person.toLowerCase()}</button>`:''}</div><div class="list" id="clientCards">${cards||'<div class="empty-state">Nenhum cadastro ainda.</div>'}</div>`);
 }
+    function whatsappBusinessName(name){
+  return String(name||'Agenda Pro').replace(/^\s*by\s+/i,'').trim()||'Agenda Pro';
+}
     function normalizeWhatsPhone(phone){
   let n=String(phone||'').replace(/\D/g,'');
   n=n.replace(/^0+/,'');
@@ -2668,7 +2671,7 @@ async function installAgendaApp(){
   const d=new Date(item.starts_at);
   const date=d.toLocaleDateString('pt-BR');
   const time=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-  const business=companyCtx?.business?.name||'Agenda Pro';
+  const business=whatsappBusinessName(companyCtx?.business?.name);
   const service=item.service_name||'atendimento';
   const professional=item.professional_name||'';
   const E={smile:'\u{1F60A}',calendar:'\u{1F4C5}',clock:'\u{1F550}',sparkle:'\u2728',person:'\u{1F464}',heart:'\u{1F49B}'};
@@ -3904,7 +3907,7 @@ async function installAgendaApp(){
   const lines=[
     `Olá${first?', '+first:''}! ${EMOJI.smile}`,
     '',
-    `Seu horário com *${companyCtx.business.name}* foi agendado.`,
+    `Seu horário com *${whatsappBusinessName(companyCtx.business.name)}* foi agendado.`,
     '',
     `${EMOJI.calendar} Data: *${dateBR}*`,
     `${EMOJI.clock} Horário: *${time}*`,
@@ -4437,7 +4440,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-mobileemoji31',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-whatsappname32',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
