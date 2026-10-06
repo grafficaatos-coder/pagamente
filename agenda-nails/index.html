@@ -4,6 +4,13 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#5c3446">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Agenda Pro">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/app-icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icons/app-icon.svg">
   <title>Agenda Pro</title>
   <style>
     :root{
@@ -24,6 +31,8 @@
     .mobile-menu-toggle,.mobile-menu-overlay{display:none}
     .mobile-menu-toggle{border:1px solid var(--line);background:#fff;color:var(--wine);width:39px;height:39px;border-radius:12px;place-items:center;flex:0 0 auto}
     .mobile-menu-toggle svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
+    .pwa-install-entry{display:none!important;border:1px solid rgba(255,255,255,.18)!important;background:rgba(255,255,255,.10)!important;color:#fff!important}
+    .pwa-install-entry svg{stroke:#fff!important}
     .main{min-width:0}.top{height:70px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;border-bottom:1px solid rgba(234,221,225,.8);background:rgba(248,244,245,.88);backdrop-filter:blur(14px);position:sticky;top:0;z-index:30}.top-left{display:flex;align-items:center;gap:12px}.top .mini-logo{display:none}.top h1{margin:0;font-size:19px;letter-spacing:-.2px}.top small{color:var(--muted);display:block;margin-top:2px}.top-actions{display:flex;gap:9px;align-items:center}.icon-btn{width:39px;height:39px;border:1px solid var(--line);background:#fff;border-radius:12px;display:grid;place-items:center;color:var(--wine)}.icon-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8}
     .btn{border:0;border-radius:12px;padding:10px 14px;font-weight:800;min-height:40px;transition:.18s}.btn:hover{transform:translateY(-1px)}.primary{background:linear-gradient(135deg,var(--wine),#7c4b60);color:#fff;box-shadow:0 8px 18px rgba(101,56,75,.18)}.secondary{background:#fff;border:1px solid var(--line);color:var(--wine)}.ghost{background:transparent;color:var(--wine)}
     .content{max-width:1180px;margin:auto;padding:24px}.hero{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:16px;gap:16px}.hero h2{font:600 31px Georgia,serif;margin:4px 0 6px;letter-spacing:-.4px}.hero p{margin:0;color:var(--muted);font-size:14px}.eyebrow{font-size:10px;letter-spacing:1.45px;color:#9b7484;font-weight:900;text-transform:uppercase}.date-chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:#fff;padding:8px 11px;border-radius:999px;color:var(--muted);font-size:12px;font-weight:700}.date-chip svg{width:15px;height:15px;stroke:var(--wine);fill:none;stroke-width:1.8}
@@ -375,6 +384,7 @@
       .side .nav{gap:6px;padding-bottom:92px}
       .side .nav button{justify-content:flex-start;padding:13px 12px;font-size:13px}
       .side .nav span.label{display:inline}
+      .side .nav .pwa-install-entry{display:flex!important;margin-top:8px}
       .side .side-foot{display:block;position:absolute;left:14px;right:14px;bottom:calc(14px + env(safe-area-inset-bottom))}
       .mobile-menu-overlay{
         display:block;
@@ -448,6 +458,7 @@
     let whatsappQueue=[],whatsappQueueTimer=null;
     let baileysSession={status:'disconnected',phone:null,qr_svg:null,pairing_code:null,last_error:null},baileysPollTimer=null;
     let metaPlatformConfig={configured:false,app_id:'',config_id:''},metaPlatformLoading=false,metaEmbeddedCapture={waba_id:'',phone_number_id:''},fbSdkPromise=null,metaListenerReady=false;
+    let deferredPwaPrompt=null;
     const CAPABILITIES={
       agenda:'Agenda, serviços e horários',
       clients:'Cadastro de clientes/pacientes',
@@ -549,6 +560,31 @@ function closeMobileMenu(){
   document.querySelector('.mobile-menu-overlay')?.classList.remove('open');
   document.body.classList.remove('mobile-menu-active');
 }
+    function isStandaloneApp(){
+  return window.matchMedia?.('(display-mode: standalone)').matches===true||window.navigator.standalone===true;
+}
+function pwaInstallEntry(){
+  if(isStandaloneApp())return '';
+  return '<button class="pwa-install-entry" onclick="installAgendaApp()"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg><span class="label">Instalar aplicativo</span></button>';
+}
+async function installAgendaApp(){
+  closeMobileMenu();
+  if(isStandaloneApp())return toast('O Agenda Pro já está instalado');
+  if(deferredPwaPrompt){
+    deferredPwaPrompt.prompt();
+    const choice=await deferredPwaPrompt.userChoice.catch(()=>null);
+    deferredPwaPrompt=null;
+    if(choice?.outcome==='accepted')toast('Instalando Agenda Pro...');
+    return;
+  }
+  const ua=navigator.userAgent||'';
+  const isIOS=/iPad|iPhone|iPod/.test(ua);
+  if(isIOS){
+    alert('No iPhone: abra no Safari, toque em Compartilhar e escolha “Adicionar à Tela de Início”.');
+  }else{
+    alert('No Chrome do celular: toque no menu ⋮ e escolha “Instalar app” ou “Adicionar à tela inicial”.');
+  }
+}
     function nav(){
   if(appMode==='company'){
     const p=P(),n=[['home','home','Início']];
@@ -556,10 +592,10 @@ function closeMobileMenu(){
     if(hasFeature('clients'))n.push(['clients','users',p.people]);
     if(hasFeature('finance'))n.push(['cash','wallet','Financeiro']);
     n.push(['wa','message','WhatsApp']);
-    return `<aside class="side"><div class="brand"><div class="logo">${p.initials}</div><div><b>${companyCtx?.business?.name||p.brand}</b><small>${companyCtx?.plan?.name||'PLANO'}</small></div></div><nav class="nav">${n.map(x=>`<button class="${page===x[0]?'on':''}" onclick="go('${x[0]}')">${I[x[1]]}<span class="label">${x[2]}</span></button>`).join('')}</nav><div class="side-foot"><small>Acesso da empresa</small><b>${subscriptionLabel()}</b></div></aside>`;
+    return `<aside class="side"><div class="brand"><div class="logo">${p.initials}</div><div><b>${companyCtx?.business?.name||p.brand}</b><small>${companyCtx?.plan?.name||'PLANO'}</small></div></div><nav class="nav">${n.map(x=>`<button class="${page===x[0]?'on':''}" onclick="go('${x[0]}')">${I[x[1]]}<span class="label">${x[2]}</span></button>`).join('')}${pwaInstallEntry()}</nav><div class="side-foot"><small>Acesso da empresa</small><b>${subscriptionLabel()}</b></div></aside>`;
   }
   const n=[['overview','home','Visão geral'],['clients','users','Assinantes'],['plans','sparkle','Planos'],['billing','wallet','Cobranças'],['settings','more','Configurações']];
-  return `<aside class="side"><div class="brand"><div class="logo">AP</div><div><b>Agenda Pro</b><small>PROPRIETÁRIO</small></div></div><nav class="nav">${n.map(x=>`<button class="${adminTab===x[0]?'on':''}" onclick="setAdminTab('${x[0]}')">${I[x[1]]}<span class="label">${x[2]}</span></button>`).join('')}</nav><div class="side-foot"><small>Acesso</small><b>Administrador da plataforma</b></div></aside>`;
+  return `<aside class="side"><div class="brand"><div class="logo">AP</div><div><b>Agenda Pro</b><small>PROPRIETÁRIO</small></div></div><nav class="nav">${n.map(x=>`<button class="${adminTab===x[0]?'on':''}" onclick="setAdminTab('${x[0]}')">${I[x[1]]}<span class="label">${x[2]}</span></button>`).join('')}${pwaInstallEntry()}</nav><div class="side-foot"><small>Acesso</small><b>Administrador da plataforma</b></div></aside>`;
 }
     function bottom(){
   if(appMode==='company'){
@@ -2212,6 +2248,23 @@ function closeMobileMenu(){
   if(companyAccessBlocked()){R.innerHTML=companyBlockedView();return}
   R.innerHTML=page==='book'?booking():({home,agenda,clients,services,cash,wa}[page]||home)();
 }
+    window.addEventListener('beforeinstallprompt',event=>{
+      event.preventDefault();
+      deferredPwaPrompt=event;
+      if(appMode)render();
+    });
+    window.addEventListener('appinstalled',()=>{
+      deferredPwaPrompt=null;
+      if(appMode)render();
+      toast('Agenda Pro instalado com sucesso');
+    });
+    if('serviceWorker' in navigator){
+      window.addEventListener('load',()=>{
+        navigator.serviceWorker.register('/sw.js',{scope:'/'})
+          .then(reg=>reg.update())
+          .catch(err=>console.error('Service Worker:',err));
+      });
+    }
     render();
     initSupabase();
   </script>
