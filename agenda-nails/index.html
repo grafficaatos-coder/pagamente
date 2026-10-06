@@ -1245,6 +1245,20 @@
       .team-member-actions .mini-btn{flex:1}
     }
 
+  
+    /* Cadastro e edição de planos */
+    .plans-section-head{display:flex;align-items:flex-end;justify-content:space-between;gap:18px}
+    .plans-section-head>div{min-width:0}
+    .plans-section-head>.btn{flex:0 0 auto;min-width:150px}
+    .client-plan-links{display:flex;gap:10px;flex-wrap:wrap;margin-top:4px}
+    .client-plan-links small{cursor:pointer;color:var(--wine);font-weight:850}
+    .client-plan-links small:hover{text-decoration:underline}
+    @media(max-width:720px){
+      .plans-section-head{align-items:stretch;flex-direction:column}
+      .plans-section-head>.btn{width:100%}
+      .client-plan-links{gap:12px}
+    }
+
   </style>
 </head>
 <body>
@@ -2527,10 +2541,10 @@ async function installAgendaApp(){
     function userLimitOk(c){const pl=getPlan(c);return pl.maxUsers>=999||Number(c.currentUsers||0)<=pl.maxUsers}
     function planAccessSummary(c){const pl=getPlan(c),s=effectiveClientStatus(c),items=planFeatureLabels(pl);return c.name+"\n\nPlano: "+pl.name+"\nStatus: "+statusLabel(s)+"\nUsuários: "+(c.currentUsers||0)+"/"+planUserLimit(pl)+"\n\nRecursos liberados:\n• "+items.join("\n• ")+(userLimitOk(c)?"":"\n\nATENÇÃO: limite de usuários excedido.")}
     function adminPlans(){
-  return `<div class="section-title"><span class="eyebrow">Regras de acesso</span><h2>Planos e permissões</h2><p>Edite nome, descrição, preço, usuários e recursos. Planos sem assinantes também podem ser excluídos.</p></div><div class="plans-grid">${ADMIN.plans.map(pl=>`<article class="card plan-card ${pl.popular?'popular':''}"><div class="plan-head"><div><span class="eyebrow">Plano</span><h3>${pl.name}</h3></div><span class="status-badge ${pl.active?'status-active':'status-blocked'}">${pl.active?'Visível':'Oculto'}</span></div><div class="plan-price">${moneyBR(pl.price)} <small>/mês</small></div><div class="plan-desc">${pl.desc}</div><div class="plan-limit"><span>Limite de usuários</span><b>${planUserLimit(pl)}</b></div><div class="feature-list">${Object.entries(CAPABILITIES).map(([k,label])=>`<div class="feature ${pl.permissions&&pl.permissions[k]?'':'feature-off'}"><i>${pl.permissions&&pl.permissions[k]?'✓':'—'}</i><span>${label}</span></div>`).join('')}</div><div class="plan-actions plan-actions-manage"><button class="btn primary plan-manage-btn" onclick="openPlanManager('${pl.id}')">Gerenciar plano</button><button class="btn ${pl.active?'secondary':'primary'}" onclick="togglePlan('${pl.id}')">${pl.active?'Ocultar':'Mostrar'}</button><button class="btn plan-delete" onclick="deletePlan('${pl.id}')">Excluir</button></div></article>`).join('')}</div><div class="context-note" style="margin-top:14px"><b>Regra aplicada:</b> um plano que esteja sendo usado por algum assinante não pode ser excluído. Primeiro troque o assinante para outro plano.</div>`;
+  return `<div class="section-title plans-section-head"><div><span class="eyebrow">Regras de acesso</span><h2>Planos e permissões</h2><p>Edite nome, descrição, preço, usuários e recursos. Planos sem assinantes também podem ser excluídos.</p></div><button class="btn primary" onclick="openCreatePlan()">+ Cadastrar plano</button></div><div class="plans-grid">${ADMIN.plans.map(pl=>`<article class="card plan-card ${pl.popular?'popular':''}"><div class="plan-head"><div><span class="eyebrow">Plano</span><h3>${pl.name}</h3></div><span class="status-badge ${pl.active?'status-active':'status-blocked'}">${pl.active?'Visível':'Oculto'}</span></div><div class="plan-price">${moneyBR(pl.price)} <small>/mês</small></div><div class="plan-desc">${pl.desc}</div><div class="plan-limit"><span>Limite de usuários</span><b>${planUserLimit(pl)}</b></div><div class="feature-list">${Object.entries(CAPABILITIES).map(([k,label])=>`<div class="feature ${pl.permissions&&pl.permissions[k]?'':'feature-off'}"><i>${pl.permissions&&pl.permissions[k]?'✓':'—'}</i><span>${label}</span></div>`).join('')}</div><div class="plan-actions plan-actions-manage"><button class="btn primary plan-manage-btn" onclick="openPlanManager('${pl.id}')">Gerenciar plano</button><button class="btn ${pl.active?'secondary':'primary'}" onclick="togglePlan('${pl.id}')">${pl.active?'Ocultar':'Mostrar'}</button><button class="btn plan-delete" onclick="deletePlan('${pl.id}')">Excluir</button></div></article>`).join('')}</div><div class="context-note" style="margin-top:14px"><b>Regra aplicada:</b> um plano que esteja sendo usado por algum assinante não pode ser excluído. Primeiro troque o assinante para outro plano.</div>`;
 }
     function adminClients(){
-  return `<section class="panel"><div class="head"><div><span class="eyebrow">Clientes da plataforma</span><h3>Assinantes</h3></div><button class="btn primary" onclick="addDemoClient()">+ Novo assinante</button></div><div style="overflow-x:auto"><table class="client-table"><thead><tr><th>Empresa</th><th>Plano</th><th>Usuários</th><th>Mensalidade</th><th>Vencimento</th><th>Status</th><th>Ações</th></tr></thead><tbody>${ADMIN.clients.map(x=>{const pl=ADMIN.plans.find(p=>p.code===x.plan)||ADMIN.plans[0],s=effectiveClientStatus(x);return `<tr><td data-label="Empresa"><b>${x.name}</b><small>${x.segment} · ${String(x.id).slice(0,8)}</small></td><td data-label="Plano"><b>${pl?.name||'—'}</b><small onclick="changeClientPlan('${x.id}')" style="cursor:pointer;color:var(--wine);font-weight:800">Trocar plano</small></td><td data-label="Usuários"><b>${x.currentUsers}/${planUserLimit(pl)}</b><small onclick="editClientUsers('${x.id}')" style="cursor:pointer;color:var(--wine);font-weight:800">+ usuário</small></td><td data-label="Mensalidade">${moneyBR(x.monthly)}</td><td data-label="Vencimento"><b>${x.due}</b>${x.trialUntil&&s==='trial'?`<small>Teste até ${x.trialUntil}</small>`:''}</td><td data-label="Status"><span class="status-badge ${statusClass(s)}">${statusLabel(s)}</span></td><td data-label="Ações"><div class="table-actions"><button class="mini-btn" onclick="viewClientAccess('${x.id}')">Ver acesso</button><button class="mini-btn" onclick="markPaid('${x.id}')">Marcar pago</button><button class="mini-btn ${s==='blocked'?'':'danger'}" onclick="toggleClient('${x.id}')">${x.manualBlocked?'Desbloquear':'Bloquear'}</button></div></td></tr>`}).join('')||'<tr><td colspan="7">Nenhum assinante cadastrado.</td></tr>'}</tbody></table></div></section>`;
+  return `<section class="panel"><div class="head"><div><span class="eyebrow">Clientes da plataforma</span><h3>Assinantes</h3></div><button class="btn primary" onclick="addDemoClient()">+ Novo assinante</button></div><div style="overflow-x:auto"><table class="client-table"><thead><tr><th>Empresa</th><th>Plano</th><th>Usuários</th><th>Mensalidade</th><th>Vencimento</th><th>Status</th><th>Ações</th></tr></thead><tbody>${ADMIN.clients.map(x=>{const pl=ADMIN.plans.find(p=>p.code===x.plan)||ADMIN.plans[0],s=effectiveClientStatus(x);return `<tr><td data-label="Empresa"><b>${x.name}</b><small>${x.segment} · ${String(x.id).slice(0,8)}</small></td><td data-label="Plano"><b>${pl?.name||'—'}</b><div class="client-plan-links"><small onclick="changeClientPlan('${x.id}')">Trocar plano</small><small onclick="openPlanManager('${pl?.id||''}')">Editar plano</small></div></td><td data-label="Usuários"><b>${x.currentUsers}/${planUserLimit(pl)}</b><small onclick="editClientUsers('${x.id}')" style="cursor:pointer;color:var(--wine);font-weight:800">+ usuário</small></td><td data-label="Mensalidade">${moneyBR(x.monthly)}</td><td data-label="Vencimento"><b>${x.due}</b>${x.trialUntil&&s==='trial'?`<small>Teste até ${x.trialUntil}</small>`:''}</td><td data-label="Status"><span class="status-badge ${statusClass(s)}">${statusLabel(s)}</span></td><td data-label="Ações"><div class="table-actions"><button class="mini-btn" onclick="viewClientAccess('${x.id}')">Ver acesso</button><button class="mini-btn" onclick="markPaid('${x.id}')">Marcar pago</button><button class="mini-btn ${s==='blocked'?'':'danger'}" onclick="toggleClient('${x.id}')">${x.manualBlocked?'Desbloquear':'Bloquear'}</button></div></td></tr>`}).join('')||'<tr><td colspan="7">Nenhum assinante cadastrado.</td></tr>'}</tbody></table></div></section>`;
 }
     async function ensureDefaultServices(){
   if(!hasFeature('agenda')||companyData.services.length)return;
@@ -3156,6 +3170,85 @@ async function installAgendaApp(){
     input.style.opacity=unlimited?'.55':'1';
   }
 }
+    function makePlanCode(name){
+  let base=String(name||'plano').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,36)||'plano';
+  let code=base,i=2;
+  while(ADMIN.plans.some(p=>p.code===code)){code=base+'-'+i;i++}
+  return code;
+}
+    function openCreatePlan(){
+  const optional=Object.entries(CAPABILITIES).filter(([k])=>k!=='finance');
+  const resourceRows=optional.map(([key,label])=>`
+    <div class="app-toggle-row">
+      <div class="app-toggle-copy"><b>${appModalEscape(label)}</b><small>Disponível para assinantes deste plano.</small></div>
+      <label class="app-switch"><input class="new-plan-feature-check" data-key="${appModalEscape(key)}" type="checkbox" checked><span></span></label>
+    </div>`).join('');
+  openAppModal({
+    title:'Cadastrar plano',
+    subtitle:'Crie um novo plano para oferecer aos seus clientes.',
+    submitLabel:'Cadastrar plano',
+    size:'wide',
+    content:`<div class="plan-manager-section">
+      <div class="plan-manager-section-head"><b>Dados principais</b><small>Defina nome, descrição, preço e limite de usuários.</small></div>
+      <div class="app-modal-grid">
+        <div class="app-modal-field full"><label>Nome do plano *</label><input id="newPlanName" placeholder="Ex.: Starter, Business, Clínica" autofocus></div>
+        <div class="app-modal-field full"><label>Descrição</label><textarea id="newPlanDescription" placeholder="Ex.: Para profissionais que estão começando."></textarea></div>
+        <div class="app-modal-field"><label>Preço mensal *</label><input id="newPlanPrice" inputmode="numeric" value="0,00" placeholder="0,00" oninput="formatCurrencyField(this)" autocomplete="off"></div>
+        <div class="app-modal-field"><label>Limite de usuários</label><input id="newPlanUsers" type="number" min="1" step="1" value="1"></div>
+      </div>
+      <div class="app-modal-toggles plan-manager-options">
+        <div class="app-toggle-row"><div class="app-toggle-copy"><b>Usuários ilimitados</b><small>Não aplica limite de usuários neste plano.</small></div><label class="app-switch"><input id="newPlanUnlimited" type="checkbox" onchange="toggleNewPlanUnlimitedField()"><span></span></label></div>
+        <div class="app-toggle-row"><div class="app-toggle-copy"><b>Mostrar no cadastro público</b><small>O plano aparecerá para novos clientes e no site de apresentação.</small></div><label class="app-switch"><input id="newPlanVisible" type="checkbox" checked><span></span></label></div>
+      </div>
+    </div>
+    <div class="plan-manager-section">
+      <div class="plan-manager-section-head"><b>Recursos do plano</b><small>Escolha o que estará incluído.</small></div>
+      <div class="app-modal-toggles">
+        <div class="app-toggle-row locked"><div class="app-toggle-copy"><b>${appModalEscape(CAPABILITIES.finance||'Financeiro')}</b><small>Incluído em todos os planos.</small></div><label class="app-switch"><input type="checkbox" checked disabled><span></span></label></div>
+        ${resourceRows}
+      </div>
+    </div>`,
+    onSubmit:async()=>{
+      const name=(document.getElementById('newPlanName')?.value||'').trim();
+      const description=(document.getElementById('newPlanDescription')?.value||'').trim();
+      const price=parseModalMoney(document.getElementById('newPlanPrice')?.value||'0');
+      const unlimited=!!document.getElementById('newPlanUnlimited')?.checked;
+      const users=unlimited?null:Number(document.getElementById('newPlanUsers')?.value||0);
+      const visible=!!document.getElementById('newPlanVisible')?.checked;
+      if(name.length<2){toast('Digite um nome válido');document.getElementById('newPlanName')?.focus();return}
+      if(!Number.isFinite(price)||price<0){toast('Digite um preço válido');document.getElementById('newPlanPrice')?.focus();return}
+      if(!unlimited&&(!Number.isFinite(users)||users<1)){toast('Informe o limite de usuários');document.getElementById('newPlanUsers')?.focus();return}
+      const permissions={finance:true};
+      document.querySelectorAll('.new-plan-feature-check').forEach(input=>{permissions[input.dataset.key]=!!input.checked});
+      const code=makePlanCode(name);
+      const {error}=await sb.from('agenda_plans').insert({
+        code,
+        name,
+        description:description||null,
+        monthly_price_cents:Math.round(price*100),
+        max_users:unlimited?null:Math.round(users),
+        permissions,
+        visible,
+        active:true
+      });
+      if(error){
+        console.error(error);
+        if(String(error.message||'').toLowerCase().includes('duplicate'))return toast('Já existe um plano com esse identificador');
+        return toast('Não foi possível cadastrar o plano');
+      }
+      closeAppModal();
+      await loadOwnerData();
+      render();
+      toast('Plano cadastrado com sucesso');
+    }
+  });
+}
+    function toggleNewPlanUnlimitedField(){
+  const unlimited=!!document.getElementById('newPlanUnlimited')?.checked;
+  const input=document.getElementById('newPlanUsers');
+  if(input){input.disabled=unlimited;input.style.opacity=unlimited?'.55':'1'}
+}
+
     function openPlanManager(id){
   const pl=ADMIN.plans.find(p=>p.id===id);if(!pl)return;
   const optional=Object.entries(CAPABILITIES).filter(([k])=>k!=='finance');
@@ -3249,12 +3342,29 @@ async function installAgendaApp(){
 }
     async function changeClientPlan(id){
   const x=ADMIN.clients.find(y=>y.id===id);if(!x)return;
-  const opts=ADMIN.plans.map((p,i)=>`${i+1} - ${p.name} (${moneyBR(p.price)})`).join('\n');
-  const choice=prompt(`Escolha o novo plano para ${x.name}:\n${opts}`);if(choice===null)return;
-  const pl=ADMIN.plans[Number(choice)-1];if(!pl)return toast('Plano inválido');
-  const {error}=await sb.from('agenda_subscriptions').update({plan_id:pl.id,updated_at:new Date().toISOString()}).eq('business_id',id);
-  if(error)return toast('Não foi possível trocar o plano');
-  await loadOwnerData();render();toast('Plano e permissões atualizados');
+  const current=ADMIN.plans.find(p=>p.code===x.plan);
+  const options=ADMIN.plans.map(p=>`<option value="${p.id}" ${p.id===current?.id?'selected':''}>${appModalEscape(p.name)} · ${moneyBR(p.price)}</option>`).join('');
+  openAppModal({
+    title:'Alterar plano',
+    subtitle:'Escolha o plano que será aplicado a '+x.name+'.',
+    submitLabel:'Aplicar plano',
+    content:`<div class="app-modal-grid">
+      <div class="app-modal-field full"><label>Empresa</label><input value="${appModalEscape(x.name)}" disabled></div>
+      <div class="app-modal-field full"><label>Novo plano *</label><select id="clientNewPlan">${options}</select></div>
+      <div class="app-modal-note full">Ao trocar o plano, o limite de usuários e as permissões da empresa passam a seguir imediatamente o novo plano.</div>
+    </div>`,
+    onSubmit:async()=>{
+      const planId=document.getElementById('clientNewPlan')?.value;
+      const pl=ADMIN.plans.find(p=>p.id===planId);
+      if(!pl)return toast('Selecione um plano');
+      const {error}=await sb.from('agenda_subscriptions').update({plan_id:pl.id,updated_at:new Date().toISOString()}).eq('business_id',id);
+      if(error){console.error(error);return toast('Não foi possível trocar o plano')}
+      closeAppModal();
+      await loadOwnerData();
+      render();
+      toast('Plano da empresa atualizado');
+    }
+  });
 }
     async function markPaid(id){
   const x=ADMIN.clients.find(y=>y.id===id);if(!x)return;
@@ -3883,7 +3993,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-companyteam21',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-plancreate22',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
