@@ -1,4 +1,4 @@
-const CACHE_NAME='agenda-pro-shell-v3-menu';
+const CACHE_NAME='agenda-pro-shell-v4-cards';
 const SHELL=['/','/manifest.webmanifest','/icons/app-icon.svg','/icons/app-icon-maskable.svg'];
 
 self.addEventListener('install',event=>{
