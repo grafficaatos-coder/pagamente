@@ -3056,20 +3056,7 @@ async function installAgendaApp(){
 
   const recent=(whatsappState?.messages||[]).map(m=>`<div class="wa-log-row"><span class="wa-log-dot ${m.status==='sent'?'ok':'bad'}"></span><div><b>${m.status==='sent'?'Enviado':'Falhou'}</b><small>${m.to_phone} · ${new Date(m.created_at).toLocaleString('pt-BR')}</small>${m.error_message?`<small class="wa-log-error">${m.error_message}</small>`:''}</div></div>`).join('');
 
-  return shell(`<div class="section-title"><span class="eyebrow">WhatsApp</span><h2>Central automática de mensagens</h2><p>Confirmações, lembretes e pós-atendimento enviados pelo WhatsApp conectado ao sistema.</p></div>
-
-  <section class="wa-free-auto">
-    <div class="wa-free-auto-top">
-      <div><span class="eyebrow">Automação</span><h3>${due.length?due.length+' mensagem(ns) pronta(s) para enviar':'Nenhuma mensagem pendente agora'}</h3><p>O sistema prepara e envia automaticamente as mensagens pelo WhatsApp conectado.</p></div>
-      <div class="wa-free-count">${due.length}</div>
-    </div>
-    <div class="wa-free-actions">
-      <button class="btn ${notifOn?'secondary':'primary'}" onclick="enableWhatsappNotifications()">${notifOn?'🔔 Avisos ativados':'🔔 Ativar avisos'}</button>
-
-    </div>
-    <div class="wa-queue-list">${queueRows||'<div class="empty-state">Quando chegar a hora de uma mensagem, ela aparecerá aqui automaticamente.</div>'}</div>
-    ${futureRows?`<details class="wa-upcoming"><summary>Ver próximas mensagens preparadas (${future.length})</summary><div>${futureRows}</div></details>`:''}
-  </section>
+  return shell(`<div class="section-title"><span class="eyebrow">WhatsApp</span><h2>Conexão do WhatsApp</h2><p>Conecte o número que será usado pelo Agenda Pro para enviar as mensagens automáticas.</p></div>
 
   ${baileysCard}`);
 }
@@ -4716,7 +4703,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-pairreset37',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-whatsappclean39',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
