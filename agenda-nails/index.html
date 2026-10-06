@@ -630,7 +630,7 @@
     const DEFAULT_ADMIN={
       settings:{autoBlock:true,freeTrial:true,publicSignup:true,trialDays:7,graceDays:5},
       plans:[
-        {id:'essencial',name:'Essencial',price:79.90,active:true,maxUsers:1,desc:'Para profissionais autônomos e agendas pequenas.',permissions:{agenda:true,clients:true,reminders:true,whatsapp:false,finance:false,reports:false,publicBooking:false,multiunit:false,advancedReports:false,prioritySupport:false}},
+        {id:'essencial',name:'Essencial',price:79.90,active:true,maxUsers:1,desc:'Para profissionais autônomos e agendas pequenas.',permissions:{agenda:true,clients:true,reminders:true,whatsapp:false,finance:true,reports:false,publicBooking:false,multiunit:false,advancedReports:false,prioritySupport:false}},
         {id:'profissional',name:'Profissional',price:129.90,active:true,popular:true,maxUsers:5,desc:'Para equipes que precisam de automação e gestão.',permissions:{agenda:true,clients:true,reminders:true,whatsapp:true,finance:true,reports:true,publicBooking:true,multiunit:false,advancedReports:false,prioritySupport:false}},
         {id:'premium',name:'Premium',price:199.90,active:true,maxUsers:999,desc:'Para clínicas e operações com mais recursos.',permissions:{agenda:true,clients:true,reminders:true,whatsapp:true,finance:true,reports:true,publicBooking:true,multiunit:true,advancedReports:true,prioritySupport:true}}
       ],
@@ -646,7 +646,7 @@
     function normalizeAdmin(raw){
       const base=cloneAdmin();
       if(!raw||!Array.isArray(raw.plans)||!Array.isArray(raw.clients))return base;
-      const plans=base.plans.map(bp=>{const rp=raw.plans.find(p=>p.id===bp.id)||{};return {...bp,...rp,permissions:{...bp.permissions,...(rp.permissions||{})},maxUsers:Number(rp.maxUsers||bp.maxUsers)}});
+      const plans=base.plans.map(bp=>{const rp=raw.plans.find(p=>p.id===bp.id)||{};return {...bp,...rp,permissions:{...bp.permissions,...(rp.permissions||{}),finance:true},maxUsers:Number(rp.maxUsers||bp.maxUsers)}});
       const clients=raw.clients.map(x=>({...x,currentUsers:Number(x.currentUsers||1),trialUntil:x.trialUntil||null,manualBlocked:x.manualBlocked??(x.status==='blocked')}));
       return {settings:{...base.settings,...(raw.settings||{})},plans,clients};
     }
@@ -830,7 +830,7 @@ async function installAgendaApp(){
   const active=companyData.services.filter(s=>s.active);
   const hello=customerName?`Olá, ${customerName}! 😊`:'Olá! 😊';
   const title=`Segue nosso catálogo de ${P().serviceLabel.toLowerCase()} da *${companyCtx.business.name}*:`;
-  const items=active.map(s=>`• *${s.name}* — ${moneyBR(Number(s.price_cents||0)/100)} · ${s.duration_minutes} min`).join('\n');
+  const items=active.map(s=>`• *${s.name}*${s.show_price_to_client===false?'':' — '+moneyBR(Number(s.price_cents||0)/100)} · ${s.duration_minutes} min`).join('\n');
   return `${hello}\n\n${title}\n\n${items}\n\nSe quiser agendar, é só falar com a gente por aqui.`;
 }
     async function shareServicesWhatsApp(){
@@ -891,8 +891,8 @@ async function installAgendaApp(){
 }
     function services(){
   const p=P();
-  const cards=companyData.services.map((s,i)=>`<article class="card service service-card"><div class="service-card-top"><div class="service-icon">${SERVICE_DEFAULTS[segment]?.[i%Math.max(1,SERVICE_DEFAULTS[segment]?.length||1)]?.[3]||'✨'}</div><span class="service-status">${s.active?'Ativo':'Inativo'}</span></div><h3>${s.name}</h3><p>${s.active?'Disponível para agendamento nesta empresa.':'Oculto para novos agendamentos.'}</p><div class="service-meta"><div><small>Duração</small><b>${s.duration_minutes} min</b></div><div><small>Valor</small><b>${moneyBR(Number(s.price_cents||0)/100)}</b></div></div>${canAdminCompany()?`<div class="service-card-actions"><button onclick="editCompanyService('${s.id}')">Editar</button><button onclick="toggleCompanyService('${s.id}')">${s.active?'Desativar':'Ativar'}</button><button onclick="deleteCompanyService('${s.id}')">Excluir</button></div>`:''}</article>`).join('');
-  return shell(`<div class="services-head"><div class="section-title service-title"><span class="eyebrow">${p.catalog}</span><h2>${p.serviceLabel}</h2><p>Catálogo salvo para esta empresa.</p></div><div class="service-top-actions"><button id="sendCatalogAllBtn" class="btn whatsapp-btn" onclick="shareServicesWhatsApp()">WhatsApp · Enviar para todos</button>${canAdminCompany()?`<button class="btn primary service-add" onclick="addCompanyService()">+ Novo ${p.service.toLowerCase()}</button>`:''}</div></div><div class="catalog-summary"><div><span>Itens cadastrados</span><b>${companyData.services.length}</b></div><div><span>Disponibilidade</span><b>${companyData.services.filter(x=>x.active).length} ativos</b></div><div><span>Plano</span><b>${companyCtx.plan.name}</b></div></div><div class="whatsapp-catalog-note"><b>Envio automático:</b> ao clicar em “WhatsApp · Enviar para todos”, o catálogo será enviado pelo WhatsApp conectado para todos os clientes cadastrados que tenham número de WhatsApp. Serão incluídos somente os serviços ativos, com valor e duração.</div><div class="services">${cards||'<div class="empty-state">Nenhum serviço cadastrado.</div>'}</div>`);
+  const cards=companyData.services.map((s,i)=>`<article class="card service service-card"><div class="service-card-top"><div class="service-icon">${SERVICE_DEFAULTS[segment]?.[i%Math.max(1,SERVICE_DEFAULTS[segment]?.length||1)]?.[3]||'✨'}</div><span class="service-status">${s.active?'Ativo':'Inativo'}</span></div><h3>${s.name}</h3><p>${s.active?'Disponível para agendamento nesta empresa.':'Oculto para novos agendamentos.'}</p><div class="service-meta"><div><small>Duração</small><b>${s.duration_minutes} min</b></div><div><small>Valor financeiro</small><b>${moneyBR(Number(s.price_cents||0)/100)}</b></div><div><small>Preço no WhatsApp</small><b>${s.show_price_to_client===false?'Não mostrar':'Mostrar'}</b></div></div>${canAdminCompany()?`<div class="service-card-actions"><button onclick="editCompanyService('${s.id}')">Editar</button><button onclick="toggleCompanyService('${s.id}')">${s.active?'Desativar':'Ativar'}</button><button onclick="deleteCompanyService('${s.id}')">Excluir</button></div>`:''}</article>`).join('');
+  return shell(`<div class="services-head"><div class="section-title service-title"><span class="eyebrow">${p.catalog}</span><h2>${p.serviceLabel}</h2><p>Catálogo salvo para esta empresa.</p></div><div class="service-top-actions"><button id="sendCatalogAllBtn" class="btn whatsapp-btn" onclick="shareServicesWhatsApp()">WhatsApp · Enviar para todos</button>${canAdminCompany()?`<button class="btn primary service-add" onclick="addCompanyService()">+ Novo ${p.service.toLowerCase()}</button>`:''}</div></div><div class="catalog-summary"><div><span>Itens cadastrados</span><b>${companyData.services.length}</b></div><div><span>Disponibilidade</span><b>${companyData.services.filter(x=>x.active).length} ativos</b></div><div><span>Plano</span><b>${companyCtx.plan.name}</b></div></div><div class="whatsapp-catalog-note"><b>Envio automático:</b> ao clicar em “WhatsApp · Enviar para todos”, o catálogo será enviado pelo WhatsApp conectado para todos os clientes cadastrados que tenham número de WhatsApp. Serão incluídos somente os itens ativos. O valor só será mostrado quando essa opção estiver habilitada no serviço/consulta; a duração continua sendo enviada.</div><div class="services">${cards||'<div class="empty-state">Nenhum serviço cadastrado.</div>'}</div>`);
 }
     function financeToday(){
   return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
@@ -1500,7 +1500,7 @@ async function installAgendaApp(){
   const defaults=SERVICE_DEFAULTS[segment]||SERVICE_DEFAULTS.salon;
   const rows=defaults.map(s=>{
     const raw=String(s[2]).replace(/[^0-9,]/g,'').replace(',','.');
-    return {business_id:companyCtx.business.id,name:s[0],duration_minutes:parseInt(s[1])||60,price_cents:Math.round((Number(raw)||0)*100),active:true};
+    return {business_id:companyCtx.business.id,name:s[0],duration_minutes:parseInt(s[1])||60,price_cents:Math.round((Number(raw)||0)*100),show_price_to_client:true,active:true};
   });
   if(rows.length){
     const {error}=await sb.from('agenda_services').insert(rows);
@@ -1592,11 +1592,14 @@ async function installAgendaApp(){
     async function editCompanyService(id){
       if(!canAdminCompany())return toast('Somente administrador pode editar serviços');
       const x=companyData.services.find(y=>y.id===id);if(!x)return;
-      const name=prompt('Nome do serviço/procedimento:',x.name);if(name===null||!name.trim())return;
+      const name=prompt('Nome do serviço/procedimento/consulta:',x.name);if(name===null||!name.trim())return;
       const duration=Number(prompt('Duração em minutos:',String(x.duration_minutes)));if(!Number.isFinite(duration)||duration<=0)return toast('Duração inválida');
-      const priceText=prompt('Valor em reais:',String(Number(x.price_cents||0)/100).replace('.',','));if(priceText===null)return;
+      const priceText=prompt('Valor interno para o financeiro (em reais):',String(Number(x.price_cents||0)/100).replace('.',','));if(priceText===null)return;
       const price=Number(String(priceText).replace('.','').replace(',','.'));if(!Number.isFinite(price)||price<0)return toast('Valor inválido');
-      const {error}=await sb.from('agenda_services').update({name:name.trim(),duration_minutes:Math.round(duration),price_cents:Math.round(price*100),updated_at:new Date().toISOString()}).eq('id',id).eq('business_id',companyCtx.business.id);
+      const showChoice=prompt('Mostrar este valor ao cliente nas mensagens/catálogo do WhatsApp?\n\n1 - Sim\n2 - Não',x.show_price_to_client===false?'2':'1');
+      if(showChoice===null)return;
+      const showPrice=String(showChoice).trim()!=='2';
+      const {error}=await sb.from('agenda_services').update({name:name.trim(),duration_minutes:Math.round(duration),price_cents:Math.round(price*100),show_price_to_client:showPrice,updated_at:new Date().toISOString()}).eq('id',id).eq('business_id',companyCtx.business.id);
       if(error){console.error(error);return toast('Não foi possível editar')}
       await loadCompanyData();render();toast('Serviço atualizado');
     }
@@ -1666,8 +1669,11 @@ async function installAgendaApp(){
   const duration=Number(prompt('Duração em minutos:','60'));if(!Number.isFinite(duration)||duration<=0)return toast('Duração inválida');
   const value=String(prompt('Valor em reais:','0')||'0').replace('.','').replace(',','.');
   const price=Number(value);if(!Number.isFinite(price)||price<0)return toast('Valor inválido');
+  const showChoice=prompt('Mostrar este valor ao cliente nas mensagens/catálogo do WhatsApp?\n\n1 - Sim\n2 - Não','1');
+  if(showChoice===null)return;
+  const showPrice=String(showChoice).trim()!=='2';
   const {error}=await sb.from('agenda_services').insert({
-    business_id:companyCtx.business.id,name:name.trim(),duration_minutes:Math.round(duration),price_cents:Math.round(price*100),active:true
+    business_id:companyCtx.business.id,name:name.trim(),duration_minutes:Math.round(duration),price_cents:Math.round(price*100),show_price_to_client:showPrice,active:true
   });
   if(error){console.error(error);return toast('Não foi possível cadastrar')}
   await loadCompanyData();render();toast(P().service+' cadastrado');
@@ -1707,7 +1713,7 @@ async function installAgendaApp(){
       ADMIN.plans=plans.map(p=>({
         id:p.id,code:p.code,name:p.name,price:Number(p.monthly_price_cents||0)/100,
         active:!!p.visible,maxUsers:p.max_users??999,desc:p.description||'',
-        permissions:p.permissions||{},popular:p.code==='profissional'
+        permissions:{...(p.permissions||{}),finance:true},popular:p.code==='profissional'
       }));
       const planById=new Map(plans.map(p=>[p.id,p]));
       const subByBiz=new Map(subs.map(s=>[s.business_id,s]));
@@ -1753,13 +1759,14 @@ async function installAgendaApp(){
 
     async function editPlanFeatures(id){
       const pl=ADMIN.plans.find(p=>p.id===id);if(!pl)return;
-      const entries=Object.entries(CAPABILITIES);
+      const entries=Object.entries(CAPABILITIES).filter(([k])=>k!=='finance');
       const list=entries.map(([k,label],i)=>(i+1)+' - '+label+' '+(pl.permissions?.[k]?'✓':'')).join('\n');
       const current=entries.map(([k],i)=>pl.permissions?.[k]?i+1:null).filter(Boolean).join(',');
-      const v=prompt('Recursos do plano '+pl.name+':\n'+list+'\n\nDigite os números liberados, separados por vírgula:',current);
+      const v=prompt('Financeiro já está incluído em todos os planos.\n\nRecursos opcionais do plano '+pl.name+':\n'+list+'\n\nDigite os números liberados, separados por vírgula:',current);
       if(v===null)return;
       const selected=new Set(v.split(',').map(z=>Number(z.trim())).filter(n=>n>=1&&n<=entries.length));
-      const permissions={};entries.forEach(([k],i)=>permissions[k]=selected.has(i+1));
+      const permissions={...(pl.permissions||{}),finance:true};
+      entries.forEach(([k],i)=>permissions[k]=selected.has(i+1));
       const {error}=await sb.from('agenda_plans').update({permissions,updated_at:new Date().toISOString()}).eq('id',id);
       if(error){console.error(error);return toast('Não foi possível atualizar recursos')}
       await loadOwnerData();render();toast('Permissões atualizadas');
