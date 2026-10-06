@@ -118,9 +118,14 @@ function messageText(kind,business,customer,service,appointment){
     return "Olá, "+first+"! 😊\n\nObrigado pelo seu atendimento na *"+business.name+"*."+
       "\n\nEsperamos que tenha gostado. Quando quiser agendar novamente, é só chamar a gente por aqui. 💛";
   }
-  return "Olá, "+first+"! 😊\n\nSeu horário na *"+business.name+"* foi agendado."+
-    "\n\n📅 Data: *"+when.date+"*\n🕐 Horário: *"+when.time+"*\n✨ Serviço: *"+service.name+"*"+proLine+
-    "\n\nSe precisar alterar o horário, fale com a gente por aqui.";
+  return "Olá, "+first+"! ✨"+
+    "\nSeu horário na *"+business.name+"* está confirmado."+
+    "\n\n📅 *Data:* "+when.date+
+    "\n🕐 *Horário:* "+when.time+
+    "\n💇‍♀️ *Serviço:* "+service.name+
+    (professional?"\n👤 *Profissional:* "+professional:"")+
+    "\n\nSe precisar alterar o horário, é só *entrar em contato por aqui*. 💖"+
+    "\n*Te esperamos! ✨*";
 }
 async function cancelClaimed(businessId,job,reason){
   await rpc("agenda_baileys_cancel_job",{
