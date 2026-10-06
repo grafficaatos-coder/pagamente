@@ -3234,7 +3234,8 @@ async function installAgendaApp(){
     function confirmationLink(key){
   if(!key)return '';
   const compact=String(key).length<=20;
-  return location.origin+location.pathname+(compact?'?c=':'?confirm=')+encodeURIComponent(key);
+  const base='https://agenda-pro-iucw.vercel.app/';
+  return base+(compact?'?c=':'?confirm=')+encodeURIComponent(key);
 }
     function publicConfirmationStatusText(a){
   if(a?.confirmed_by_customer_at)return 'Confirmado pelo cliente';
@@ -3673,7 +3674,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-confirmclose16',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-cleanurl17',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
