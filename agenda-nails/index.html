@@ -1439,6 +1439,55 @@
       .side{z-index:105!important}
     }
 
+  
+    /* Conexão simplificada do WhatsApp */
+    .wa-easy-connect{padding-bottom:18px}
+    .wa-easy-connect>.head{padding-bottom:15px}
+    .wa-connect-intro,.wa-pair-ready{padding:20px;border:1px solid #eee5e9;border-radius:18px;background:linear-gradient(145deg,#fff,#fbf8fa)}
+    .wa-connect-progress{display:flex;align-items:center;max-width:300px;margin-bottom:18px}
+    .wa-connect-progress span{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;border:2px solid #ded4d9;background:#fff;color:#8c7e85;font-size:10px;font-weight:900}
+    .wa-connect-progress span.active{border-color:#28764f;background:#e9f6ee;color:#1f6844}
+    .wa-connect-progress span.done{border-color:#28764f;background:#28764f;color:#fff}
+    .wa-connect-progress i{height:2px;flex:1;background:#e4dce0}
+    .wa-step-label{font-size:8px;letter-spacing:.12em;font-weight:900;color:#8d6678}
+    .wa-connect-intro h4,.wa-pair-ready h4{margin:7px 0 5px;font-size:18px;letter-spacing:-.025em}
+    .wa-connect-intro>p{margin:0 0 17px;color:var(--muted);font-size:11px;line-height:1.55}
+    .wa-phone-box label{display:block;margin-bottom:7px;font-size:9px;font-weight:850}
+    .wa-phone-input{display:flex;align-items:center;border:1px solid #ddd3d8;border-radius:13px;background:#fff;overflow:hidden;min-height:50px}
+    .wa-phone-input>span{padding:0 12px;border-right:1px solid #eee5e9;font-size:11px;font-weight:800;white-space:nowrap}
+    .wa-phone-input input{border:0!important;box-shadow:none!important;outline:0!important;flex:1;min-width:0;height:48px;padding:0 12px;font-size:14px;background:transparent}
+    .wa-main-connect{width:100%;margin-top:12px;min-height:50px;font-size:13px}
+    .wa-qr-alternative{margin-top:11px;text-align:center}
+    .wa-qr-alternative summary{display:inline-block;color:#755469;font-size:9px;font-weight:800;cursor:pointer}
+    .wa-qr-alternative>div{margin-top:10px}
+    .wa-pair-ready{text-align:center}
+    .wa-pair-ready .wa-connect-progress{margin-left:auto;margin-right:auto}
+    .wa-pair-code{margin:15px auto 10px;padding:17px 12px;border:2px dashed #cdb9c3;border-radius:15px;background:#fff;font-size:30px;letter-spacing:.2em;font-weight:900;color:#35262e;max-width:330px}
+    .wa-copy-code{min-height:42px;padding-inline:22px}
+    .wa-simple-steps{display:grid;gap:9px;margin:20px 0;text-align:left}
+    .wa-simple-steps>div{display:grid;grid-template-columns:30px 1fr;gap:10px;align-items:center;padding:10px 11px;border-radius:12px;background:#f7f3f5}
+    .wa-simple-steps b{width:30px;height:30px;border-radius:9px;background:#fff;color:var(--wine);display:grid;place-items:center;font-size:10px}
+    .wa-simple-steps span{font-size:10px;line-height:1.45;color:#645a5f}
+    .wa-waiting-line{display:flex;align-items:center;justify-content:center;gap:8px;margin:13px 0;color:#6a5c63;font-size:9px;font-weight:800}
+    .wa-waiting-line>span{width:8px;height:8px;border-radius:50%;background:#d6a947;box-shadow:0 0 0 5px rgba(214,169,71,.11);animation:waPulse 1.4s infinite}
+    @keyframes waPulse{50%{opacity:.45}}
+    .wa-verify-btn{width:100%;min-height:49px}
+    .wa-easy-success{display:grid;grid-template-columns:48px 1fr auto;gap:14px;align-items:center;padding:18px;border-radius:17px;background:#edf8f1;border:1px solid #d4eadc}
+    .wa-easy-success-icon{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;background:#28764f;color:#fff;font-size:21px;font-weight:900}
+    .wa-easy-success b,.wa-easy-success p,.wa-easy-success small{display:block}
+    .wa-easy-success p{margin:4px 0;color:#527062;font-size:10px}.wa-easy-success small{color:#527062;font-size:9px}
+    .wa-security-note{margin-top:13px;padding:0 4px;color:#8a7b82}
+    .wa-security-note summary{font-size:8px;font-weight:750;cursor:pointer}
+    .wa-security-note p{font-size:8px;line-height:1.45;margin:6px 0 0}
+    .wa-easy-error{margin-top:10px}
+    .wa-easy-qr{margin:15px auto 0}
+    @media(max-width:720px){
+      .wa-connect-intro,.wa-pair-ready{padding:16px;border-radius:16px}
+      .wa-pair-code{font-size:25px;letter-spacing:.16em}
+      .wa-easy-success{grid-template-columns:44px 1fr}
+      .wa-easy-success .wa-disconnect{grid-column:1/-1;width:100%}
+    }
+
   </style>
 </head>
 <body>
@@ -2766,6 +2815,25 @@ async function installAgendaApp(){
   whatsappQueueTimer=setInterval(()=>loadWhatsappQueue(page==='wa'),60000);
   checkWhatsappQueueNotifications();
 }
+    function baileysPreferredPhone(){
+  return companyCtx?.business?.phone||companyCtx?.profile?.phone||'';
+}
+    async function copyBaileysCode(){
+  const code=String(baileysSession?.pairing_code||'').replace(/\s/g,'');
+  if(!code)return toast('Gere o código primeiro');
+  try{
+    await navigator.clipboard.writeText(code);
+    toast('Código copiado');
+  }catch(e){
+    prompt('Copie o código:',code);
+  }
+}
+    async function verifyBaileysNow(){
+  toast('Verificando conexão...');
+  await loadBaileysStatus(true);
+  if(baileysSession.status==='connected')toast('WhatsApp conectado com sucesso');
+  else toast('Ainda aguardando. Conclua o código no WhatsApp.');
+}
     function wa(){
   const conn=whatsappState?.connection;
   const connected=conn?.status==='connected';
@@ -2789,17 +2857,47 @@ async function installAgendaApp(){
     : `<b>💻 No computador</b><span>O Agenda Pro prepara tudo sozinho e avisa quando houver mensagem. Ao abrir, o WhatsApp Web já vem com o texto pronto.</span>`;
 
   const baileysEnabled=!!(companyCtx?.settings?.baileys_enabled&&companyCtx?.settings?.baileys_service_url);
-  const baileysCard=baileysEnabled?`<section class="panel baileys-card ${baileysSession.status==='connected'?'connected':''}">
-    <div class="head"><div><span class="eyebrow">WhatsApp automático</span><h3>${baileysSession.status==='connected'?'WhatsApp conectado por QR':'Automação por QR Code'}</h3></div><span class="status-badge ${baileysSession.status==='connected'?'status-active':'status-late'}">${baileysSession.status==='connected'?'Conectado':'Experimental'}</span></div>
+  const preferredPhone=formatBusinessPhone(baileysPreferredPhone());
+  const baileysWaiting=baileysSession.status==='qr'||baileysSession.status==='connecting';
+  const baileysCard=baileysEnabled?`<section class="panel baileys-card wa-easy-connect ${baileysSession.status==='connected'?'connected':''}">
+    <div class="head">
+      <div><span class="eyebrow">WhatsApp automático</span><h3>${baileysSession.status==='connected'?'WhatsApp conectado':'Conectar meu WhatsApp'}</h3></div>
+      <span class="status-badge ${baileysSession.status==='connected'?'status-active':baileysWaiting?'status-late':'status-neutral'}">${baileysSession.status==='connected'?'Conectado':baileysWaiting?'Aguardando':'Desconectado'}</span>
+    </div>
     ${baileysSession.status==='connected'
-      ? `<div class="baileys-connected"><b>${baileysSession.phone?'+'+baileysSession.phone:'WhatsApp conectado'}</b><p>Confirmações, lembretes e pós-atendimento da fila podem ser enviados automaticamente.</p>${admin?`<button class="btn wa-disconnect" onclick="disconnectBaileys()">Desconectar</button>`:''}</div>`
-      : `<p>Conecte como um aparelho vinculado. No celular, você pode usar um código e não precisa de outro aparelho para escanear QR.</p>
-        ${baileysSession.pairing_code?`<div class="baileys-steps"><b>Código para conectar no celular:</b><strong style="font-size:1.7rem;letter-spacing:.18em;display:block;margin:.55rem 0">${baileysSession.pairing_code}</strong><span>No WhatsApp: Aparelhos conectados → Conectar um aparelho → Conectar com número de telefone → digite este código.</span></div>`:''}
-        ${baileysSession.qr_svg&&!baileysSession.pairing_code?`<div class="baileys-qr">${baileysSession.qr_svg}</div><div class="baileys-steps"><b>Com outro aparelho:</b><span>Configurações/⋮ → Aparelhos conectados → Conectar um aparelho → escaneie o QR.</span></div>`:''}
-        <div id="baileysConnectError" class="login-error">${baileysSession.last_error||''}</div>
-        ${admin?`<div class="wa-form-grid"><div class="field wa-full"><b>Seu número do WhatsApp</b><input id="baileysPhone" inputmode="tel" placeholder="DDD + número, ex.: 41999999999"></div></div><div class="wa-free-actions"><button id="baileysPhoneBtn" class="btn whatsapp-btn" onclick="connectBaileysByPhone()">Conectar pelo celular</button><button id="baileysConnectBtn" class="btn baileys-connect-btn" onclick="connectBaileys()">Usar QR Code</button></div>`:''}`
+      ? `<div class="wa-easy-success">
+          <div class="wa-easy-success-icon">✓</div>
+          <div><b>Pronto! Seu WhatsApp está conectado.</b><p>As mensagens automáticas já podem ser enviadas pelo sistema.</p><small>${baileysSession.phone?'Número conectado: +'+baileysSession.phone:''}</small></div>
+          ${admin?`<button class="btn wa-disconnect" onclick="disconnectBaileys()">Desconectar</button>`:''}
+        </div>`
+      : baileysSession.pairing_code
+        ? `<div class="wa-pair-ready">
+            <div class="wa-connect-progress"><span class="done">1</span><i></i><span class="active">2</span><i></i><span>3</span></div>
+            <span class="wa-step-label">PASSO 2 DE 3</span>
+            <h4>Digite este código no WhatsApp</h4>
+            <div class="wa-pair-code">${baileysSession.pairing_code}</div>
+            <button class="btn secondary wa-copy-code" onclick="copyBaileysCode()">Copiar código</button>
+            <div class="wa-simple-steps">
+              <div><b>1</b><span>Abra o <strong>WhatsApp</strong>.</span></div>
+              <div><b>2</b><span>Entre em <strong>Aparelhos conectados → Conectar um aparelho</strong>.</span></div>
+              <div><b>3</b><span>Toque em <strong>Conectar com número de telefone</strong> e digite o código acima.</span></div>
+            </div>
+            <div class="wa-waiting-line"><span></span>Aguardando a conexão...</div>
+            <button class="btn primary wa-verify-btn" onclick="verifyBaileysNow()">Já conectei · verificar agora</button>
+          </div>`
+        : `<div class="wa-connect-intro">
+            <div class="wa-connect-progress"><span class="active">1</span><i></i><span>2</span><i></i><span>3</span></div>
+            <span class="wa-step-label">PASSO 1 DE 3</span>
+            <h4>Informe o número do WhatsApp</h4>
+            <p>Use o número que ficará conectado ao Agenda Pro para enviar confirmações e lembretes.</p>
+            ${admin?`<div class="wa-phone-box"><label>Número com DDD</label><div class="wa-phone-input"><span>🇧🇷 +55</span><input id="baileysPhone" inputmode="tel" autocomplete="tel" value="${appModalEscape(preferredPhone)}" placeholder="41 99999-9999"></div></div>
+            <button id="baileysPhoneBtn" class="btn primary wa-main-connect" onclick="connectBaileysByPhone()">Gerar código de conexão</button>
+            <details class="wa-qr-alternative"><summary>Prefiro conectar com QR Code</summary><div><button id="baileysConnectBtn" class="btn secondary" onclick="connectBaileys()">Gerar QR Code</button></div></details>`:''}
+            ${baileysSession.qr_svg?`<div class="baileys-qr wa-easy-qr">${baileysSession.qr_svg}</div>`:''}
+          </div>`
     }
-    <div class="baileys-warning">Baileys usa o WhatsApp Web de forma não oficial. O WhatsApp pode desconectar ou restringir esta sessão.</div>
+    <div id="baileysConnectError" class="login-error wa-easy-error">${baileysSession.last_error||''}</div>
+    <details class="wa-security-note"><summary>Sobre esta conexão</summary><p>Esta automação usa o WhatsApp Web por Baileys, uma integração não oficial. O WhatsApp pode solicitar nova conexão ou restringir a sessão.</p></details>
   </section>`:'';
 
   const connectedCard=connected
@@ -3488,7 +3586,7 @@ async function installAgendaApp(){
     toast(ex.message||'Não foi possível gerar o código');
   }finally{
     const b=document.getElementById('baileysPhoneBtn');
-    if(b){b.disabled=false;b.textContent='Conectar pelo celular'}
+    if(b){b.disabled=false;b.textContent='Gerar código de conexão'}
   }
 }
     async function disconnectBaileys(){
@@ -4443,7 +4541,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-displayname33',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-easywa34',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
