@@ -135,7 +135,7 @@ function messageText(kind,business,customer,service,appointment){
   const proLine=professional?"\n👤 Profissional: *"+professional+"*":"";
   const confirmationKey=appointment.confirmation_code||appointment.confirmation_token||"";
   const confirmationUrl=confirmationKey
-    ? AGENDA_ORIGIN.replace(/\/$/,"")+(appointment.confirmation_code?"/?c=":"/?confirm=")+encodeURIComponent(confirmationKey)
+    ? "https://agenda-pro-iucw.vercel.app"+(appointment.confirmation_code?"/?c=":"/?confirm=")+encodeURIComponent(confirmationKey)
     : "";
   const confirmationBlock=confirmationUrl
     ? "\n\n*Confirme seu horário:*\n✅ "+confirmationUrl
@@ -492,7 +492,7 @@ const server=http.createServer(async(req,res)=>{
   if(req.method==="OPTIONS")return json(res,204,{});
   try{
     const url=new URL(req.url||"/","http://localhost");
-    if(url.pathname==="/health")return json(res,200,{ok:true,service:"agenda-pro-baileys-oracle",version:"2026-10-06-short-confirmation",sessions:sessions.size});
+    if(url.pathname==="/health")return json(res,200,{ok:true,service:"agenda-pro-baileys-oracle",version:"2026-10-06-clean-confirmation-url",sessions:sessions.size});
     const match=url.pathname.match(/^\/v1\/([^/]+)\/(status|connect|disconnect|pair-code|send-catalog)$/);
     if(!match)return json(res,404,{error:"Rota não encontrada"});
     const businessId=decodeURIComponent(match[1]);
