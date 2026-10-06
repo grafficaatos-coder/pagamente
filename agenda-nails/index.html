@@ -1661,6 +1661,126 @@
       .wa-mobile-benefits span{font-size:7px}
     }
 
+  
+    /* Mobile v6 - trava definitiva contra deslocamento horizontal no iPhone */
+    @media(max-width:720px){
+      html,body{
+        margin:0!important;
+        padding:0!important;
+        width:100%!important;
+        max-width:100%!important;
+        min-width:0!important;
+        overflow-x:hidden!important;
+        overscroll-behavior-x:none!important;
+      }
+      body{
+        position:relative!important;
+        left:0!important;
+        right:auto!important;
+        touch-action:pan-y pinch-zoom!important;
+      }
+      #root{
+        position:relative!important;
+        left:0!important;
+        width:100%!important;
+        max-width:100%!important;
+        min-width:0!important;
+        margin:0!important;
+        padding:0!important;
+        overflow-x:hidden!important;
+      }
+      .app{
+        display:block!important;
+        position:relative!important;
+        left:0!important;
+        width:100%!important;
+        max-width:100%!important;
+        min-width:0!important;
+        margin:0!important;
+        padding:0!important;
+        overflow-x:hidden!important;
+      }
+      .main{
+        display:block!important;
+        position:relative!important;
+        left:0!important;
+        width:100%!important;
+        max-width:100%!important;
+        min-width:0!important;
+        margin:0!important;
+        overflow-x:hidden!important;
+      }
+      .content{
+        position:relative!important;
+        left:0!important;
+        width:100%!important;
+        max-width:100%!important;
+        min-width:0!important;
+        margin:0!important;
+        padding-left:12px!important;
+        padding-right:12px!important;
+        overflow-x:hidden!important;
+      }
+      .content>*{
+        min-width:0!important;
+        max-width:100%!important;
+      }
+      .hero,
+      .dashboard-grid,
+      .next-card,
+      .metrics,
+      .metric,
+      .section-grid,
+      .panel,
+      .card,
+      .agenda-header,
+      .toolbar,
+      .viewtoggle,
+      .services,
+      .money,
+      .finance-grid,
+      .profile-layout,
+      .booking,
+      .bookwrap,
+      .book,
+      .formgrid,
+      .wa-easy-connect,
+      .wa-mobile-connect-primary{
+        width:100%!important;
+        max-width:100%!important;
+        min-width:0!important;
+        margin-left:0!important;
+        margin-right:0!important;
+      }
+      .dashboard-grid,
+      .section-grid{
+        grid-template-columns:minmax(0,1fr)!important;
+      }
+      .metrics{
+        grid-template-columns:repeat(2,minmax(0,1fr))!important;
+      }
+      .next-card,
+      .metric,
+      .panel,
+      .card{
+        overflow:hidden!important;
+      }
+      .top{
+        left:0!important;
+        right:0!important;
+        width:auto!important;
+        max-width:none!important;
+        margin:0!important;
+        transform:none!important;
+      }
+      .fab{
+        position:fixed!important;
+        right:14px!important;
+        left:auto!important;
+        transform:none!important;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -1934,6 +2054,16 @@
   if(s==='active'&&companyCtx.subscription?.current_period_end&&new Date(companyCtx.subscription.current_period_end)<new Date())return'Em tolerância';
   return s==='cancelled'?'Cancelado':'Ativo';
 }
+    function resetMobileHorizontalPosition(){
+  if(!window.matchMedia||!window.matchMedia('(max-width:720px)').matches)return;
+  try{
+    document.documentElement.scrollLeft=0;
+    document.body.scrollLeft=0;
+    if(window.scrollX!==0)window.scrollTo({left:0,top:window.scrollY,behavior:'auto'});
+  }catch(e){
+    try{window.scrollTo(0,window.scrollY)}catch(_){}
+  }
+}
     function toggleMobileMenu(){
   const side=document.querySelector('.side');
   const overlay=document.querySelector('.mobile-menu-overlay');
@@ -1942,11 +2072,13 @@
   side.classList.toggle('mobile-open',opening);
   overlay?.classList.toggle('open',opening);
   document.body.classList.toggle('mobile-menu-active',opening);
+  if(!opening)requestAnimationFrame(resetMobileHorizontalPosition);
 }
 function closeMobileMenu(){
   document.querySelector('.side')?.classList.remove('mobile-open');
   document.querySelector('.mobile-menu-overlay')?.classList.remove('open');
   document.body.classList.remove('mobile-menu-active');
+  requestAnimationFrame(resetMobileHorizontalPosition);
 }
     function isStandaloneApp(){
   return window.matchMedia?.('(display-mode: standalone)').matches===true||window.navigator.standalone===true;
@@ -4723,17 +4855,57 @@ async function installAgendaApp(){
   if(PUBLIC_CONFIRMATION_KEY){
     document.title='Confirmar horário · Agenda Pro';
     R.innerHTML=publicConfirmationView();
+    requestAnimationFrame(resetMobileHorizontalPosition);
     return;
   }
-  if(authLoading){document.title='Agenda Pro';R.innerHTML='<div class="auth-loading"><div class="logo">AP</div><b>Carregando Agenda Pro...</b></div>';return}
-  if(passwordRecovery){document.title='Agenda Pro · Nova senha';R.innerHTML=resetPasswordView();return}
-  if(signupMode){document.title='Agenda Pro · Criar conta';R.innerHTML=signupView();return}
-  if(!appMode){document.title='Agenda Pro · Login';R.innerHTML=loginView();return}
-  if(appMode==='owner'){document.title='Agenda Pro · Administração';page='admin';R.innerHTML=admin();return}
+  if(authLoading){
+    document.title='Agenda Pro';
+    R.innerHTML='<div class="auth-loading"><div class="logo">AP</div><b>Carregando Agenda Pro...</b></div>';
+    requestAnimationFrame(resetMobileHorizontalPosition);
+    return;
+  }
+  if(passwordRecovery){
+    document.title='Agenda Pro · Nova senha';
+    R.innerHTML=resetPasswordView();
+    requestAnimationFrame(resetMobileHorizontalPosition);
+    return;
+  }
+  if(signupMode){
+    document.title='Agenda Pro · Criar conta';
+    R.innerHTML=signupView();
+    requestAnimationFrame(resetMobileHorizontalPosition);
+    return;
+  }
+  if(!appMode){
+    document.title='Agenda Pro · Login';
+    R.innerHTML=loginView();
+    requestAnimationFrame(resetMobileHorizontalPosition);
+    return;
+  }
+  if(appMode==='owner'){
+    document.title='Agenda Pro · Administração';
+    page='admin';
+    R.innerHTML=admin();
+    requestAnimationFrame(resetMobileHorizontalPosition);
+    return;
+  }
   document.title=displayBusinessName(companyCtx?.business?.name||'Agenda Pro')+' · Agenda Pro';
-  if(companyAccessBlocked()){R.innerHTML=companyBlockedView();return}
+  if(companyAccessBlocked()){
+    R.innerHTML=companyBlockedView();
+    requestAnimationFrame(resetMobileHorizontalPosition);
+    return;
+  }
   R.innerHTML=page==='book'?booking():({home,agenda,clients,services,cash,wa,team,profile:myProfile}[page]||home)();
+  requestAnimationFrame(resetMobileHorizontalPosition);
 }
+    window.addEventListener('pageshow',resetMobileHorizontalPosition);
+    window.addEventListener('resize',()=>requestAnimationFrame(resetMobileHorizontalPosition));
+    window.addEventListener('orientationchange',()=>setTimeout(resetMobileHorizontalPosition,120));
+    window.addEventListener('scroll',()=>{
+      if(window.matchMedia?.('(max-width:720px)').matches&&window.scrollX!==0){
+        requestAnimationFrame(resetMobileHorizontalPosition);
+      }
+    },{passive:true});
     window.addEventListener('beforeinstallprompt',event=>{
       event.preventDefault();
       deferredPwaPrompt=event;
@@ -4752,7 +4924,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-mobileofficial41',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-mobilefix42',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
