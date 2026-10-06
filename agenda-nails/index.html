@@ -393,7 +393,7 @@
     let companyData={customers:[],services:[],appointments:[]};
     let whatsappState={connection:null,messages:[]},whatsappLoading=false,whatsappSetupDevice='mobile';
     let whatsappQueue=[],whatsappQueueTimer=null;
-    let baileysSession={status:'disconnected',phone:null,qr_svg:null,last_error:null},baileysPollTimer=null;
+    let baileysSession={status:'disconnected',phone:null,qr_svg:null,pairing_code:null,last_error:null},baileysPollTimer=null;
     let metaPlatformConfig={configured:false,app_id:'',config_id:''},metaPlatformLoading=false,metaEmbeddedCapture={waba_id:'',phone_number_id:''},fbSdkPromise=null,metaListenerReady=false;
     const CAPABILITIES={
       agenda:'Agenda, serviços e horários',
@@ -616,9 +616,10 @@
     ${connected
       ? `<div class="baileys-connected"><b>${baileysSession.phone?'+'+baileysSession.phone:'WhatsApp conectado'}</b><p>Confirmações, lembretes e mensagens automáticas podem ser enviadas pelo servidor.</p>${admin?`<button class="btn wa-disconnect" onclick="disconnectBaileys()">Desconectar</button>`:''}</div>`
       : `<p>Conecte o WhatsApp desta empresa para usar os envios automáticos sem deixar um computador ligado.</p>
-         ${baileysSession.qr_svg?`<div class="baileys-qr">${baileysSession.qr_svg}</div><div class="baileys-steps"><b>No celular:</b><span>WhatsApp → Aparelhos conectados → Conectar um aparelho → escaneie o QR.</span></div>`:''}
+         ${baileysSession.pairing_code?`<div class="baileys-steps"><b>Código para conectar no celular:</b><strong style="font-size:1.7rem;letter-spacing:.18em;display:block;margin:.55rem 0">${baileysSession.pairing_code}</strong><span>No WhatsApp: Aparelhos conectados → Conectar um aparelho → Conectar com número de telefone → digite este código.</span></div>`:''}
+         ${baileysSession.qr_svg&&!baileysSession.pairing_code?`<div class="baileys-qr">${baileysSession.qr_svg}</div><div class="baileys-steps"><b>Com outro aparelho:</b><span>WhatsApp → Aparelhos conectados → Conectar um aparelho → escaneie o QR.</span></div>`:''}
          <div id="baileysConnectError" class="login-error">${baileysSession.last_error||''}</div>
-         ${admin?`<button id="baileysConnectBtn" class="btn baileys-connect-btn" onclick="connectBaileys()">${baileysSession.qr_svg?'Gerar novo QR':'Conectar por QR Code'}</button>`:''}`
+         ${admin?`<div class="wa-form-grid"><div class="field wa-full"><b>Conectar usando este celular</b><input id="baileysPhone" inputmode="tel" placeholder="DDD + número, ex.: 41999999999"></div></div><div class="service-top-actions"><button id="baileysPhoneBtn" class="btn whatsapp-btn" onclick="connectBaileysByPhone()">Conectar pelo celular</button><button id="baileysConnectBtn" class="btn baileys-connect-btn" onclick="connectBaileys()">Usar QR Code</button></div>`:''}`
     }
   </section>`;
 }
@@ -1050,7 +1051,11 @@
     <div class="head"><div><span class="eyebrow">Experimental · Baileys</span><h3>${baileysSession.status==='connected'?'WhatsApp conectado por QR':'Automação por QR Code'}</h3></div><span class="status-badge ${baileysSession.status==='connected'?'status-active':'status-late'}">${baileysSession.status==='connected'?'Conectado':'Experimental'}</span></div>
     ${baileysSession.status==='connected'
       ? `<div class="baileys-connected"><b>${baileysSession.phone?'+'+baileysSession.phone:'WhatsApp conectado'}</b><p>Confirmações, lembretes e pós-atendimento da fila podem ser enviados automaticamente.</p>${admin?`<button class="btn wa-disconnect" onclick="disconnectBaileys()">Desconectar</button>`:''}</div>`
-      : `<p>Conecte como um aparelho vinculado. A sessão fica salva nesta empresa.</p>${baileysSession.qr_svg?`<div class="baileys-qr">${baileysSession.qr_svg}</div><div class="baileys-steps"><b>No WhatsApp do celular:</b><span>Configurações/⋮ → Aparelhos conectados → Conectar um aparelho → escaneie o QR.</span></div>`:''}<div id="baileysConnectError" class="login-error">${baileysSession.last_error||''}</div>${admin?`<button id="baileysConnectBtn" class="btn baileys-connect-btn" onclick="connectBaileys()">${baileysSession.qr_svg?'Gerar novo QR':'Conectar por QR Code'}</button>`:''}`
+      : `<p>Conecte como um aparelho vinculado. No celular, você pode usar um código e não precisa de outro aparelho para escanear QR.</p>
+        ${baileysSession.pairing_code?`<div class="baileys-steps"><b>Código para conectar no celular:</b><strong style="font-size:1.7rem;letter-spacing:.18em;display:block;margin:.55rem 0">${baileysSession.pairing_code}</strong><span>No WhatsApp: Aparelhos conectados → Conectar um aparelho → Conectar com número de telefone → digite este código.</span></div>`:''}
+        ${baileysSession.qr_svg&&!baileysSession.pairing_code?`<div class="baileys-qr">${baileysSession.qr_svg}</div><div class="baileys-steps"><b>Com outro aparelho:</b><span>Configurações/⋮ → Aparelhos conectados → Conectar um aparelho → escaneie o QR.</span></div>`:''}
+        <div id="baileysConnectError" class="login-error">${baileysSession.last_error||''}</div>
+        ${admin?`<div class="wa-form-grid"><div class="field wa-full"><b>Seu número do WhatsApp</b><input id="baileysPhone" inputmode="tel" placeholder="DDD + número, ex.: 41999999999"></div></div><div class="wa-free-actions"><button id="baileysPhoneBtn" class="btn whatsapp-btn" onclick="connectBaileysByPhone()">Conectar pelo celular</button><button id="baileysConnectBtn" class="btn baileys-connect-btn" onclick="connectBaileys()">Usar QR Code</button></div>`:''}`
     }
     <div class="baileys-warning">Baileys usa o WhatsApp Web de forma não oficial. O WhatsApp pode desconectar ou restringir esta sessão.</div>
   </section>`:'';
@@ -1418,17 +1423,19 @@
   if(error){console.error(error);if(e)e.textContent='Não foi possível salvar.';return}
   await loadOwnerData();render();toast('Configuração do Baileys salva');
 }
-    async function callBaileys(action,method='GET'){
+    async function callBaileys(action,method='GET',payload=null){
   let base=String(companyCtx?.settings?.baileys_service_url||'').trim();
   if(base.endsWith('/'))base=base.slice(0,-1);
   if(!base)throw new Error('Serviço Baileys ainda não foi publicado');
   const {data}=await sb.auth.getSession();
   const token=data?.session?.access_token;
   if(!token)throw new Error('Sessão expirada');
-  const r=await fetch(base+'/v1/'+encodeURIComponent(companyCtx.business.id)+'/'+action,{
+  const options={
     method,
     headers:{'Authorization':'Bearer '+token,'Content-Type':'application/json'}
-  });
+  };
+  if(payload!==null)options.body=JSON.stringify(payload);
+  const r=await fetch(base+'/v1/'+encodeURIComponent(companyCtx.business.id)+'/'+action,options);
   const out=await r.json().catch(()=>({}));
   if(!r.ok)throw new Error(out.error||'Falha na conexão do WhatsApp');
   return out;
@@ -1441,14 +1448,16 @@
       status:out.status||'disconnected',
       phone:out.phone||null,
       qr_svg:out.qr_svg||null,
+      pairing_code:out.pairing_code||baileysSession.pairing_code||null,
       last_error:out.last_error||null,
       catalog_broadcast:out.catalog_broadcast||null
     };
+    if(baileysSession.status==='connected')baileysSession.pairing_code=null;
   }catch(ex){
     console.error(ex);
     baileysSession={status:'error',phone:null,qr_svg:null,last_error:ex.message};
   }
-  if(redraw&&page==='wa')render();
+  if(redraw&&(page==='wa'||page==='services'))render();
 }
     function startBaileysPoll(){
   if(baileysPollTimer)clearInterval(baileysPollTimer);
@@ -1480,15 +1489,37 @@
     else toast('WhatsApp conectado');
   }catch(ex){
     console.error(ex);
-    baileysSession={status:'error',phone:null,qr_svg:null,last_error:ex.message};
+    baileysSession={status:'error',phone:null,qr_svg:null,pairing_code:null,last_error:ex.message};
     render();
+  }
+}
+    async function connectBaileysByPhone(){
+  const input=document.getElementById('baileysPhone');
+  const btn=document.getElementById('baileysPhoneBtn');
+  const err=document.getElementById('baileysConnectError');
+  const phone=normalizeWhatsPhone(input?.value||'');
+  if(!phone)return toast('Digite o número do WhatsApp com DDD');
+  if(btn){btn.disabled=true;btn.textContent='Gerando código...'}
+  if(err)err.textContent='';
+  try{
+    const out=await callBaileys('pair-code','POST',{phone});
+    baileysSession={...baileysSession,status:out.status||'qr',pairing_code:out.pairing_code||null,last_error:null};
+    render();
+    startBaileysPoll();
+  }catch(ex){
+    console.error(ex);
+    if(err)err.textContent=ex.message||'Não foi possível gerar o código';
+    toast(ex.message||'Não foi possível gerar o código');
+  }finally{
+    const b=document.getElementById('baileysPhoneBtn');
+    if(b){b.disabled=false;b.textContent='Conectar pelo celular'}
   }
 }
     async function disconnectBaileys(){
   if(!confirm('Desconectar este WhatsApp do modo automático experimental?'))return;
   try{
     await callBaileys('disconnect','POST');
-    baileysSession={status:'disconnected',phone:null,qr_svg:null,last_error:null};
+    baileysSession={status:'disconnected',phone:null,qr_svg:null,pairing_code:null,last_error:null};
     render();toast('WhatsApp desconectado');
   }catch(ex){console.error(ex);toast(ex.message||'Não foi possível desconectar')}
 }
