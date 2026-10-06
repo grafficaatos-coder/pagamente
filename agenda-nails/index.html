@@ -1627,6 +1627,21 @@
       .wa-code-actions .btn{width:100%;padding-left:8px;padding-right:8px}
     }
 
+  
+    /* QR principal no WhatsApp */
+    .wa-qr-help{display:grid;grid-template-columns:auto 1fr;gap:9px;margin:12px 0 0;padding:11px 12px;border-radius:12px;background:#f4f8f5;border:1px solid #dce9df;color:#51665a;font-size:9px;line-height:1.5}
+    .wa-qr-help b{color:#286b49}
+    .wa-phone-experimental{margin-top:14px;border-top:1px solid #ece4e8;padding-top:12px}
+    .wa-phone-experimental summary{cursor:pointer;color:#765668;font-size:9px;font-weight:850;text-align:center}
+    .wa-phone-exp-body{margin-top:12px}
+    .wa-phone-exp-body>p{font-size:9px;line-height:1.5;color:#806f77;margin:0 0 10px}
+    .wa-qr-title{font-size:11px;font-weight:900;color:#4f3542;margin-bottom:10px;text-align:center}
+    .wa-qr-wait{font-size:9px;font-weight:800;color:#6e6268;margin-top:8px;text-align:center}
+    .wa-easy-qr{padding:16px;background:#fff;border:1px solid #e8e0e4;border-radius:16px}
+    @media(max-width:720px){
+      .wa-qr-help{grid-template-columns:1fr}
+    }
+
   </style>
 </head>
 <body>
@@ -3031,13 +3046,17 @@ async function installAgendaApp(){
           </div>`
         : `<div class="wa-connect-intro">
             <div class="wa-connect-progress"><span class="active">1</span><i></i><span>2</span><i></i><span>3</span></div>
-            <span class="wa-step-label">PASSO 1 DE 3</span>
-            <h4>Informe o número do WhatsApp</h4>
-            <p>Use o número que ficará conectado ao Agenda Pro para enviar confirmações e lembretes.</p>
-            ${admin?`<div class="wa-phone-box"><label>Número com DDD</label><div class="wa-phone-input"><span>🇧🇷 +55</span><input id="baileysPhone" inputmode="tel" autocomplete="tel" value="${appModalEscape(preferredPhone)}" placeholder="41 99999-9999"></div></div>
-            <button id="baileysPhoneBtn" class="btn primary wa-main-connect" onclick="connectBaileysByPhone()">Gerar código de conexão</button>
-            <details class="wa-qr-alternative"><summary>Prefiro conectar com QR Code</summary><div><button id="baileysConnectBtn" class="btn secondary" onclick="connectBaileys()">Gerar QR Code</button></div></details>`:''}
-            ${baileysSession.qr_svg?`<div class="baileys-qr wa-easy-qr">${baileysSession.qr_svg}</div>`:''}
+            <span class="wa-step-label">CONEXÃO RECOMENDADA</span>
+            <h4>Conectar com QR Code</h4>
+            <p>É a forma mais simples para vincular este WhatsApp ao Agenda Pro. Depois de conectado, o computador não precisa ficar ligado.</p>
+            ${admin?`<button id="baileysConnectBtn" class="btn primary wa-main-connect" onclick="connectBaileys()">Gerar QR Code</button>
+            <div class="wa-qr-help"><b>No celular?</b><span>Abra o Agenda Pro em um computador, tablet ou outro celular para mostrar o QR. No seu WhatsApp, entre em <strong>Aparelhos conectados → Conectar um aparelho</strong> e escaneie.</span></div>
+            <details class="wa-phone-experimental"><summary>Conectar com código pelo número (experimental)</summary><div class="wa-phone-exp-body">
+              <p>O pareamento por código pode ser rejeitado pelo WhatsApp em algumas versões. Use somente se preferir tentar sem QR.</p>
+              <div class="wa-phone-box"><label>Número com DDD</label><div class="wa-phone-input"><span>🇧🇷 +55</span><input id="baileysPhone" inputmode="tel" autocomplete="tel" value="${appModalEscape(preferredPhone)}" placeholder="41 99999-9999"></div></div>
+              <button id="baileysPhoneBtn" class="btn secondary wa-main-connect" onclick="connectBaileysByPhone()">Gerar código pelo número</button>
+            </div></details>`:''}
+            ${baileysSession.qr_svg?`<div class="baileys-qr wa-easy-qr"><div class="wa-qr-title">Escaneie este QR no WhatsApp</div>${baileysSession.qr_svg}<div class="wa-qr-wait">Aguardando conexão...</div></div>`:''}
           </div>`
     }
     <div id="baileysConnectError" class="login-error wa-easy-error">${baileysSession.last_error||''}</div>
@@ -4703,7 +4722,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-whatsappclean39',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-qrfirst40',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
