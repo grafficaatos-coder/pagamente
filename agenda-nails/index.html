@@ -1488,6 +1488,135 @@
       .wa-easy-success .wa-disconnect{grid-column:1/-1;width:100%}
     }
 
+  
+    /* Mobile v5 - largura travada e sem arrasto horizontal */
+    .mobile-side-logout{display:none!important}
+    @media(max-width:720px){
+      html{
+        width:100%!important;
+        max-width:100%!important;
+        overflow-x:clip!important;
+        overscroll-behavior-x:none;
+      }
+      body{
+        width:100%!important;
+        max-width:100%!important;
+        overflow-x:clip!important;
+        overscroll-behavior-x:none;
+        touch-action:pan-y pinch-zoom;
+      }
+      #root,.app,.main{
+        width:100%!important;
+        max-width:100%!important;
+        min-width:0!important;
+        overflow-x:clip!important;
+      }
+      .content{
+        box-sizing:border-box!important;
+        width:100%!important;
+        max-width:100%!important;
+        min-width:0!important;
+        margin:0!important;
+        padding-left:12px!important;
+        padding-right:12px!important;
+        overflow-x:clip!important;
+      }
+      .content>*,
+      .hero,.dashboard-grid,.next-card,.metrics,.metric,.section-grid,.panel,.card,
+      .agenda-header,.toolbar,.viewtoggle,.weekgrid,.month,.services,.money,.finance-grid,
+      .profile-layout,.booking,.bookwrap,.book,.formgrid,.wa-free-auto,.baileys-card{
+        box-sizing:border-box!important;
+        min-width:0!important;
+        max-width:100%!important;
+      }
+      .dashboard-grid,.metrics,.section-grid,.services,.money,.finance-grid{
+        width:100%!important;
+      }
+      .metrics{
+        grid-template-columns:repeat(2,minmax(0,1fr))!important;
+      }
+      .metric,.next-card,.panel{
+        width:auto!important;
+        overflow:hidden;
+      }
+      .metric *,.next-card *,.panel *{
+        max-width:100%;
+      }
+      .top{
+        box-sizing:border-box!important;
+        display:grid!important;
+        grid-template-columns:minmax(0,1fr) auto!important;
+        align-items:center!important;
+        column-gap:8px!important;
+        width:100%!important;
+        max-width:100%!important;
+        overflow:hidden!important;
+      }
+      .top-left{
+        display:flex!important;
+        min-width:0!important;
+        max-width:100%!important;
+        overflow:hidden!important;
+      }
+      .top-left>div:last-child{
+        flex:1 1 auto!important;
+        min-width:0!important;
+        overflow:hidden!important;
+      }
+      .top h1{
+        overflow:hidden!important;
+        text-overflow:ellipsis!important;
+        white-space:nowrap!important;
+      }
+      .top-actions{
+        display:flex!important;
+        flex:0 0 auto!important;
+        min-width:0!important;
+        gap:0!important;
+      }
+      .top-actions .owner-session,
+      .top-actions .primary,
+      .top-actions .mobile-top-logout{
+        display:none!important;
+      }
+      .top-actions .mobile-password-btn{
+        display:inline-flex!important;
+        min-width:auto!important;
+        max-width:62px!important;
+        padding:0 12px!important;
+        height:44px!important;
+        align-items:center!important;
+        justify-content:center!important;
+        white-space:nowrap!important;
+      }
+      .mobile-menu-toggle{
+        min-width:96px!important;
+        max-width:96px!important;
+        padding:0 11px!important;
+      }
+      .mobile-side-logout{
+        display:flex!important;
+        margin-top:8px!important;
+        color:#ffdfe9!important;
+        border:1px solid rgba(255,255,255,.12)!important;
+        background:rgba(255,255,255,.06)!important;
+      }
+      .mobile-side-logout svg{
+        width:18px!important;
+        height:18px!important;
+        stroke:currentColor!important;
+        fill:none!important;
+        stroke-width:1.8!important;
+      }
+      .fab{
+        right:14px!important;
+        max-width:56px!important;
+      }
+      img,video,canvas,svg{
+        max-width:100%;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -1809,10 +1938,10 @@ async function installAgendaApp(){
     n.push(['wa','message','WhatsApp']);
     if(canAdminCompany())n.push(['team','userplus','Equipe']);
     n.push(['profile','users','Meu perfil']);
-    return `<aside class="side"><div class="brand"><div class="logo">${p.initials}</div><div><b>${displayBusinessName(companyCtx?.business?.name||p.brand)}</b><small>${companyCtx?.plan?.name||'PLANO'}</small></div></div><nav class="nav">${n.map(x=>`<button class="${page===x[0]?'on':''}" onclick="go('${x[0]}')">${I[x[1]]}<span class="label">${x[2]}</span></button>`).join('')}${pwaInstallEntry()}</nav><div class="side-foot"><small>Acesso da empresa</small><b>${subscriptionLabel()}</b></div></aside>`;
+    return `<aside class="side"><div class="brand"><div class="logo">${p.initials}</div><div><b>${displayBusinessName(companyCtx?.business?.name||p.brand)}</b><small>${companyCtx?.plan?.name||'PLANO'}</small></div></div><nav class="nav">${n.map(x=>`<button class="${page===x[0]?'on':''}" onclick="go('${x[0]}')">${I[x[1]]}<span class="label">${x[2]}</span></button>`).join('')}${pwaInstallEntry()}<button class="mobile-side-logout" onclick="ownerLogout()"><svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M13 4h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/></svg><span class="label">Sair</span></button></nav><div class="side-foot"><small>Acesso da empresa</small><b>${subscriptionLabel()}</b></div></aside>`;
   }
   const n=[['overview','home','Visão geral'],['clients','users','Assinantes'],['plans','sparkle','Planos'],['billing','wallet','Cobranças'],['settings','more','Configurações']];
-  return `<aside class="side"><div class="brand"><div class="logo">AP</div><div><b>Agenda Pro</b><small>PROPRIETÁRIO</small></div></div><nav class="nav">${n.map(x=>`<button class="${adminTab===x[0]?'on':''}" onclick="setAdminTab('${x[0]}')">${I[x[1]]}<span class="label">${x[2]}</span></button>`).join('')}${pwaInstallEntry()}</nav><div class="side-foot"><small>Acesso</small><b>Administrador da plataforma</b></div></aside>`;
+  return `<aside class="side"><div class="brand"><div class="logo">AP</div><div><b>Agenda Pro</b><small>PROPRIETÁRIO</small></div></div><nav class="nav">${n.map(x=>`<button class="${adminTab===x[0]?'on':''}" onclick="setAdminTab('${x[0]}')">${I[x[1]]}<span class="label">${x[2]}</span></button>`).join('')}${pwaInstallEntry()}<button class="mobile-side-logout" onclick="ownerLogout()"><svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M13 4h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/></svg><span class="label">Sair</span></button></nav><div class="side-foot"><small>Acesso</small><b>Administrador da plataforma</b></div></aside>`;
 }
     function bottom(){
   if(appMode==='company'){
@@ -1831,10 +1960,10 @@ async function installAgendaApp(){
     function shell(content){
   if(appMode==='company'){
     const p=P(),t=companyTitles()[page]||companyTitles().home;
-    return `<div class="app company-app">${nav()}<div class="mobile-menu-overlay" onclick="closeMobileMenu()" aria-hidden="true"></div><main class="main"><header class="top"><div class="top-left"><button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Abrir menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="menu-label">Menu</span></button><div class="logo mini-logo">${p.initials}</div><div><h1>${t[0]}</h1><small>${t[1]}</small></div></div><div class="top-actions"><span class="owner-session"><i class="owner-dot"></i> ${companyCtx?.plan?.name||'Plano'} · ${companyRole()}</span>${hasFeature('agenda')&&canOperateCompany()?'<button class="btn primary" onclick="book()">+ Novo horário</button>':''}<button class="logout-btn" onclick="changeMyPassword()">Senha</button><button class="logout-btn" onclick="ownerLogout()">Sair</button></div></header><div class="content">${content}</div></main>${bottom()}</div>`;
+    return `<div class="app company-app">${nav()}<div class="mobile-menu-overlay" onclick="closeMobileMenu()" aria-hidden="true"></div><main class="main"><header class="top"><div class="top-left"><button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Abrir menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="menu-label">Menu</span></button><div class="logo mini-logo">${p.initials}</div><div><h1>${t[0]}</h1><small>${t[1]}</small></div></div><div class="top-actions"><span class="owner-session"><i class="owner-dot"></i> ${companyCtx?.plan?.name||'Plano'} · ${companyRole()}</span>${hasFeature('agenda')&&canOperateCompany()?'<button class="btn primary" onclick="book()">+ Novo horário</button>':''}<button class="logout-btn mobile-password-btn" onclick="changeMyPassword()">Senha</button><button class="logout-btn mobile-top-logout" onclick="ownerLogout()">Sair</button></div></header><div class="content">${content}</div></main>${bottom()}</div>`;
   }
   const t=titles()[adminTab]||titles().overview;
-  return `<div class="app admin-owner-app">${nav()}<div class="mobile-menu-overlay" onclick="closeMobileMenu()" aria-hidden="true"></div><main class="main"><header class="top"><div class="top-left"><button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Abrir menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="menu-label">Menu</span></button><div class="logo mini-logo">AP</div><div><h1>${t[0]}</h1><small>${t[1]}</small></div></div><div class="top-actions"><span class="owner-session"><i class="owner-dot"></i> Proprietário</span><button class="logout-btn" onclick="changeMyPassword()">Senha</button><button class="logout-btn" onclick="ownerLogout()">Sair</button></div></header><div class="content">${content}</div></main>${bottom()}</div>`;
+  return `<div class="app admin-owner-app">${nav()}<div class="mobile-menu-overlay" onclick="closeMobileMenu()" aria-hidden="true"></div><main class="main"><header class="top"><div class="top-left"><button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Abrir menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="menu-label">Menu</span></button><div class="logo mini-logo">AP</div><div><h1>${t[0]}</h1><small>${t[1]}</small></div></div><div class="top-actions"><span class="owner-session"><i class="owner-dot"></i> Proprietário</span><button class="logout-btn mobile-password-btn" onclick="changeMyPassword()">Senha</button><button class="logout-btn mobile-top-logout" onclick="ownerLogout()">Sair</button></div></header><div class="content">${content}</div></main>${bottom()}</div>`;
 }
     function segmentSwitch(){return `<div class="segment-switch"><button class="${segment==='salon'?'on':''}" onclick="setSegment('salon')">✂️ Salão</button><button class="${segment==='esthetic'?'on':''}" onclick="setSegment('esthetic')">✨ Estética</button><button class="${segment==='doctor'?'on':''}" onclick="setSegment('doctor')">🩺 Consultório</button></div>`}
     function setSegment(s){segment=s;localStorage.setItem('agendaProSegment',s);resetData();page='home';render();toast(`Modo alterado para ${P().segment}`)}
@@ -4551,7 +4680,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-baileysproxy35',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-mobilewidth36',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
