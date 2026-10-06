@@ -1347,6 +1347,7 @@
     let sb=null,authUser=null,appMode=null,ownerLogged=false,authLoading=true,loginMessage='',passwordRecovery=false,signupMode=false,signupLoading=false,signupMessage='',signupWaitingEmail='',signupPlans=[],signupSettings={public_signup_enabled:true,free_trial_enabled:true,trial_days:7},signupSelectedPlan='profissional',loginPrefillEmail='';
     let companyCtx=null;
     let companyData={customers:[],services:[],appointments:[],financialEntries:[]};
+    let appointmentSyncTimer=null;
     let financeFormOpen=false,financeEntryType='income',financePeriod='month',financeKind='all',financeTab='cash';
     let whatsappState={connection:null,messages:[]},whatsappLoading=false,whatsappSetupDevice='mobile';
     let whatsappQueue=[],whatsappQueueTimer=null;
@@ -2347,6 +2348,28 @@ async function installAgendaApp(){
     if(error)console.error(error);
   }
 }
+    function appointmentSyncSignature(rows){
+  return (rows||[]).map(a=>[
+    a.id,a.status,a.confirmed_by_customer_at||'',a.customer_cancelled_at||'',a.updated_at||''
+  ].join(':')).join('|');
+}
+    function startAppointmentStatusSync(){
+  if(appointmentSyncTimer)clearInterval(appointmentSyncTimer);
+  appointmentSyncTimer=setInterval(async()=>{
+    if(appMode!=='company'||!companyCtx||!sb||!hasFeature('agenda'))return;
+    try{
+      const {data,error}=await sb.from('agenda_appointments').select('*')
+        .eq('business_id',companyCtx.business.id)
+        .order('starts_at',{ascending:true});
+      if(error||!data)return;
+      const before=appointmentSyncSignature(companyData.appointments);
+      const after=appointmentSyncSignature(data);
+      if(before===after)return;
+      companyData.appointments=data;
+      if(['home','agenda','cash'].includes(page))render();
+    }catch(err){console.error('Sincronização da agenda:',err)}
+  },10000);
+}
     async function loadCompanyData(){
   if(!companyCtx||!sb)return;
   const bid=companyCtx.business.id;
@@ -2365,6 +2388,7 @@ async function installAgendaApp(){
   whatsappQueue=wq.data||[];
   baileysSession=br.data?{status:br.data.status||'disconnected',phone:br.data.phone||null,qr_svg:null,last_error:br.data.last_error||null}:{status:'disconnected',phone:null,qr_svg:null,last_error:null};
   startWhatsappQueueWatcher();
+  startAppointmentStatusSync();
   if(hasFeature('agenda')&&!companyData.services.length){
     await ensureDefaultServices();
     sr=await sb.from('agenda_services').select('*').eq('business_id',bid).order('name');
@@ -3308,7 +3332,7 @@ async function installAgendaApp(){
         sb=mod.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
         sb.auth.onAuthStateChange(async(event,session)=>{
           if(event==='PASSWORD_RECOVERY'){passwordRecovery=true;authLoading=false;render();return}
-          if(event==='SIGNED_OUT'){authUser=null;appMode=null;ownerLogged=false;companyCtx=null;passwordRecovery=false;render()}
+          if(event==='SIGNED_OUT'){authUser=null;appMode=null;ownerLogged=false;companyCtx=null;passwordRecovery=false;if(appointmentSyncTimer){clearInterval(appointmentSyncTimer);appointmentSyncTimer=null}render()}
         });
         const {data}=await sb.auth.getSession();
         authLoading=false;
@@ -3601,7 +3625,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-confirm11',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-confirm12',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
