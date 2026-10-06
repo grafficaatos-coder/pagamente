@@ -123,7 +123,7 @@ function serviceTerms(segment){
 function catalogText(business,customer,services){
   const first=String(customer?.name||"").trim().split(/\s+/)[0]||"Cliente";
   const terms=serviceTerms(business?.segment);
-  const items=services.map(s=>"• *"+s.name+"*"+(s.show_price_to_client===false?"":" — "+moneyBRFromCents(s.price_cents))+" · "+s.duration_minutes+" min").join("\n");
+  const items=services.map(s=>"• *"+s.name+"*"+(s.show_price_to_client===false?"":" — "+moneyBRFromCents(s.price_cents))).join("\n");
   return "Olá, "+first+"! ✨\n\nSegue nosso catálogo de "+terms.many+" da *"+business.name+"*:\n\n"+items+
     "\n\nSe quiser agendar, é só entrar em contato por aqui. 💖";
 }
@@ -490,7 +490,7 @@ const server=http.createServer(async(req,res)=>{
   if(req.method==="OPTIONS")return json(res,204,{});
   try{
     const url=new URL(req.url||"/","http://localhost");
-    if(url.pathname==="/health")return json(res,200,{ok:true,service:"agenda-pro-baileys-oracle",version:"2026-10-06-confirm-24h",sessions:sessions.size});
+    if(url.pathname==="/health")return json(res,200,{ok:true,service:"agenda-pro-baileys-oracle",version:"2026-10-06-service-value-only",sessions:sessions.size});
     const match=url.pathname.match(/^\/v1\/([^/]+)\/(status|connect|disconnect|pair-code|send-catalog)$/);
     if(!match)return json(res,404,{error:"Rota não encontrada"});
     const businessId=decodeURIComponent(match[1]);
