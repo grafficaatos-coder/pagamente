@@ -1112,6 +1112,72 @@
       .booking-price-toggle{margin-top:2px}
     }
 
+  
+    /* Confirmação pública do agendamento */
+    .public-confirm-screen{
+      min-height:100vh;
+      padding:26px 16px;
+      display:grid;
+      place-items:center;
+      background:
+        radial-gradient(circle at 10% 0%,rgba(117,71,90,.10),transparent 32%),
+        linear-gradient(180deg,#faf8f9 0%,#f4f5f6 100%);
+    }
+    .public-confirm-card{
+      width:min(100%,520px);
+      background:#fff;
+      border:1px solid var(--line);
+      border-radius:22px;
+      box-shadow:0 22px 60px rgba(43,30,36,.10);
+      overflow:hidden;
+    }
+    .public-confirm-head{
+      padding:24px 24px 18px;
+      background:linear-gradient(145deg,#4a2d3b,#643d50);
+      color:#fff;
+    }
+    .public-confirm-brand{display:flex;align-items:center;gap:11px;margin-bottom:18px}
+    .public-confirm-logo{
+      width:42px;height:42px;border-radius:13px;display:grid;place-items:center;
+      background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.14);
+      font-weight:900;font-size:13px
+    }
+    .public-confirm-brand b,.public-confirm-brand small{display:block}
+    .public-confirm-brand b{font-size:13px}
+    .public-confirm-brand small{margin-top:2px;font-size:9px;color:rgba(255,255,255,.70)}
+    .public-confirm-head h1{margin:0;font-size:25px;letter-spacing:-.04em}
+    .public-confirm-head p{margin:7px 0 0;font-size:11px;line-height:1.5;color:rgba(255,255,255,.78)}
+    .public-confirm-body{padding:22px 24px 24px}
+    .public-confirm-summary{display:grid;gap:10px;margin-bottom:18px}
+    .public-confirm-row{
+      display:flex;align-items:flex-start;justify-content:space-between;gap:18px;
+      padding:12px 0;border-bottom:1px solid #eee9eb
+    }
+    .public-confirm-row:last-child{border-bottom:0}
+    .public-confirm-row span{font-size:10px;color:var(--muted)}
+    .public-confirm-row b{font-size:12px;text-align:right;max-width:66%}
+    .public-confirm-status{
+      padding:12px 13px;border-radius:12px;margin-bottom:15px;font-size:10px;line-height:1.45;
+      background:#fff8e8;border:1px solid #efe0b6;color:#765a19
+    }
+    .public-confirm-status.ok{background:#eef9f2;border-color:#cfe8d8;color:#176b3a}
+    .public-confirm-status.cancelled{background:#fff2f2;border-color:#efd5d5;color:#973e43}
+    .public-confirm-actions{display:grid;gap:9px}
+    .public-confirm-actions .btn{width:100%;min-height:48px;font-size:12px}
+    .public-confirm-actions .confirm-yes{background:#2d7b50;color:#fff;border-color:#2d7b50}
+    .public-confirm-actions .confirm-no{background:#fff;color:#9a4046;border-color:#e5c9cc}
+    .public-confirm-foot{margin:15px 0 0;text-align:center;color:var(--muted);font-size:9px;line-height:1.45}
+    .public-confirm-loading{padding:48px 24px;text-align:center}
+    .public-confirm-loading .logo{margin:0 auto 14px}
+    .public-confirm-loading b,.public-confirm-loading small{display:block}
+    .public-confirm-loading small{margin-top:5px;color:var(--muted)}
+    @media(max-width:560px){
+      .public-confirm-screen{padding:0;align-items:stretch}
+      .public-confirm-card{border-radius:0;min-height:100vh;width:100%}
+      .public-confirm-head{padding:28px 20px 20px}
+      .public-confirm-body{padding:20px}
+    }
+
   </style>
 </head>
 <body>
@@ -1275,6 +1341,9 @@
     const AGENDA_ADMIN_FUNCTION=SUPABASE_URL+'/functions/v1/agenda-admin-access';
     const AGENDA_WHATSAPP_FUNCTION=SUPABASE_URL+'/functions/v1/agenda-whatsapp';
     const AGENDA_WHATSAPP_ONBOARDING_FUNCTION=SUPABASE_URL+'/functions/v1/agenda-whatsapp-onboarding';
+    const AGENDA_CONFIRMATION_FUNCTION=SUPABASE_URL+'/functions/v1/agenda-confirmation';
+    const PUBLIC_CONFIRMATION_TOKEN=(new URLSearchParams(location.search).get('confirm')||'').trim();
+    let publicConfirmationState={loading:!!PUBLIC_CONFIRMATION_TOKEN,requested:false,submitting:false,error:'',appointment:null,message:''};
     let sb=null,authUser=null,appMode=null,ownerLogged=false,authLoading=true,loginMessage='',passwordRecovery=false,signupMode=false,signupLoading=false,signupMessage='',signupWaitingEmail='',signupPlans=[],signupSettings={public_signup_enabled:true,free_trial_enabled:true,trial_days:7},signupSelectedPlan='profissional',loginPrefillEmail='';
     let companyCtx=null;
     let companyData={customers:[],services:[],appointments:[],financialEntries:[]};
@@ -1514,13 +1583,13 @@ async function installAgendaApp(){
   return status==='pending'?'Pendente':status==='cancelled'?'Cancelado':status==='completed'?'Concluído':status==='no_show'?'Faltou':'Confirmado';
 }
     function agendaActions(a){
-  return canOperateCompany()?`<div class="agenda-actions"><select onchange="updateAppointmentStatus('${a.id}',this.value)"><option value="pending" ${a.status==='pending'?'selected':''}>Pendente</option><option value="confirmed" ${a.status==='confirmed'?'selected':''}>Confirmado</option><option value="completed" ${a.status==='completed'?'selected':''}>Concluído</option><option value="no_show" ${a.status==='no_show'?'selected':''}>Faltou</option><option value="cancelled" ${a.status==='cancelled'?'selected':''}>Cancelado</option></select><button class="mini-btn" onclick="editAppointment('${a.id}')">Editar</button>${canAdminCompany()?`<button class="mini-btn danger" onclick="deleteAppointment('${a.id}')">Excluir</button>`:''}</div>`:'';
+  return canOperateCompany()?`<div class="agenda-actions"><select onchange="updateAppointmentStatus('${a.id}',this.value)"><option value="pending" ${a.status==='pending'?'selected':''}>Pendente</option><option value="confirmed" ${a.status==='confirmed'?'selected':''}>Confirmado</option><option value="completed" ${a.status==='completed'?'selected':''}>Concluído</option><option value="no_show" ${a.status==='no_show'?'selected':''}>Faltou</option><option value="cancelled" ${a.status==='cancelled'?'selected':''}>Cancelado</option></select><button class="mini-btn whats-mini" onclick="sendAppointmentConfirmationLink('${a.id}')">Enviar confirmação</button><button class="mini-btn" onclick="editAppointment('${a.id}')">Editar</button>${canAdminCompany()?`<button class="mini-btn danger" onclick="deleteAppointment('${a.id}')">Excluir</button>`:''}</div>`:'';
 }
     function agendaRow(a,showDate=false){
   const d=new Date(a.starts_at),cu=companyData.customers.find(x=>x.id===a.customer_id),se=companyData.services.find(x=>x.id===a.service_id);
   const statusText=agendaStatusText(a.status);
   const tagClass=a.status==='pending'?'p':a.status==='cancelled'?'canceled':'';
-  return `<div class="appt agenda-real-row" data-search="${(cu?.name||'').toLowerCase()} ${(se?.name||'').toLowerCase()} ${(a.professional_name||'').toLowerCase()}"><div class="appt-time">${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div><span class="status-line ${a.status==='pending'?'p':''}"></span><div><strong>${cu?.name||'Cliente'}</strong><small>${showDate?d.toLocaleDateString('pt-BR')+' · ':''}${se?.name||P().service} · ${a.professional_name||P().professional}</small>${agendaActions(a)}</div><span class="tag ${tagClass}">${statusText}</span></div>`;
+  return `<div class="appt agenda-real-row" data-search="${(cu?.name||'').toLowerCase()} ${(se?.name||'').toLowerCase()} ${(a.professional_name||'').toLowerCase()}"><div class="appt-time">${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div><span class="status-line ${a.status==='pending'?'p':''}"></span><div><strong>${cu?.name||'Cliente'}</strong><small>${showDate?d.toLocaleDateString('pt-BR')+' · ':''}${se?.name||P().service} · ${a.professional_name||P().professional}${a.confirmed_by_customer_at?' · ✓ Cliente confirmou':''}</small>${agendaActions(a)}</div><span class="tag ${tagClass}">${statusText}</span></div>`;
 }
     function agenda(){
   const p=P();
@@ -3035,10 +3104,11 @@ async function installAgendaApp(){
   openCustomerModal(null,true);
 }
 
-    function appointmentWhatsMessage(customer,service,date,time,professional,status){
+    function appointmentWhatsMessage(customer,service,date,time,professional,status,confirmationToken=''){
   const first=(customer?.name||'').trim().split(/\s+/)[0]||'';
   const dateBR=String(date||'').split('-').reverse().join('/');
-  const statusText=status==='pending'?'Pendente':'Confirmado';
+  const statusText=status==='pending'?'Aguardando confirmação':status==='cancelled'?'Cancelado':'Confirmado';
+  const link=confirmationLink(confirmationToken);
   const lines=[
     `Olá${first?', '+first:''}! 😊`,
     '',
@@ -3049,9 +3119,12 @@ async function installAgendaApp(){
     `✨ ${P().service}: *${service?.name||''}*`,
     professional?`👤 ${P().professional}: *${professional}*`:null,
     `✅ Status: *${statusText}*`,
+    link?'':'',
+    link?'*Confirme seu horário pelo link abaixo:*':null,
+    link?`✅ ${link}`:null,
     '',
     'Se precisar alterar o horário, fale com a gente por aqui.'
-  ].filter(Boolean);
+  ].filter(v=>v!==null&&v!==undefined);
   return lines.join('\n');
 }
     async function saveAppointment(){
@@ -3085,7 +3158,7 @@ async function installAgendaApp(){
     starts_at,
     status,
     notes:notes||null
-  }).select('id').single();
+  }).select('id,confirmation_token').single();
 
   if(error){
     console.error(error);
@@ -3102,13 +3175,13 @@ async function installAgendaApp(){
     }catch(ex){
       console.error(ex);
       toast('Horário salvo. O envio automático falhou; abrindo WhatsApp manual.');
-      const msg=appointmentWhatsMessage(customer,service,date,time,professional_name,status);
+      const msg=appointmentWhatsMessage(customer,service,date,time,professional_name,status,created?.confirmation_token);
       const url='https://wa.me/'+phone+'?text='+encodeURIComponent(msg);
       window.open(url,'_blank','noopener,noreferrer');
       await markQueueByAppointment(created.id,'confirmation','opened');
     }
   }else if(phone&&!baileysConnected){
-    const msg=appointmentWhatsMessage(customer,service,date,time,professional_name,status);
+    const msg=appointmentWhatsMessage(customer,service,date,time,professional_name,status,created?.confirmation_token);
     const url='https://wa.me/'+phone+'?text='+encodeURIComponent(msg);
     if(whatsWindow&&!whatsWindow.closed)whatsWindow.location.href=url;
     else window.open(url,'_blank','noopener,noreferrer');
@@ -3123,6 +3196,108 @@ async function installAgendaApp(){
   else if(baileysConnected)toast('Horário salvo. A confirmação entrou na fila automática do WhatsApp.');
   else if(!autoConnected)toast('Horário salvo. Lembretes futuros já foram preparados automaticamente.');
 }
+    function confirmationLink(token){
+  if(!token)return '';
+  return location.origin+location.pathname+'?confirm='+encodeURIComponent(token);
+}
+    function publicConfirmationStatusText(a){
+  if(a?.confirmed_by_customer_at)return 'Confirmado pelo cliente';
+  if(a?.customer_cancelled_at||a?.status==='cancelled')return 'Cliente informou que não poderá comparecer';
+  if(a?.status==='completed')return 'Atendimento concluído';
+  return 'Aguardando sua confirmação';
+}
+    function publicConfirmationView(){
+  const s=publicConfirmationState;
+  if(s.loading&&!s.appointment&&!s.error){
+    return '<div class="public-confirm-screen"><div class="public-confirm-card"><div class="public-confirm-loading"><div class="logo">AP</div><b>Carregando seu horário...</b><small>Aguarde um instante.</small></div></div></div>';
+  }
+  if(s.error&&!s.appointment){
+    return `<div class="public-confirm-screen"><div class="public-confirm-card"><div class="public-confirm-head"><div class="public-confirm-brand"><div class="public-confirm-logo">AP</div><div><b>Agenda Pro</b><small>Confirmação de horário</small></div></div><h1>Não foi possível abrir este horário</h1><p>O link pode estar inválido ou o agendamento não está mais disponível.</p></div><div class="public-confirm-body"><div class="public-confirm-status cancelled">${appModalEscape(s.error)}</div><p class="public-confirm-foot">Entre em contato com o estabelecimento para conferir seu agendamento.</p></div></div></div>`;
+  }
+  const a=s.appointment||{};
+  const d=a.starts_at?new Date(a.starts_at):null;
+  const when=d&&!Number.isNaN(d.getTime())?d.toLocaleString('pt-BR',{weekday:'long',day:'2-digit',month:'long',hour:'2-digit',minute:'2-digit'}):'—';
+  const confirmed=!!a.confirmed_by_customer_at;
+  const cancelled=!!a.customer_cancelled_at||a.status==='cancelled';
+  const completed=a.status==='completed';
+  const statusClass=confirmed?'ok':cancelled?'cancelled':'';
+  return `<div class="public-confirm-screen"><div class="public-confirm-card">
+    <div class="public-confirm-head">
+      <div class="public-confirm-brand"><div class="public-confirm-logo">AP</div><div><b>${appModalEscape(a.business_name||'Agenda Pro')}</b><small>Confirmação de horário</small></div></div>
+      <h1>Olá, ${appModalEscape((a.customer_name||'Cliente').split(/\s+/)[0])}!</h1>
+      <p>Confira os dados abaixo e confirme se poderá comparecer.</p>
+    </div>
+    <div class="public-confirm-body">
+      <div class="public-confirm-summary">
+        <div class="public-confirm-row"><span>Serviço</span><b>${appModalEscape(a.service_name||'Serviço')}</b></div>
+        <div class="public-confirm-row"><span>Data e horário</span><b>${appModalEscape(when)}</b></div>
+        ${a.professional_name?`<div class="public-confirm-row"><span>Profissional</span><b>${appModalEscape(a.professional_name)}</b></div>`:''}
+      </div>
+      <div class="public-confirm-status ${statusClass}">${appModalEscape(s.message||publicConfirmationStatusText(a))}</div>
+      ${completed?'':`<div class="public-confirm-actions">
+        <button class="btn confirm-yes" onclick="submitPublicConfirmation('confirm')" ${s.submitting?'disabled':''}>✓ Confirmar horário</button>
+        <button class="btn confirm-no" onclick="submitPublicConfirmation('cancel')" ${s.submitting?'disabled':''}>Não poderei comparecer</button>
+      </div>`}
+      <p class="public-confirm-foot">Sua resposta é enviada diretamente para a agenda do estabelecimento.</p>
+    </div>
+  </div></div>`;
+}
+    async function loadPublicConfirmation(){
+  if(!PUBLIC_CONFIRMATION_TOKEN||publicConfirmationState.requested)return;
+  publicConfirmationState.requested=true;
+  publicConfirmationState.loading=true;
+  render();
+  try{
+    const r=await fetch(AGENDA_CONFIRMATION_FUNCTION+'?token='+encodeURIComponent(PUBLIC_CONFIRMATION_TOKEN),{cache:'no-store'});
+    const out=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(out.error||'Não foi possível carregar o horário');
+    publicConfirmationState.appointment=out.appointment||null;
+    publicConfirmationState.error='';
+  }catch(err){
+    console.error(err);
+    publicConfirmationState.error=err?.message||'Não foi possível carregar o horário';
+  }finally{
+    publicConfirmationState.loading=false;
+    render();
+  }
+}
+    async function submitPublicConfirmation(action){
+  if(!PUBLIC_CONFIRMATION_TOKEN||publicConfirmationState.submitting)return;
+  publicConfirmationState.submitting=true;
+  publicConfirmationState.message=action==='confirm'?'Confirmando seu horário...':'Registrando sua resposta...';
+  render();
+  try{
+    const r=await fetch(AGENDA_CONFIRMATION_FUNCTION,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({token:PUBLIC_CONFIRMATION_TOKEN,action})
+    });
+    const out=await r.json().catch(()=>({}));
+    if(!r.ok)throw new Error(out.error||'Não foi possível enviar sua resposta');
+    publicConfirmationState.appointment=out.appointment||publicConfirmationState.appointment;
+    publicConfirmationState.message=out.message||'Resposta registrada com sucesso';
+  }catch(err){
+    console.error(err);
+    publicConfirmationState.message=err?.message||'Não foi possível enviar sua resposta';
+  }finally{
+    publicConfirmationState.submitting=false;
+    render();
+  }
+}
+    function sendAppointmentConfirmationLink(id){
+  const a=companyData.appointments.find(x=>x.id===id);if(!a)return;
+  const customer=companyData.customers.find(x=>x.id===a.customer_id);
+  const service=companyData.services.find(x=>x.id===a.service_id);
+  const phone=normalizeWhatsPhone(customer?.phone);
+  if(!phone)return toast('Cadastre o WhatsApp do cliente primeiro');
+  const d=new Date(a.starts_at);
+  const localDate=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+  const time=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  const msg=appointmentWhatsMessage(customer,service,localDate,time,a.professional_name||'',a.status,a.confirmation_token);
+  window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg),'_blank','noopener,noreferrer');
+  toast('Mensagem de confirmação preparada no WhatsApp');
+}
+
     function companyBlockedView(){
   const name=companyCtx?.business?.name||'Sua empresa';
   return `<div class="blocked-screen"><div class="blocked-card"><div class="logo">AP</div><span class="eyebrow">Acesso suspenso</span><h2>${name}</h2><p>O acesso desta empresa está bloqueado ou a assinatura não está ativa. Entre em contato com o administrador da plataforma para regularizar.</p><div class="blocked-plan"><span>Plano</span><b>${companyCtx?.plan?.name||'—'}</b><span>Status</span><b>${subscriptionLabel()}</b></div><button class="btn primary" onclick="ownerLogout()">Sair</button></div></div>`;
@@ -3394,6 +3569,11 @@ async function installAgendaApp(){
 }
     function toast(x){const e=document.getElementById('toast');e.textContent=x;e.hidden=false;clearTimeout(window.__toastTimer);window.__toastTimer=setTimeout(()=>e.hidden=true,1900)}
     function render(){
+  if(PUBLIC_CONFIRMATION_TOKEN){
+    document.title='Confirmar horário · Agenda Pro';
+    R.innerHTML=publicConfirmationView();
+    return;
+  }
   if(authLoading){document.title='Agenda Pro';R.innerHTML='<div class="auth-loading"><div class="logo">AP</div><b>Carregando Agenda Pro...</b></div>';return}
   if(passwordRecovery){document.title='Agenda Pro · Nova senha';R.innerHTML=resetPasswordView();return}
   if(signupMode){document.title='Agenda Pro · Criar conta';R.innerHTML=signupView();return}
@@ -3421,13 +3601,14 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-bookingprice10',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-confirm11',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
     }
     render();
-    initSupabase();
+    if(PUBLIC_CONFIRMATION_TOKEN)loadPublicConfirmation();
+    else initSupabase();
   </script>
 </body>
 </html>
