@@ -1,4 +1,4 @@
-const CACHE_NAME='agenda-pro-shell-v1';
+const CACHE_NAME='agenda-pro-shell-v3-menu';
 const SHELL=['/','/manifest.webmanifest','/icons/app-icon.svg','/icons/app-icon-maskable.svg'];
 
 self.addEventListener('install',event=>{
@@ -23,7 +23,7 @@ self.addEventListener('fetch',event=>{
 
   if(req.mode==='navigate'){
     event.respondWith(
-      fetch(req)
+      fetch(req,{cache:'no-store'})
         .then(res=>{
           const copy=res.clone();
           caches.open(CACHE_NAME).then(cache=>cache.put('/',copy)).catch(()=>{});
