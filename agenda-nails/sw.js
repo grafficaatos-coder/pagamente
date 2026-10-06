@@ -1,4 +1,4 @@
-const CACHE_NAME='agenda-pro-shell-v42-mobile-fix';
+const CACHE_NAME='agenda-pro-shell-v43-meta-config';
 const SHELL=['/','/manifest.webmanifest','/icons/app-icon.svg','/icons/app-icon-maskable.svg'];
 
 self.addEventListener('install',event=>{
