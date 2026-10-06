@@ -3,8 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <title>Agenda Pro — Sistema de agendamento para profissionais e empresas</title>
-  <meta name="description" content="Organize agenda, clientes, serviços, financeiro, equipe e confirmações pelo WhatsApp em um único sistema. Conheça o Agenda Pro.">
+  <title>Agenda Pro — Gestão profissional para negócios de atendimento</title>
+  <meta name="description" content="Profissionalize sua rotina com agenda, clientes, serviços, financeiro, equipe e confirmações pelo WhatsApp em uma única plataforma.">
   <meta name="theme-color" content="#4f3041">
   <meta name="robots" content="index,follow">
   <meta property="og:title" content="Agenda Pro — Menos confusão. Mais controle sobre seus atendimentos.">
@@ -113,6 +113,250 @@
       .section{padding:66px 0}.section-head{margin-bottom:30px}.section-head p{font-size:14px}.features,.pain-grid,.results,.faq{grid-template-columns:1fr}.tour-tabs{grid-template-columns:repeat(2,1fr)}.dash-cards{grid-template-columns:repeat(2,1fr)}.phone{width:min(300px,92vw)}.cta-card{padding:34px 24px;border-radius:20px}.cta-card h2{font-size:31px}.footer{flex-direction:column;align-items:flex-start}.mobile-cta{display:block}
     }
     @media(max-width:420px){.hero h1{font-size:39px}.mock-side{display:none}.mock-body{grid-template-columns:1fr}.mock-main{padding:14px}.float-card{display:none}.hero-actions{display:grid}.hero-actions .btn{width:100%}.tour-screen{padding:10px}.tour-window-body{padding:12px}}
+  
+    /* Refinamento visual premium */
+    :root{
+      --wine:#5b3348;
+      --wine-strong:#452536;
+      --wine-soft:#8b6074;
+      --cream:#fcfafb;
+      --surface:#ffffff;
+      --surface-soft:#f8f5f7;
+      --line:#e9e1e5;
+      --ink:#211b1f;
+      --muted:#72686d;
+      --shadow:0 28px 80px rgba(55,35,45,.10);
+      --shadow-soft:0 12px 32px rgba(55,35,45,.06)
+    }
+    body{
+      background:
+        radial-gradient(circle at 90% 2%,rgba(132,81,105,.08),transparent 27%),
+        radial-gradient(circle at 10% 20%,rgba(225,206,215,.18),transparent 23%),
+        #fbfafb;
+      color:var(--ink);
+      -webkit-font-smoothing:antialiased;
+      text-rendering:optimizeLegibility
+    }
+    .container{width:min(1210px,calc(100% - 44px))}
+    .topbar{
+      background:rgba(255,255,255,.78);
+      border-bottom:1px solid rgba(232,224,228,.82);
+      box-shadow:0 1px 0 rgba(255,255,255,.7);
+      backdrop-filter:blur(22px) saturate(150%)
+    }
+    .nav{height:76px}
+    .brand-logo{
+      width:44px;height:44px;border-radius:14px;
+      background:linear-gradient(145deg,#70465a,#402733);
+      box-shadow:0 10px 24px rgba(72,40,55,.22)
+    }
+    .brand span{font-size:19px}
+    .navlinks{gap:28px;font-size:12px;font-weight:650}
+    .navlinks a{position:relative;padding:28px 0}
+    .navlinks a:after{
+      content:"";position:absolute;left:50%;right:50%;bottom:17px;height:2px;border-radius:2px;background:var(--wine);
+      transition:.2s ease
+    }
+    .navlinks a:hover:after{left:0;right:0}
+    .nav-cta{gap:9px;padding-inline:18px}
+    .nav-cta i,.hero-actions .primary i{font-style:normal;font-size:16px;transition:.18s ease}
+    .nav-cta:hover i,.hero-actions .primary:hover i{transform:translateX(3px)}
+    .btn{
+      border-radius:13px;
+      font-weight:800;
+      letter-spacing:-.01em;
+      box-shadow:none
+    }
+    .btn.primary{
+      background:linear-gradient(135deg,var(--wine),#6d4257);
+      box-shadow:0 12px 28px rgba(82,46,63,.18)
+    }
+    .btn.primary:hover{box-shadow:0 15px 34px rgba(82,46,63,.24)}
+    .btn.secondary{
+      background:rgba(255,255,255,.86);
+      border-color:#e6dde2;
+      box-shadow:0 7px 20px rgba(55,35,45,.035)
+    }
+    .hero{
+      padding:104px 0 86px;
+      background:
+        linear-gradient(180deg,rgba(255,255,255,.28),rgba(255,255,255,0)),
+        radial-gradient(circle at 77% 35%,rgba(100,58,78,.075),transparent 27%)
+    }
+    .hero:before{
+      width:720px;height:720px;right:-260px;top:-280px;
+      background:radial-gradient(circle,rgba(112,70,90,.11),rgba(112,70,90,0) 67%)
+    }
+    .hero-grid{grid-template-columns:minmax(0,1.04fr) minmax(470px,.96fr);gap:72px}
+    .hero-badge{
+      display:inline-flex;align-items:center;gap:9px;
+      padding:8px 12px;border:1px solid #e5d8df;border-radius:999px;
+      background:rgba(255,255,255,.82);box-shadow:0 8px 26px rgba(54,35,44,.045);
+      color:#68475a;font-size:10px;font-weight:850;letter-spacing:.055em;text-transform:uppercase
+    }
+    .hero-badge i{
+      width:7px;height:7px;border-radius:50%;background:#3f9a66;
+      box-shadow:0 0 0 4px rgba(63,154,102,.11)
+    }
+    .hero h1{
+      font-size:clamp(49px,5.5vw,75px);
+      line-height:.98;
+      max-width:760px;
+      letter-spacing:-.066em;
+      margin:20px 0 22px
+    }
+    .hero h1 em{
+      background:linear-gradient(135deg,#6a3e53,#9c6b81);
+      -webkit-background-clip:text;background-clip:text;color:transparent
+    }
+    .hero p{max-width:660px;font-size:17px;line-height:1.72;color:#6f666b}
+    .hero-actions{margin-top:31px}
+    .hero-actions .btn{gap:10px}
+    .trial-hero-note{
+      margin-top:20px;
+      background:rgba(238,248,242,.9);
+      border-color:#d8ecdf;
+      box-shadow:0 8px 22px rgba(35,115,75,.04)
+    }
+    .trust-row{margin-top:16px;gap:21px;font-size:11px}
+    .product-shell:before{
+      content:"";position:absolute;inset:9% 7% -8% 9%;
+      background:linear-gradient(135deg,rgba(104,59,80,.15),rgba(104,59,80,.02));
+      filter:blur(36px);border-radius:40px;z-index:-1
+    }
+    .product-card{
+      border-radius:26px;border-color:#e4dce0;
+      box-shadow:0 34px 100px rgba(57,34,45,.15);
+      transform:none
+    }
+    .mock-top{height:60px;background:linear-gradient(180deg,#fff,#fcfbfc)}
+    .mock-body{grid-template-columns:126px 1fr;min-height:438px}
+    .mock-side{padding:18px 10px;background:linear-gradient(180deg,#392630 0%,#4a2e3c 100%)}
+    .mock-side .m-logo{margin:0 auto 22px}
+    .m-nav{
+      height:36px;margin:7px 0;padding:0 9px;display:flex;align-items:center;gap:8px;
+      color:rgba(255,255,255,.58);background:transparent
+    }
+    .m-nav span{width:18px;text-align:center;font-size:9px}.m-nav b{font-size:8px;font-weight:750}
+    .m-nav.on{background:rgba(255,255,255,.96);color:#583749;box-shadow:0 6px 18px rgba(0,0,0,.08)}
+    .mock-main{padding:24px;background:linear-gradient(180deg,#f8f7f8,#f5f4f5)}
+    .mock-kpi,.mock-panel{box-shadow:0 7px 20px rgba(44,30,36,.03)}
+    .float-card{
+      right:-17px;bottom:33px;width:220px;border-radius:17px;transform:none;
+      box-shadow:0 20px 50px rgba(55,35,44,.17)
+    }
+    .float-card:before{
+      content:"";position:absolute;width:8px;height:8px;border-radius:50%;background:#2f8b59;right:13px;top:14px;
+      box-shadow:0 0 0 5px rgba(47,139,89,.10)
+    }
+    .strip{padding:27px 0;background:rgba(255,255,255,.74)}
+    .strip-title{text-align:center;font-size:10px;text-transform:uppercase;letter-spacing:.12em;font-weight:850;color:#9a8e94;margin-bottom:14px}
+    .segments{gap:8px}
+    .segments span{
+      padding:8px 13px;background:#fff;border-color:#ebe4e7;
+      box-shadow:0 4px 13px rgba(54,36,44,.025);font-size:10px
+    }
+    .section{padding:104px 0}
+    .section.alt{background:linear-gradient(180deg,#fff 0%,#fdfcfd 100%)}
+    .section-head{max-width:760px;margin-bottom:50px}
+    .section-head h2{font-size:clamp(35px,4vw,51px);letter-spacing:-.055em}
+    .section-head p{font-size:15px;line-height:1.7}
+    .section-kicker{
+      display:inline-flex;padding:7px 10px;border-radius:999px;background:#f4edf1;color:#70485c;
+      font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:.11em
+    }
+    .pain-grid,.features{gap:18px}
+    .pain,.feature,.result{
+      border-radius:19px;border-color:#e9e2e5;
+      box-shadow:var(--shadow-soft);
+      transition:.2s ease
+    }
+    .pain:hover,.feature:hover,.result:hover{transform:translateY(-3px);box-shadow:0 18px 40px rgba(55,35,45,.09)}
+    .feature{padding:27px}
+    .feature-icon{
+      width:46px;height:46px;border-radius:14px;background:linear-gradient(145deg,#f4eaf0,#efe2e8);
+      box-shadow:inset 0 0 0 1px rgba(113,70,90,.04)
+    }
+    .feature h3{font-size:18px}.feature p{font-size:12px;line-height:1.72}
+    .tour-wrap{grid-template-columns:270px 1fr;gap:22px}
+    .tour-tab{
+      padding:16px;border-radius:15px;background:rgba(255,255,255,.85);
+      box-shadow:0 7px 20px rgba(52,35,43,.03)
+    }
+    .tour-tab.active{border-color:#b48c9e;background:#fff;box-shadow:0 13px 30px rgba(75,45,59,.09)}
+    .tour-screen{padding:20px;border-radius:22px;background:linear-gradient(145deg,#f7f4f6,#f1eef0)}
+    .tour-window{border-radius:17px;box-shadow:0 18px 45px rgba(48,31,39,.08)}
+    .phone{box-shadow:0 30px 80px rgba(28,17,22,.25)}
+    .results{gap:16px}.result{padding:23px}
+    .pricing{gap:20px}
+    .plan{
+      border-radius:22px;padding:28px;
+      box-shadow:0 12px 36px rgba(55,35,45,.05);
+      overflow:hidden
+    }
+    .plan.featured{
+      border-color:#9f7388;
+      box-shadow:0 24px 60px rgba(75,45,59,.14)
+    }
+    .plan.featured:before{
+      content:"";position:absolute;inset:0 0 auto 0;height:4px;background:linear-gradient(90deg,#5a3348,#9f7388)
+    }
+    .plan h3{font-size:22px}.plan .desc{line-height:1.55}.price{font-size:38px}
+    details{padding:17px 19px;border-radius:15px;box-shadow:0 6px 18px rgba(50,34,42,.025)}
+    summary{font-size:12px}
+    .cta{padding:88px 0}
+    .cta-card{
+      border-radius:28px;padding:60px;
+      background:
+        radial-gradient(circle at 90% 0%,rgba(255,255,255,.11),transparent 28%),
+        linear-gradient(135deg,#3e2733,#623b4f 64%,#74485d);
+      box-shadow:0 30px 80px rgba(62,38,50,.2)
+    }
+    .cta-card h2{font-size:42px}
+    .mobile-cta{border-radius:17px}
+    @media(max-width:980px){
+      .hero-grid{grid-template-columns:1fr;gap:52px}
+      .hero{text-align:center}
+      .hero h1,.hero p{margin-left:auto;margin-right:auto}
+      .hero-actions,.trust-row{justify-content:center}
+      .product-shell{max-width:760px}
+      .tour-wrap{grid-template-columns:1fr}
+    }
+    @media(max-width:720px){
+      .container{width:min(100% - 28px,1210px)}
+      .nav{height:66px}
+      .brand-logo{width:40px;height:40px}.brand span{font-size:17px}
+      .nav-actions .primary{padding-inline:13px}.nav-actions .primary i{display:none}
+      .hero{padding:60px 0 50px;text-align:left}
+      .hero h1{font-size:43px;margin-left:0;margin-right:0}
+      .hero p{font-size:15px;margin-left:0;margin-right:0}
+      .hero-actions,.trust-row{justify-content:flex-start}
+      .hero-badge{font-size:8px}
+      .mock-body{grid-template-columns:82px 1fr}
+      .m-nav{padding:0 7px;gap:5px}.m-nav b{font-size:6px}.m-nav span{font-size:8px;width:13px}
+      .mock-main{padding:15px}
+      .section{padding:74px 0}
+      .section-head{text-align:left}
+      .section-head h2{font-size:34px}
+      .section-head p{font-size:14px}
+      .strip-title{text-align:left}
+      .segments{justify-content:flex-start;overflow:auto;flex-wrap:nowrap;padding-bottom:3px;scrollbar-width:none}
+      .segments::-webkit-scrollbar{display:none}
+      .segments span{white-space:nowrap}
+      .tour-tabs{display:flex;overflow:auto;gap:8px;padding-bottom:3px;scrollbar-width:none}
+      .tour-tabs::-webkit-scrollbar{display:none}
+      .tour-tab{min-width:130px}
+      .cta-card{padding:38px 25px}.cta-card h2{font-size:32px}
+    }
+    @media(max-width:420px){
+      .hero h1{font-size:39px}
+      .mock-side{display:none}.mock-body{grid-template-columns:1fr}
+      .product-card{border-radius:20px}
+      .hero-actions{grid-template-columns:1fr}
+      .hero-actions .btn{width:100%}
+      .trial-hero-note{font-size:9px}
+    }
+
   </style>
   <script type="application/ld+json">
   {
@@ -139,7 +383,7 @@
       </nav>
       <div class="nav-actions">
         <a class="btn secondary" href="https://agenda-pro-iucw.vercel.app/?utm_source=site&utm_medium=landing&utm_campaign=agenda_pro">Entrar</a>
-        <a class="btn primary" href="https://agenda-pro-iucw.vercel.app/?cadastro=1&utm_source=site&utm_medium=landing&utm_campaign=agenda_pro">Criar conta</a>
+        <a class="btn primary nav-cta" href="https://agenda-pro-iucw.vercel.app/?cadastro=1&utm_source=site&utm_medium=landing&utm_campaign=agenda_pro"><span>Começar agora</span><i>→</i></a>
       </div>
     </div>
   </header>
@@ -148,12 +392,12 @@
     <section class="hero" id="inicio">
       <div class="container hero-grid">
         <div>
-          <span class="eyebrow">Sistema de gestão para quem atende clientes</span>
-          <h1>Menos confusão na agenda. <em>Mais controle do seu negócio.</em></h1>
-          <p>O Agenda Pro reúne horários, clientes, serviços, financeiro, equipe e confirmações pelo WhatsApp em um só lugar — com uma experiência simples para usar todos os dias.</p>
+          <span class="hero-badge"><i></i> Gestão profissional para negócios de atendimento</span>
+          <h1>Seu atendimento merece uma gestão <em>mais profissional.</em></h1>
+          <p>Centralize agenda, clientes, serviços, financeiro, equipe e confirmações pelo WhatsApp em uma plataforma simples, elegante e pronta para acompanhar o crescimento do seu negócio.</p>
           <div class="hero-actions">
-            <a class="btn primary large" href="https://agenda-pro-iucw.vercel.app/?cadastro=1&utm_source=site&utm_medium=hero&utm_campaign=agenda_pro">Criar minha conta</a>
-            <a class="btn secondary large" href="#demonstracao">Ver como funciona</a>
+            <a class="btn primary large" href="https://agenda-pro-iucw.vercel.app/?cadastro=1&utm_source=site&utm_medium=hero&utm_campaign=agenda_pro"><span>Criar minha conta</span><i>→</i></a>
+            <a class="btn secondary large" href="#demonstracao"><span>Ver demonstração</span></a>
           </div>
           <div id="trialHeroNote" class="trial-hero-note">Cadastro rápido e teste disponível conforme configuração atual.</div>
           <div class="trust-row">
@@ -166,7 +410,14 @@
           <div class="product-card">
             <div class="mock-top"><span class="mock-dot"></span><span class="mock-dot"></span><span class="mock-dot"></span><span class="mock-brand">Agenda Pro</span></div>
             <div class="mock-body">
-              <aside class="mock-side"><div class="m-logo">AP</div><div class="m-nav on"></div><div class="m-nav"></div><div class="m-nav"></div><div class="m-nav"></div><div class="m-nav"></div></aside>
+              <aside class="mock-side">
+    <div class="m-logo">AP</div>
+    <div class="m-nav on"><span>⌂</span><b>Painel</b></div>
+    <div class="m-nav"><span>◫</span><b>Agenda</b></div>
+    <div class="m-nav"><span>◎</span><b>Clientes</b></div>
+    <div class="m-nav"><span>R$</span><b>Financeiro</b></div>
+    <div class="m-nav"><span>👥</span><b>Equipe</b></div>
+  </aside>
               <div class="mock-main">
                 <div class="mock-head"><b>Visão geral</b><span class="mock-chip">Hoje</span></div>
                 <div class="mock-kpis">
@@ -193,9 +444,9 @@
     </section>
 
     <section class="strip">
-      <div class="container segments">
+      <div class="container"><div class="strip-title">Feito para diferentes áreas de atendimento</div><div class="segments">
         <span>Salões</span><span>Manicures</span><span>Barbearias</span><span>Clínicas</span><span>Psicólogos</span><span>Terapeutas</span><span>Médicos</span><span>Dentistas</span><span>Nutricionistas</span><span>Profissionais autônomos</span>
-      </div>
+      </div></div>
     </section>
 
     <section class="section alt">
@@ -211,7 +462,7 @@
 
     <section class="section" id="recursos">
       <div class="container">
-        <div class="section-head"><span class="eyebrow">Tudo em um só lugar</span><h2>O essencial para organizar seus atendimentos e acompanhar o negócio.</h2><p>Uma estrutura simples para trabalhar melhor sem transformar sua rotina em uma planilha complicada.</p></div>
+        <div class="section-head"><span class="section-kicker">Plataforma completa</span><h2>Tudo que você precisa para organizar o atendimento e acompanhar o negócio.</h2><p>Uma estrutura simples para trabalhar melhor sem transformar sua rotina em uma planilha complicada.</p></div>
         <div class="features">
           <article class="feature"><div class="feature-icon">◫</div><h3>Agenda diária, semanal e mensal</h3><p>Organize os horários, acompanhe pendentes e confirmados e altere os atendimentos quando precisar.</p></article>
           <article class="feature"><div class="feature-icon">◎</div><h3>Cadastro de clientes</h3><p>Nome, WhatsApp e e-mail ficam organizados dentro da empresa para facilitar novos agendamentos.</p></article>
@@ -225,7 +476,7 @@
 
     <section class="section alt" id="demonstracao">
       <div class="container">
-        <div class="section-head"><span class="eyebrow">Veja por dentro</span><h2>Uma interface feita para ser entendida sem treinamento complicado.</h2><p>Escolha uma área abaixo para visualizar como o Agenda Pro organiza o dia a dia.</p></div>
+        <div class="section-head"><span class="section-kicker">Experiência simples</span><h2>Uma interface clara, bonita e fácil de usar desde o primeiro acesso.</h2><p>Escolha uma área abaixo para visualizar como o Agenda Pro organiza o dia a dia.</p></div>
         <div class="tour-wrap">
           <div class="tour-tabs" role="tablist">
             <button class="tour-tab active" data-tour="painel"><b>Painel</b><small>Resumo rápido do negócio</small></button>
@@ -275,7 +526,7 @@
           </div>
         </div>
         <div>
-          <span class="eyebrow">Lembrete e confirmação</span>
+          <span class="section-kicker">WhatsApp integrado</span>
           <h2 style="font-size:clamp(32px,4vw,48px);line-height:1.06;letter-spacing:-.05em;margin:12px 0 26px">O cliente confirma e a agenda fica atualizada.</h2>
           <div class="steps">
             <div class="step"><div class="step-num">1</div><div><h3>Agende normalmente</h3><p>O cliente recebe as informações do horário cadastrado.</p></div></div>
@@ -288,7 +539,7 @@
 
     <section class="section alt">
       <div class="container">
-        <div class="section-head"><span class="eyebrow">Por que usar</span><h2>Mais organização sem complicar sua rotina.</h2></div>
+        <div class="section-head"><span class="section-kicker">Mais controle</span><h2>Uma rotina mais organizada sem complicar o seu dia.</h2></div>
         <div class="results">
           <div class="result"><b>Agenda mais clara</b><span>Você enxerga rapidamente o que está pendente, confirmado ou concluído.</span></div>
           <div class="result"><b>Menos trabalho manual</b><span>Cadastros, mensagens e informações ficam conectados em um mesmo fluxo.</span></div>
@@ -300,7 +551,7 @@
 
     <section class="section" id="planos">
       <div class="container">
-        <div class="section-head"><span class="eyebrow">Planos</span><h2>Escolha o plano que acompanha o tamanho da sua operação.</h2><p>Os valores abaixo são carregados diretamente do Agenda Pro e acompanham as configurações atuais da plataforma.</p></div>
+        <div class="section-head"><span class="section-kicker">Planos flexíveis</span><h2>Escolha o plano que acompanha o tamanho da sua operação.</h2><p>Os valores abaixo são carregados diretamente do Agenda Pro e acompanham as configurações atuais da plataforma.</p></div>
         <div id="pricing" class="pricing"><div class="plans-loading">Carregando planos...</div></div>
         <p class="trial-note">Os recursos e limites podem variar de acordo com o plano vigente. Consulte os detalhes antes da contratação.</p>
       </div>
@@ -308,7 +559,7 @@
 
     <section class="section alt" id="duvidas">
       <div class="container">
-        <div class="section-head"><span class="eyebrow">Dúvidas frequentes</span><h2>Antes de começar, veja as respostas mais importantes.</h2></div>
+        <div class="section-head"><span class="section-kicker">Dúvidas frequentes</span><h2>Respostas rápidas para começar com segurança.</h2></div>
         <div class="faq">
           <details><summary>O Agenda Pro funciona no celular?</summary><p>Sim. O sistema é responsivo, funciona no navegador do celular e também pode ser instalado como aplicativo compatível.</p></details>
           <details><summary>Serve apenas para salão de beleza?</summary><p>Não. O sistema atende diferentes profissionais e empresas que trabalham com horários, incluindo clínicas, psicólogos, terapeutas, médicos, dentistas, esteticistas, barbeiros, manicures e outros.</p></details>
