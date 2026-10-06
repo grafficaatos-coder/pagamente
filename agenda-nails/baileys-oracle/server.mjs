@@ -45,12 +45,16 @@ async function bodyJson(req){
   return JSON.parse(Buffer.concat(chunks).toString("utf8"));
 }
 function serviceHeaders(extra={}){
-  return {
+  const headers={
     apikey:SERVICE_KEY,
-    authorization:"Bearer "+SERVICE_KEY,
-    "content-type":"application/json",
-    ...extra
+    "content-type":"application/json"
   };
+  // Supabase secret keys (sb_secret_...) are used as API keys only.
+  // Legacy service_role JWTs can also be sent as Bearer tokens.
+  if(!SERVICE_KEY.startsWith("sb_secret_")){
+    headers.authorization="Bearer "+SERVICE_KEY;
+  }
+  return {...headers,...extra};
 }
 async function db(pathname,options={}){
   return fetch(SUPABASE_URL+pathname,{
