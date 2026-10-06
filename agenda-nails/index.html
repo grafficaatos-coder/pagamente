@@ -21,6 +21,9 @@
     .brand b{display:block;font-size:15px}.brand small{display:block;color:#d9c4cc;font-size:10px;letter-spacing:1.6px;margin-top:2px}.nav{display:grid;gap:5px}.nav button{border:0;background:transparent;color:#d8c8ce;padding:11px 12px;border-radius:13px;text-align:left;display:flex;align-items:center;gap:11px;font-weight:700;transition:.18s}
     .nav button:hover,.nav button.on{background:rgba(255,255,255,.92);color:var(--wine);transform:translateX(2px)}.nav svg{width:18px;height:18px;stroke:currentColor;stroke-width:1.8;fill:none}
     .side-foot{position:absolute;left:14px;right:14px;bottom:18px;padding:13px;border-radius:14px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1)}.side-foot small{color:#ceb9c2;display:block;font-size:10px}.side-foot b{display:block;margin-top:4px;font-size:12px}
+    .mobile-menu-toggle,.mobile-menu-overlay{display:none}
+    .mobile-menu-toggle{border:1px solid var(--line);background:#fff;color:var(--wine);width:39px;height:39px;border-radius:12px;place-items:center;flex:0 0 auto}
+    .mobile-menu-toggle svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round}
     .main{min-width:0}.top{height:70px;display:flex;align-items:center;justify-content:space-between;padding:0 24px;border-bottom:1px solid rgba(234,221,225,.8);background:rgba(248,244,245,.88);backdrop-filter:blur(14px);position:sticky;top:0;z-index:30}.top-left{display:flex;align-items:center;gap:12px}.top .mini-logo{display:none}.top h1{margin:0;font-size:19px;letter-spacing:-.2px}.top small{color:var(--muted);display:block;margin-top:2px}.top-actions{display:flex;gap:9px;align-items:center}.icon-btn{width:39px;height:39px;border:1px solid var(--line);background:#fff;border-radius:12px;display:grid;place-items:center;color:var(--wine)}.icon-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8}
     .btn{border:0;border-radius:12px;padding:10px 14px;font-weight:800;min-height:40px;transition:.18s}.btn:hover{transform:translateY(-1px)}.primary{background:linear-gradient(135deg,var(--wine),#7c4b60);color:#fff;box-shadow:0 8px 18px rgba(101,56,75,.18)}.secondary{background:#fff;border:1px solid var(--line);color:var(--wine)}.ghost{background:transparent;color:var(--wine)}
     .content{max-width:1180px;margin:auto;padding:24px}.hero{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:16px;gap:16px}.hero h2{font:600 31px Georgia,serif;margin:4px 0 6px;letter-spacing:-.4px}.hero p{margin:0;color:var(--muted);font-size:14px}.eyebrow{font-size:10px;letter-spacing:1.45px;color:#9b7484;font-weight:900;text-transform:uppercase}.date-chip{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:#fff;padding:8px 11px;border-radius:999px;color:var(--muted);font-size:12px;font-weight:700}.date-chip svg{width:15px;height:15px;stroke:var(--wine);fill:none;stroke-width:1.8}
@@ -341,6 +344,49 @@
     .baileys-steps span{color:var(--muted);line-height:1.45}
     .baileys-warning{margin-top:12px;padding:9px 11px;border-radius:10px;background:#fff6df;color:#7d5c17;font-size:9px;line-height:1.4}
     .baileys-connected b{display:block;font-size:18px;color:#245f4a}
+
+    /* Menu lateral no celular */
+    @media(max-width:720px){
+      body.mobile-menu-active{overflow:hidden}
+      .app{display:block}
+      .main{padding-bottom:22px}
+      .side{
+        display:block;
+        position:fixed;
+        top:0;left:0;bottom:0;
+        width:min(84vw,300px);
+        height:100dvh;
+        transform:translateX(-105%);
+        transition:transform .22s ease;
+        z-index:90;
+        padding:20px 14px calc(18px + env(safe-area-inset-bottom));
+        overflow-y:auto;
+        box-shadow:18px 0 42px rgba(35,20,27,.28);
+      }
+      .side.mobile-open{transform:translateX(0)}
+      .side .brand{justify-content:flex-start;padding-bottom:18px}
+      .side .brand>div:not(.logo){display:block}
+      .side .nav{gap:6px;padding-bottom:92px}
+      .side .nav button{justify-content:flex-start;padding:13px 12px;font-size:13px}
+      .side .nav span.label{display:inline}
+      .side .side-foot{display:block;position:absolute;left:14px;right:14px;bottom:calc(14px + env(safe-area-inset-bottom))}
+      .mobile-menu-overlay{
+        display:block;
+        position:fixed;
+        inset:0;
+        background:rgba(24,15,19,.46);
+        opacity:0;
+        pointer-events:none;
+        transition:opacity .2s ease;
+        z-index:80;
+      }
+      .mobile-menu-overlay.open{opacity:1;pointer-events:auto}
+      .mobile-menu-toggle{display:grid}
+      .top{z-index:70}
+      .top .mini-logo{display:none}
+      .bottom,.company-bottom{display:none!important}
+      .fab{bottom:18px}
+    }
   </style>
 </head>
 <body>
@@ -482,6 +528,20 @@
   if(s==='active'&&companyCtx.subscription?.current_period_end&&new Date(companyCtx.subscription.current_period_end)<new Date())return'Em tolerância';
   return s==='cancelled'?'Cancelado':'Ativo';
 }
+    function toggleMobileMenu(){
+  const side=document.querySelector('.side');
+  const overlay=document.querySelector('.mobile-menu-overlay');
+  if(!side)return;
+  const opening=!side.classList.contains('mobile-open');
+  side.classList.toggle('mobile-open',opening);
+  overlay?.classList.toggle('open',opening);
+  document.body.classList.toggle('mobile-menu-active',opening);
+}
+function closeMobileMenu(){
+  document.querySelector('.side')?.classList.remove('mobile-open');
+  document.querySelector('.mobile-menu-overlay')?.classList.remove('open');
+  document.body.classList.remove('mobile-menu-active');
+}
     function nav(){
   if(appMode==='company'){
     const p=P(),n=[['home','home','Início']];
@@ -509,10 +569,10 @@
     function shell(content){
   if(appMode==='company'){
     const p=P(),t=companyTitles()[page]||companyTitles().home;
-    return `<div class="app company-app">${nav()}<main class="main"><header class="top"><div class="top-left"><div class="logo mini-logo">${p.initials}</div><div><h1>${t[0]}</h1><small>${t[1]}</small></div></div><div class="top-actions"><span class="owner-session"><i class="owner-dot"></i> ${companyCtx?.plan?.name||'Plano'} · ${companyRole()}</span>${hasFeature('agenda')&&canOperateCompany()?'<button class="btn primary" onclick="book()">+ Novo horário</button>':''}<button class="logout-btn" onclick="changeMyPassword()">Senha</button><button class="logout-btn" onclick="ownerLogout()">Sair</button></div></header><div class="content">${content}</div></main>${bottom()}</div>`;
+    return `<div class="app company-app">${nav()}<div class="mobile-menu-overlay" onclick="closeMobileMenu()" aria-hidden="true"></div><main class="main"><header class="top"><div class="top-left"><button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Abrir menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><div class="logo mini-logo">${p.initials}</div><div><h1>${t[0]}</h1><small>${t[1]}</small></div></div><div class="top-actions"><span class="owner-session"><i class="owner-dot"></i> ${companyCtx?.plan?.name||'Plano'} · ${companyRole()}</span>${hasFeature('agenda')&&canOperateCompany()?'<button class="btn primary" onclick="book()">+ Novo horário</button>':''}<button class="logout-btn" onclick="changeMyPassword()">Senha</button><button class="logout-btn" onclick="ownerLogout()">Sair</button></div></header><div class="content">${content}</div></main>${bottom()}</div>`;
   }
   const t=titles()[adminTab]||titles().overview;
-  return `<div class="app admin-owner-app">${nav()}<main class="main"><header class="top"><div class="top-left"><div class="logo mini-logo">AP</div><div><h1>${t[0]}</h1><small>${t[1]}</small></div></div><div class="top-actions"><span class="owner-session"><i class="owner-dot"></i> Proprietário</span><button class="logout-btn" onclick="changeMyPassword()">Senha</button><button class="logout-btn" onclick="ownerLogout()">Sair</button></div></header><div class="content">${content}</div></main>${bottom()}</div>`;
+  return `<div class="app admin-owner-app">${nav()}<div class="mobile-menu-overlay" onclick="closeMobileMenu()" aria-hidden="true"></div><main class="main"><header class="top"><div class="top-left"><button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Abrir menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button><div class="logo mini-logo">AP</div><div><h1>${t[0]}</h1><small>${t[1]}</small></div></div><div class="top-actions"><span class="owner-session"><i class="owner-dot"></i> Proprietário</span><button class="logout-btn" onclick="changeMyPassword()">Senha</button><button class="logout-btn" onclick="ownerLogout()">Sair</button></div></header><div class="content">${content}</div></main>${bottom()}</div>`;
 }
     function segmentSwitch(){return `<div class="segment-switch"><button class="${segment==='salon'?'on':''}" onclick="setSegment('salon')">✂️ Salão</button><button class="${segment==='esthetic'?'on':''}" onclick="setSegment('esthetic')">✨ Estética</button><button class="${segment==='doctor'?'on':''}" onclick="setSegment('doctor')">🩺 Consultório</button></div>`}
     function setSegment(s){segment=s;localStorage.setItem('agendaProSegment',s);resetData();page='home';render();toast(`Modo alterado para ${P().segment}`)}
@@ -1559,7 +1619,7 @@
 }
     function moneyBR(v){return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
     function setAdminTab(v){
-  adminTab=v;render();
+  closeMobileMenu();adminTab=v;render();
   if(v==='settings')loadMetaPlatformConfig();
 }
     async function editPlanDetails(id){
@@ -2027,6 +2087,7 @@
 }
     function setAgendaView(v){agendaView=v;render()}
     function go(p){
+  closeMobileMenu();
   if(!appMode){render();return}
   if(appMode==='owner'){page='admin';adminTab=['overview','clients','plans','billing','settings'].includes(p)?p:'overview';render();scrollTo(0,0);return}
   const allowed={home:true,agenda:hasFeature('agenda'),services:hasFeature('agenda'),clients:hasFeature('clients'),cash:hasFeature('finance'),wa:true};
