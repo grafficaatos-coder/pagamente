@@ -39,7 +39,13 @@
     .month{display:grid;grid-template-columns:repeat(7,1fr);gap:7px}.month-label{text-align:center;color:var(--muted);font-size:10px;font-weight:900;padding:4px}.daybox{min-height:82px;border:1px solid var(--line);background:#fff;border-radius:13px;padding:9px}.daybox.muted{opacity:.45}.daybox.today{border-color:#b990a0;box-shadow:inset 0 0 0 1px #b990a0}.daybox b{font-size:11px}.daybox .count{margin-top:10px;display:inline-block;background:var(--rose);color:var(--wine);border-radius:999px;padding:5px 7px;font-size:9px;font-weight:900}
     .list{display:grid;gap:9px}.client{display:grid;grid-template-columns:48px minmax(0,1fr) auto auto;gap:11px;align-items:center;padding:13px}.round{width:48px;height:48px;border-radius:15px;background:linear-gradient(145deg,#f2dce5,#e8cad6);display:grid;place-items:center;font-weight:900;color:var(--wine);font-size:13px}.client small{display:block;color:var(--muted);margin-top:3px}.client-stat{text-align:right;min-width:92px}.client-stat b{display:block}.client-action{width:37px;height:37px;border:1px solid var(--line);border-radius:11px;background:#fff;display:grid;place-items:center;color:var(--wine)}.client-action svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.9}
     .services{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}.service{padding:15px}.service-icon{width:42px;height:42px;border-radius:14px;background:var(--rose);display:grid;place-items:center;font-size:19px;margin-bottom:11px}.service h3{margin:4px 0;font-size:14px}.service p{color:var(--muted);font-size:11px;line-height:1.45;min-height:32px}.service footer{display:flex;justify-content:space-between;align-items:center;font-weight:900;padding-top:11px;border-top:1px solid #f2e9ec}.service footer span{color:var(--muted);font-size:11px}
-    .money{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:12px}.money .card{padding:15px}.money .card span{color:var(--muted);font-size:11px}.money .card b{display:block;font-size:23px;margin-top:7px}.finance-grid{display:grid;grid-template-columns:1.25fr .75fr;gap:12px}.chart{height:180px;display:flex;align-items:flex-end;gap:9px;padding:18px 6px 4px}.bar-wrap{flex:1;text-align:center}.bar{width:100%;max-width:34px;margin:auto;background:linear-gradient(180deg,#99687c,#684052);border-radius:9px 9px 4px 4px;min-height:12px}.bar-wrap small{display:block;color:var(--muted);font-size:9px;margin-top:7px}.finance-summary{display:grid;gap:9px}.finance-row{padding:12px;border-radius:13px;background:var(--surface-2);border:1px solid var(--line);display:flex;justify-content:space-between;gap:10px}.finance-row span{color:var(--muted)}
+    .money{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}.money .card{padding:15px}.money .card span{color:var(--muted);font-size:11px}.money .card b{display:block;font-size:23px;margin-top:7px}.money .card small{display:block;color:var(--muted);font-size:9px;margin-top:5px}.money .card.finance-income{border-color:#cce7d5;background:linear-gradient(180deg,#fff,#f5fcf7)}.money .card.finance-expense{border-color:#f1cccc;background:linear-gradient(180deg,#fff,#fff7f7)}.money .card.finance-balance{border-color:#decbd3;background:linear-gradient(180deg,#fff,#fbf6f8)}
+    .finance-toolbar{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:0 0 12px}.finance-actions,.finance-filters{display:flex;gap:8px;flex-wrap:wrap}.finance-add-income{background:#2f8a5b;color:#fff}.finance-add-expense{background:#b65353;color:#fff}.finance-filter{border:1px solid var(--line);background:#fff;color:var(--muted);border-radius:999px;padding:8px 11px;font-size:10px;font-weight:850}.finance-filter.on{background:var(--wine);color:#fff;border-color:var(--wine)}
+    .finance-entry-form{margin-bottom:12px;border-color:#dbc7cf}.finance-entry-form .head h3{margin:3px 0 0}.finance-entry-form-grid{display:grid;grid-template-columns:1.2fr .8fr .8fr .8fr;gap:10px}.finance-entry-form-grid .field{margin:0}.finance-entry-form .form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}.finance-type-chip{display:inline-flex;padding:6px 9px;border-radius:999px;font-size:9px;font-weight:900}.finance-type-chip.income{background:var(--green);color:var(--green-ink)}.finance-type-chip.expense{background:var(--red);color:var(--red-ink)}
+    .finance-grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(260px,.55fr);gap:12px}.finance-history{padding:0;overflow:hidden}.finance-history-head{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:15px 16px;border-bottom:1px solid var(--line)}.finance-history-head h3{margin:3px 0 0}.finance-list{display:grid}.finance-item{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:11px;align-items:center;padding:13px 16px;border-bottom:1px solid #f1e8eb}.finance-item:last-child{border-bottom:0}.finance-icon{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-weight:950}.finance-icon.income{background:var(--green);color:var(--green-ink)}.finance-icon.expense{background:var(--red);color:var(--red-ink)}.finance-item-main b,.finance-item-main small{display:block}.finance-item-main small{color:var(--muted);font-size:9px;margin-top:3px}.finance-amount{text-align:right;font-weight:900;white-space:nowrap}.finance-amount.income{color:var(--green-ink)}.finance-amount.expense{color:var(--red-ink)}.finance-delete{border:0;background:transparent;color:#b26a6a;font-size:18px;padding:5px}
+    .finance-side{display:grid;gap:10px;align-content:start}.finance-summary{display:grid;gap:9px}.finance-row{padding:12px;border-radius:13px;background:var(--surface-2);border:1px solid var(--line);display:flex;justify-content:space-between;gap:10px}.finance-row span{color:var(--muted)}.finance-auto-note{padding:13px;border-radius:14px;background:#f5f8ff;border:1px solid #dce5f6;color:#52627a;font-size:10px;line-height:1.5}.finance-auto-note b{display:block;color:#40516c;margin-bottom:4px}
+    @media(max-width:900px){.money{grid-template-columns:1fr 1fr}.finance-grid{grid-template-columns:1fr}.finance-entry-form-grid{grid-template-columns:1fr 1fr}}
+    @media(max-width:620px){.money{grid-template-columns:1fr}.finance-toolbar{align-items:stretch}.finance-actions,.finance-filters{display:grid;grid-template-columns:1fr 1fr}.finance-entry-form-grid{grid-template-columns:1fr}.finance-item{grid-template-columns:auto minmax(0,1fr) auto}.finance-delete{grid-column:3}.finance-history-head{align-items:flex-start;flex-direction:column}}
     .auto{display:flex;align-items:center;justify-content:space-between;gap:12px}.toggle{width:46px;height:26px;border-radius:999px;background:#d8d0d3;position:relative;flex:0 0 auto}.toggle:after{content:"";position:absolute;width:20px;height:20px;background:#fff;border-radius:50%;left:3px;top:3px;box-shadow:0 2px 5px rgba(0,0,0,.15);transition:.18s}.toggle.on{background:#6d9d86}.toggle.on:after{left:23px}.demo{display:inline-block;background:var(--amber);color:var(--amber-ink);border-radius:999px;padding:5px 8px;font-size:9px;font-weight:900;margin-left:6px}
     .more-list{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.more-btn{border:1px solid var(--line);background:#fff;border-radius:16px;padding:17px;text-align:left;color:var(--ink)}.more-btn .quick-ico{margin-bottom:11px}.more-btn b{display:block}.more-btn small{display:block;color:var(--muted);margin-top:4px}
     .bottom,.fab{display:none}.booking{min-height:100vh;background:radial-gradient(circle at 15% 0,#fff6f9 0,transparent 36%),#f7f1f3;padding:25px}.bookwrap{max-width:940px;margin:auto;display:grid;grid-template-columns:.72fr 1.28fr;gap:22px;align-items:start;padding-top:35px}.bookintro{padding:26px 8px}.bookintro h1{font:600 42px Georgia;margin:18px 0 10px;letter-spacing:-.5px}.bookintro p{color:var(--muted);line-height:1.65;max-width:330px}.book{background:#fff;border:1px solid var(--line);border-radius:22px;padding:21px;box-shadow:var(--shadow)}.book-title{display:flex;justify-content:space-between;align-items:start;gap:10px}.book-title h2{margin:5px 0 4px;font-size:22px}.book-title p{margin:0;color:var(--muted);font-size:11px}.field{display:grid;gap:6px;margin:10px 0}.field b{font-size:11px}.field input,.field select,.field textarea{border:1px solid var(--line);border-radius:12px;padding:12px;background:#fff;width:100%;outline:0}.field input:focus,.field select:focus,.field textarea:focus{border-color:#c9a8b5;box-shadow:0 0 0 3px rgba(146,90,111,.08)}.field textarea{min-height:76px;resize:vertical}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.checkrow{display:flex;align-items:flex-start;gap:10px;padding:12px;border:1px solid var(--line);border-radius:13px;background:#faf7f8;margin-top:10px}.checkrow input{margin-top:2px}.book-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin:12px 0}.book-summary div{background:var(--surface-2);border:1px solid var(--line);border-radius:11px;padding:9px}.book-summary span{font-size:9px;color:var(--muted);display:block}.book-summary b{font-size:11px;display:block;margin-top:3px}.toast{position:fixed;right:18px;bottom:18px;background:#382d32;color:#fff;padding:11px 14px;border-radius:12px;z-index:99;box-shadow:0 12px 30px rgba(0,0,0,.18)}
@@ -436,7 +442,8 @@
     const AGENDA_WHATSAPP_ONBOARDING_FUNCTION=SUPABASE_URL+'/functions/v1/agenda-whatsapp-onboarding';
     let sb=null,authUser=null,appMode=null,ownerLogged=false,authLoading=true,loginMessage='',passwordRecovery=false,signupMode=false,signupLoading=false,signupMessage='',signupWaitingEmail='',signupPlans=[],signupSettings={public_signup_enabled:true,free_trial_enabled:true,trial_days:7},signupSelectedPlan='profissional',loginPrefillEmail='';
     let companyCtx=null;
-    let companyData={customers:[],services:[],appointments:[]};
+    let companyData={customers:[],services:[],appointments:[],financialEntries:[]};
+    let financeFormOpen=false,financeEntryType='income',financePeriod='month',financeKind='all';
     let whatsappState={connection:null,messages:[]},whatsappLoading=false,whatsappSetupDevice='mobile';
     let whatsappQueue=[],whatsappQueueTimer=null;
     let baileysSession={status:'disconnected',phone:null,qr_svg:null,pairing_code:null,last_error:null},baileysPollTimer=null;
@@ -688,12 +695,104 @@ function closeMobileMenu(){
   const cards=companyData.services.map((s,i)=>`<article class="card service service-card"><div class="service-card-top"><div class="service-icon">${SERVICE_DEFAULTS[segment]?.[i%Math.max(1,SERVICE_DEFAULTS[segment]?.length||1)]?.[3]||'✨'}</div><span class="service-status">${s.active?'Ativo':'Inativo'}</span></div><h3>${s.name}</h3><p>${s.active?'Disponível para agendamento nesta empresa.':'Oculto para novos agendamentos.'}</p><div class="service-meta"><div><small>Duração</small><b>${s.duration_minutes} min</b></div><div><small>Valor</small><b>${moneyBR(Number(s.price_cents||0)/100)}</b></div></div>${canAdminCompany()?`<div class="service-card-actions"><button onclick="editCompanyService('${s.id}')">Editar</button><button onclick="toggleCompanyService('${s.id}')">${s.active?'Desativar':'Ativar'}</button><button onclick="deleteCompanyService('${s.id}')">Excluir</button></div>`:''}</article>`).join('');
   return shell(`<div class="services-head"><div class="section-title service-title"><span class="eyebrow">${p.catalog}</span><h2>${p.serviceLabel}</h2><p>Catálogo salvo para esta empresa.</p></div><div class="service-top-actions"><button id="sendCatalogAllBtn" class="btn whatsapp-btn" onclick="shareServicesWhatsApp()">WhatsApp · Enviar para todos</button>${canAdminCompany()?`<button class="btn primary service-add" onclick="addCompanyService()">+ Novo ${p.service.toLowerCase()}</button>`:''}</div></div><div class="catalog-summary"><div><span>Itens cadastrados</span><b>${companyData.services.length}</b></div><div><span>Disponibilidade</span><b>${companyData.services.filter(x=>x.active).length} ativos</b></div><div><span>Plano</span><b>${companyCtx.plan.name}</b></div></div><div class="whatsapp-catalog-note"><b>Envio automático:</b> ao clicar em “WhatsApp · Enviar para todos”, o catálogo será enviado pelo WhatsApp conectado para todos os clientes cadastrados que tenham número de WhatsApp. Serão incluídos somente os serviços ativos, com valor e duração.</div><div class="services">${cards||'<div class="empty-state">Nenhum serviço cadastrado.</div>'}</div>`);
 }
+    function financeToday(){
+  return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());
+}
+    function financeInPeriod(value){
+  if(financePeriod==='all')return true;
+  const d=new Date(String(value).length===10?value+'T12:00:00':value);
+  const now=new Date();
+  return d.getFullYear()===now.getFullYear()&&d.getMonth()===now.getMonth();
+}
+    function openFinanceEntry(type){
+  if(!canOperateCompany())return toast('Seu perfil não permite lançamentos financeiros');
+  financeEntryType=type==='expense'?'expense':'income';
+  financeFormOpen=true;
+  render();
+  setTimeout(()=>document.getElementById('financeDescription')?.focus(),50);
+}
+    function closeFinanceEntry(){financeFormOpen=false;render()}
+    function setFinancePeriod(v){financePeriod=v==='all'?'all':'month';render()}
+    function setFinanceKind(v){financeKind=['income','expense'].includes(v)?v:'all';render()}
+    async function saveFinanceEntry(){
+  if(!canOperateCompany())return toast('Seu perfil não permite lançamentos financeiros');
+  const description=(document.getElementById('financeDescription')?.value||'').trim();
+  const category=(document.getElementById('financeCategory')?.value||'Outros').trim();
+  const date=(document.getElementById('financeDate')?.value||financeToday()).trim();
+  const payment=(document.getElementById('financePayment')?.value||'').trim();
+  const notes=(document.getElementById('financeNotes')?.value||'').trim();
+  const raw=(document.getElementById('financeAmount')?.value||'').trim().replace(/\s/g,'').replace(/\./g,'').replace(',','.');
+  const amount=Number(raw);
+  if(!description)return toast('Informe a descrição');
+  if(!Number.isFinite(amount)||amount<=0)return toast('Informe um valor válido');
+  const {error}=await sb.from('agenda_financial_entries').insert({
+    business_id:companyCtx.business.id,
+    type:financeEntryType,
+    description,
+    category:category||'Outros',
+    amount_cents:Math.round(amount*100),
+    occurred_on:date,
+    payment_method:payment||null,
+    notes:notes||null
+  });
+  if(error){console.error(error);return toast('Não foi possível salvar o lançamento')}
+  financeFormOpen=false;
+  await loadCompanyData();render();
+  toast(financeEntryType==='income'?'Entrada registrada':'Saída registrada');
+}
+    async function deleteFinanceEntry(id){
+  if(!canAdminCompany())return toast('Somente administrador pode excluir lançamentos');
+  const x=companyData.financialEntries.find(e=>e.id===id);if(!x)return;
+  if(!confirm('Excluir este lançamento financeiro?'))return;
+  const {error}=await sb.from('agenda_financial_entries').delete().eq('id',id).eq('business_id',companyCtx.business.id);
+  if(error){console.error(error);return toast('Não foi possível excluir')}
+  await loadCompanyData();render();toast('Lançamento excluído');
+}
     function cash(){
   const serviceMap=new Map(companyData.services.map(s=>[s.id,s]));
-  const completed=companyData.appointments.filter(a=>a.status==='completed');
-  const revenue=completed.reduce((sum,a)=>sum+Number(serviceMap.get(a.service_id)?.price_cents||0),0)/100;
-  const future=companyData.appointments.filter(a=>new Date(a.starts_at)>=new Date()&&a.status!=='cancelled').length;
-  return shell(`<div class="section-title"><span class="eyebrow">Financeiro</span><h2>Resumo</h2><p>Informações calculadas a partir dos atendimentos desta empresa.</p></div><div class="money"><div class="card"><span>Receita concluída</span><b>${moneyBR(revenue)}</b><small>atendimentos concluídos</small></div><div class="card"><span>Concluídos</span><b>${completed.length}</b><small>atendimentos finalizados</small></div><div class="card"><span>Próximos</span><b>${future}</b><small>horários futuros</small></div></div>`);
+  const completed=companyData.appointments.filter(a=>a.status==='completed'&&financeInPeriod(a.starts_at));
+  const autoRevenue=completed.reduce((sum,a)=>sum+Number(serviceMap.get(a.service_id)?.price_cents||0),0)/100;
+  const manual=(companyData.financialEntries||[]).filter(e=>financeInPeriod(e.occurred_on));
+  const manualIncome=manual.filter(e=>e.type==='income').reduce((s,e)=>s+Number(e.amount_cents||0),0)/100;
+  const expenses=manual.filter(e=>e.type==='expense').reduce((s,e)=>s+Number(e.amount_cents||0),0)/100;
+  const totalIncome=autoRevenue+manualIncome;
+  const balance=totalIncome-expenses;
+  const incomeCount=manual.filter(e=>e.type==='income').length;
+  const expenseCount=manual.filter(e=>e.type==='expense').length;
+  const filtered=manual.filter(e=>financeKind==='all'||e.type===financeKind);
+  const rows=[];
+  if(financeKind!=='expense'&&autoRevenue>0){
+    rows.push(`<div class="finance-item"><div class="finance-icon income">↗</div><div class="finance-item-main"><b>Atendimentos concluídos</b><small>Receita automática · ${completed.length} atendimento(s)</small></div><div class="finance-amount income">+${moneyBR(autoRevenue)}</div><span></span></div>`);
+  }
+  rows.push(...filtered.map(e=>{
+    const income=e.type==='income';
+    const date=new Date(e.occurred_on+'T12:00:00').toLocaleDateString('pt-BR');
+    const meta=[date,e.category,e.payment_method].filter(Boolean).join(' · ');
+    return `<div class="finance-item"><div class="finance-icon ${income?'income':'expense'}">${income?'↗':'↘'}</div><div class="finance-item-main"><b>${e.description}</b><small>${meta||'Lançamento manual'}${e.notes?' · '+e.notes:''}</small></div><div class="finance-amount ${income?'income':'expense'}">${income?'+':'-'}${moneyBR(Number(e.amount_cents||0)/100)}</div>${canAdminCompany()?`<button class="finance-delete" onclick="deleteFinanceEntry('${e.id}')" aria-label="Excluir">×</button>`:'<span></span>'}</div>`;
+  }));
+
+  const incomeCategories=['Venda','Produto','Comissão','Adiantamento','Outros'];
+  const expenseCategories=['Aluguel','Produtos e materiais','Salários','Comissões','Água/Luz/Internet','Impostos','Marketing','Manutenção','Outros'];
+  const cats=(financeEntryType==='income'?incomeCategories:expenseCategories).map(x=>`<option>${x}</option>`).join('');
+  const form=financeFormOpen?`<section class="panel finance-entry-form">
+    <div class="head"><div><span class="eyebrow">${financeEntryType==='income'?'Entrada':'Saída'}</span><h3>Novo lançamento</h3></div><span class="finance-type-chip ${financeEntryType}">${financeEntryType==='income'?'Valor recebido':'Valor pago'}</span></div>
+    <div class="finance-entry-form-grid">
+      <div class="field"><b>Descrição</b><input id="financeDescription" placeholder="${financeEntryType==='income'?'Ex.: Venda de produto':'Ex.: Compra de material'}"></div>
+      <div class="field"><b>Valor</b><input id="financeAmount" inputmode="decimal" placeholder="0,00"></div>
+      <div class="field"><b>Data</b><input id="financeDate" type="date" value="${financeToday()}"></div>
+      <div class="field"><b>Categoria</b><select id="financeCategory">${cats}</select></div>
+      <div class="field"><b>Forma de pagamento</b><select id="financePayment"><option value="">Não informar</option><option>Pix</option><option>Dinheiro</option><option>Cartão</option><option>Transferência</option><option>Boleto</option></select></div>
+      <div class="field" style="grid-column:span 3"><b>Observação</b><input id="financeNotes" placeholder="Opcional"></div>
+    </div>
+    <div class="form-actions"><button class="btn secondary" onclick="closeFinanceEntry()">Cancelar</button><button class="btn primary" onclick="saveFinanceEntry()">Salvar ${financeEntryType==='income'?'entrada':'saída'}</button></div>
+  </section>`:''; 
+
+  return shell(`<div class="section-title"><span class="eyebrow">Financeiro</span><h2>Controle de caixa</h2><p>Acompanhe entradas, saídas e o saldo da empresa.</p></div>
+  <div class="finance-toolbar"><div class="finance-actions"><button class="btn finance-add-income" onclick="openFinanceEntry('income')">+ Entrada</button><button class="btn finance-add-expense" onclick="openFinanceEntry('expense')">− Saída</button></div><div class="finance-filters"><button class="finance-filter ${financePeriod==='month'?'on':''}" onclick="setFinancePeriod('month')">Este mês</button><button class="finance-filter ${financePeriod==='all'?'on':''}" onclick="setFinancePeriod('all')">Todo período</button></div></div>
+  ${form}
+  <div class="money"><div class="card finance-income"><span>Entradas</span><b>${moneyBR(totalIncome)}</b><small>${completed.length} atendimento(s) + ${incomeCount} lançamento(s)</small></div><div class="card finance-expense"><span>Saídas</span><b>${moneyBR(expenses)}</b><small>${expenseCount} lançamento(s)</small></div><div class="card finance-balance"><span>Saldo</span><b>${moneyBR(balance)}</b><small>${balance>=0?'Caixa positivo':'Caixa negativo'}</small></div><div class="card"><span>Receita automática</span><b>${moneyBR(autoRevenue)}</b><small>Atendimentos concluídos</small></div></div>
+  <div class="finance-grid"><section class="panel finance-history"><div class="finance-history-head"><div><span class="eyebrow">Movimentações</span><h3>Histórico</h3></div><div class="finance-filters"><button class="finance-filter ${financeKind==='all'?'on':''}" onclick="setFinanceKind('all')">Todas</button><button class="finance-filter ${financeKind==='income'?'on':''}" onclick="setFinanceKind('income')">Entradas</button><button class="finance-filter ${financeKind==='expense'?'on':''}" onclick="setFinanceKind('expense')">Saídas</button></div></div><div class="finance-list">${rows.join('')||'<div class="empty-state" style="margin:16px">Nenhuma movimentação neste período.</div>'}</div></section>
+  <aside class="finance-side"><section class="panel"><div class="head"><div><span class="eyebrow">Resumo</span><h3>Movimento do caixa</h3></div></div><div class="finance-summary"><div class="finance-row"><span>Entradas manuais</span><b>${moneyBR(manualIncome)}</b></div><div class="finance-row"><span>Receita de atendimentos</span><b>${moneyBR(autoRevenue)}</b></div><div class="finance-row"><span>Total de saídas</span><b>${moneyBR(expenses)}</b></div><div class="finance-row"><span>Saldo final</span><b>${moneyBR(balance)}</b></div></div></section><div class="finance-auto-note"><b>Receita automática</b>Quando um atendimento é marcado como concluído, o valor do serviço entra automaticamente no resumo financeiro. Entradas e saídas extras podem ser lançadas pelos botões acima.</div></aside></div>`);
 }
     async function callAgendaWhatsApp(payload){
   if(!sb)throw new Error('Sessão indisponível');
@@ -1205,8 +1304,10 @@ function closeMobileMenu(){
   const whatsMessagesPromise=sb.from('agenda_whatsapp_messages').select('id,to_phone,message_type,status,meta_message_id,error_message,created_at').eq('business_id',bid).order('created_at',{ascending:false}).limit(10);
   const queuePromise=sb.from('agenda_whatsapp_queue').select('*').eq('business_id',bid).in('status',['pending','queued','opened','failed']).order('scheduled_for',{ascending:true}).limit(100);
   const baileysPromise=sb.from('agenda_baileys_sessions').select('business_id,status,phone,last_error,connected_at,last_seen_at,updated_at').eq('business_id',bid).maybeSingle();
-  let [cr,sr,ar,wr,wm,wq,br]=await Promise.all([customersPromise,servicesPromise,appointmentsPromise,whatsPromise,whatsMessagesPromise,queuePromise,baileysPromise]);
-  companyData={customers:cr.data||[],services:sr.data||[],appointments:ar.data||[]};
+  const financePromise=hasFeature('finance')?sb.from('agenda_financial_entries').select('*').eq('business_id',bid).order('occurred_on',{ascending:false}).order('created_at',{ascending:false}):Promise.resolve({data:[],error:null});
+  let [cr,sr,ar,wr,wm,wq,br,fr]=await Promise.all([customersPromise,servicesPromise,appointmentsPromise,whatsPromise,whatsMessagesPromise,queuePromise,baileysPromise,financePromise]);
+  if(fr?.error)console.error(fr.error);
+  companyData={customers:cr.data||[],services:sr.data||[],appointments:ar.data||[],financialEntries:fr?.data||[]};
   whatsappState={connection:wr.data||null,messages:wm.data||[]};
   whatsappQueue=wq.data||[];
   baileysSession=br.data?{status:br.data.status||'disconnected',phone:br.data.phone||null,qr_svg:null,last_error:br.data.last_error||null}:{status:'disconnected',phone:null,qr_svg:null,last_error:null};
