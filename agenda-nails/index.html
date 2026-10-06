@@ -3472,24 +3472,79 @@ async function installAgendaApp(){
   if(a.error||b.error)return toast('Não foi possível alterar o acesso');
   await loadOwnerData();render();toast(blocking?'Empresa bloqueada':'Empresa desbloqueada');
 }
-    async function addDemoClient(){
-  const name=prompt('Nome da empresa:');if(!name)return;
-  const segChoice=prompt('Segmento:\n1 - Salão de beleza\n2 - Clínica de estética\n3 - Consultório médico','1');
-  const segment=segChoice==='2'?'esthetic':segChoice==='3'?'doctor':'salon';
+    function addDemoClient(){
   const visible=ADMIN.plans.filter(p=>p.active);
-  const opts=visible.map((p,i)=>`${i+1} - ${p.name} (${moneyBR(p.price)})`).join('\n');
-  const planChoice=prompt(`Plano:\n${opts}`,'1');if(planChoice===null)return;
-  const pl=visible[Number(planChoice)-1];if(!pl)return toast('Plano inválido');
-  const email=prompt('E-mail de login da empresa:');if(!email)return;
-  const phoneInput=prompt('Telefone / WhatsApp do responsável (com DDD):','');if(phoneInput===null)return;
-  const phone=String(phoneInput||'').replace(/\D/g,'');
-  if(phone.length<10||phone.length>13)return toast('Informe um telefone válido com DDD');
-  const password=prompt('Senha inicial (mínimo 8 caracteres):');if(!password||password.length<8)return toast('A senha precisa ter 8 caracteres');
-  const useTrial=confirm(`Ativar ${ADMIN.settings.trialDays} dias de teste grátis?`);
-  try{
-    await callAgendaAdmin({action:'create_business_owner',name:name.trim(),segment,plan_code:pl.code,email:email.trim(),phone,password,display_name:name.trim(),use_trial:useTrial});
-    await loadOwnerData();render();toast('Empresa e login criados com sucesso');
-  }catch(err){toast(err.message||'Erro ao criar acesso')}
+  if(!visible.length)return toast('Cadastre pelo menos um plano ativo');
+  const planOptions=visible.map((p,i)=>`<option value="${appModalEscape(p.code)}" ${i===0?'selected':''}>${appModalEscape(p.name)} · ${moneyBR(p.price)}</option>`).join('');
+  openAppModal({
+    title:'Novo assinante',
+    subtitle:'Cadastre a empresa e o responsável pelo acesso ao Agenda Pro.',
+    submitLabel:'Cadastrar assinante',
+    size:'wide',
+    content:`<div class="app-modal-grid">
+      <div class="app-modal-field full"><label>Nome da empresa *</label><input id="newSubscriberBusiness" placeholder="Ex.: Clínica Vida" autofocus></div>
+      <div class="app-modal-field"><label>Nome do responsável *</label><input id="newSubscriberName" placeholder="Nome completo"></div>
+      <div class="app-modal-field"><label>Telefone / WhatsApp *</label><input id="newSubscriberPhone" type="tel" inputmode="tel" autocomplete="tel" placeholder="(41) 99999-9999"></div>
+      <div class="app-modal-field"><label>Área de atendimento *</label><select id="newSubscriberSegment">
+        <option value="salon">Cabeleireiro(a) / Salão de beleza</option>
+        <option value="manicure">Manicure / Nail Designer</option>
+        <option value="barber">Barbeiro(a) / Barbearia</option>
+        <option value="esthetic">Esteticista / Clínica de estética</option>
+        <option value="massage_therapist">Massoterapeuta</option>
+        <option value="podiatrist">Podólogo(a)</option>
+        <option value="doctor">Médico(a) / Consultório médico</option>
+        <option value="psychiatrist">Psiquiatra</option>
+        <option value="psychologist">Psicólogo(a)</option>
+        <option value="therapist">Terapeuta</option>
+        <option value="physiotherapist">Fisioterapeuta</option>
+        <option value="nutritionist">Nutricionista</option>
+        <option value="dentist">Dentista</option>
+        <option value="speech_therapist">Fonoaudiólogo(a)</option>
+        <option value="occupational_therapist">Terapeuta Ocupacional</option>
+        <option value="personal_trainer">Personal Trainer</option>
+        <option value="other">Outro profissional</option>
+      </select></div>
+      <div class="app-modal-field"><label>Plano *</label><select id="newSubscriberPlan">${planOptions}</select></div>
+      <div class="app-modal-field"><label>E-mail de login *</label><input id="newSubscriberEmail" type="email" autocomplete="off" placeholder="contato@empresa.com"></div>
+      <div class="app-modal-field"><label>Senha inicial *</label><input id="newSubscriberPassword" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres"></div>
+      <div class="app-modal-field full"><div class="app-toggle-row" style="margin-top:2px"><div class="app-toggle-copy"><b>Ativar teste grátis</b><small>Usar ${Number(ADMIN.settings.trialDays||0)} dia(s) de teste conforme configuração da plataforma.</small></div><label class="app-switch"><input id="newSubscriberTrial" type="checkbox" checked><span></span></label></div></div>
+      <div class="app-modal-note full"><b>Telefone obrigatório:</b> esse número aparecerá na lista de assinantes e será usado para cobranças pelo WhatsApp.</div>
+    </div>`,
+    onSubmit:async()=>{
+      const business=(document.getElementById('newSubscriberBusiness')?.value||'').trim();
+      const display_name=(document.getElementById('newSubscriberName')?.value||'').trim();
+      const phone=(document.getElementById('newSubscriberPhone')?.value||'').replace(/\D/g,'');
+      const segment=document.getElementById('newSubscriberSegment')?.value||'other';
+      const plan_code=document.getElementById('newSubscriberPlan')?.value||'';
+      const email=(document.getElementById('newSubscriberEmail')?.value||'').trim().toLowerCase();
+      const password=document.getElementById('newSubscriberPassword')?.value||'';
+      const use_trial=!!document.getElementById('newSubscriberTrial')?.checked;
+      if(business.length<2){toast('Informe o nome da empresa');return}
+      if(display_name.length<2){toast('Informe o nome do responsável');return}
+      if(phone.length<10||phone.length>13){toast('Informe um telefone/WhatsApp válido com DDD');return}
+      if(!/^\S+@\S+\.\S+$/.test(email)){toast('Informe um e-mail válido');return}
+      if(password.length<8){toast('A senha precisa ter pelo menos 8 caracteres');return}
+      try{
+        await callAgendaAdmin({
+          action:'create_business_owner',
+          name:business,
+          segment,
+          plan_code,
+          email,
+          phone,
+          password,
+          display_name,
+          use_trial
+        });
+        closeAppModal();
+        await loadOwnerData();
+        render();
+        toast('Assinante cadastrado com telefone');
+      }catch(err){
+        toast(err?.message||'Erro ao criar acesso');
+      }
+    }
+  });
 }
     function viewClientAccess(id){
   const x=ADMIN.clients.find(y=>y.id===id);if(!x)return;
@@ -4095,7 +4150,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-subscriberphone26',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-subscriberphone27',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
