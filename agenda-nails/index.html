@@ -1211,6 +1211,40 @@
       .plan-actions-manage .plan-manage-btn,.plan-actions-manage .plan-delete{grid-column:auto}
     }
 
+  
+    /* Equipe e usuários da empresa */
+    .team-summary{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-bottom:14px}
+    .team-summary-card{min-height:112px;padding:17px 18px;border:1px solid var(--line);border-radius:15px;background:#fff}
+    .team-summary-card span,.team-summary-card b,.team-summary-card small{display:block}
+    .team-summary-card span{font-size:9px;color:var(--muted);font-weight:800;text-transform:uppercase;letter-spacing:.06em}
+    .team-summary-card b{margin-top:8px;font-size:21px;letter-spacing:-.035em}
+    .team-summary-card small{margin-top:5px;color:var(--muted);font-size:9px}
+    .team-summary-action{display:flex;flex-direction:column;justify-content:center;align-items:flex-start}
+    .team-summary-action .btn{min-width:150px}
+    .team-summary-action .btn[disabled]{opacity:.5;cursor:not-allowed}
+    .team-panel{overflow:hidden}
+    .team-usage-chip{padding:6px 9px;border:1px solid var(--line);border-radius:999px;background:#faf8f9;color:var(--wine);font-size:9px;font-weight:850}
+    .team-member-card{display:grid;grid-template-columns:44px minmax(0,1fr) auto;gap:13px;align-items:center;padding:14px 16px;border-top:1px solid #eee9eb}
+    .team-member-card:first-of-type{border-top:0}
+    .team-avatar{width:44px;height:44px;border-radius:13px;background:#f1e8ec;color:var(--wine);display:grid;place-items:center;font-size:11px;font-weight:900}
+    .team-member-main{min-width:0}
+    .team-member-name{display:flex;align-items:center;gap:7px;min-width:0}
+    .team-member-name b{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .team-member-main>span{display:block;margin-top:2px;color:var(--muted);font-size:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .team-role{display:inline-block!important;width:auto;margin-top:7px;padding:4px 7px;border-radius:999px;font-size:8px!important;font-weight:850}
+    .team-role.owner{background:#f0e7ec;color:#694055}.team-role.admin{background:#e9f0fa;color:#345d8b}.team-role.professional{background:#edf7f1;color:#26704b}.team-role.viewer{background:#f2f1f1;color:#6c6568}
+    .team-you{padding:3px 6px;border-radius:999px;background:#f5f1f3;color:#715164;font-size:7px;font-weight:850}
+    .team-member-actions{display:flex;gap:7px}
+    .team-loading{padding:28px;text-align:center;color:var(--muted);font-size:10px}
+    .team-help{margin-top:14px}
+    @media(max-width:760px){
+      .team-summary{grid-template-columns:1fr}
+      .team-summary-card{min-height:auto}
+      .team-member-card{grid-template-columns:42px minmax(0,1fr)}
+      .team-member-actions{grid-column:1/-1;padding-left:55px}
+      .team-member-actions .mini-btn{flex:1}
+    }
+
   </style>
 </head>
 <body>
@@ -1383,6 +1417,7 @@
     let sb=null,authUser=null,appMode=null,ownerLogged=false,authLoading=true,loginMessage='',passwordRecovery=false,signupMode=false,signupLoading=false,signupMessage='',signupWaitingEmail='',signupPlans=[],signupSettings={public_signup_enabled:true,free_trial_enabled:true,trial_days:7},signupSelectedPlan='profissional',loginPrefillEmail='';
     let companyCtx=null;
     let companyData={customers:[],services:[],appointments:[],financialEntries:[]};
+    let teamState={members:[],count:0,maxUsers:null,loading:false,loaded:false};
     let appointmentSyncTimer=null;
     let financeFormOpen=false,financeEntryType='income',financePeriod='month',financeKind='all',financeTab='cash';
     let whatsappState={connection:null,messages:[]},whatsappLoading=false,whatsappSetupDevice='mobile';
@@ -1442,6 +1477,7 @@
     services:[p.serviceLabel,p.catalog],
     cash:['Financeiro','Resumo do negócio'],
     wa:['WhatsApp','Lembretes e confirmações'],
+    team:['Equipe','Usuários e permissões'],
     book:['Novo horário','Cadastrar atendimento']
   };
 }
@@ -1523,6 +1559,7 @@ async function installAgendaApp(){
     if(hasFeature('clients'))n.push(['clients','users',p.people]);
     if(hasFeature('finance'))n.push(['cash','wallet','Financeiro']);
     n.push(['wa','message','WhatsApp']);
+    if(canAdminCompany())n.push(['team','userplus','Equipe']);
     return `<aside class="side"><div class="brand"><div class="logo">${p.initials}</div><div><b>${companyCtx?.business?.name||p.brand}</b><small>${companyCtx?.plan?.name||'PLANO'}</small></div></div><nav class="nav">${n.map(x=>`<button class="${page===x[0]?'on':''}" onclick="go('${x[0]}')">${I[x[1]]}<span class="label">${x[2]}</span></button>`).join('')}${pwaInstallEntry()}</nav><div class="side-foot"><small>Acesso da empresa</small><b>${subscriptionLabel()}</b></div></aside>`;
   }
   const n=[['overview','home','Visão geral'],['clients','users','Assinantes'],['plans','sparkle','Planos'],['billing','wallet','Cobranças'],['settings','more','Configurações']];
@@ -1535,6 +1572,7 @@ async function installAgendaApp(){
     if(hasFeature('clients'))n.push(['clients','users',p.people]);
     if(hasFeature('finance'))n.push(['cash','wallet','Financeiro']);
     n.push(['wa','message','WhatsApp']);
+    if(canAdminCompany())n.push(['team','userplus','Equipe']);
     return `<nav class="bottom company-bottom">${n.map(x=>`<button class="${page===x[0]?'on':''}" onclick="go('${x[0]}')">${I[x[1]]}${x[2]}</button>`).join('')}</nav>${hasFeature('agenda')?`<button class="fab" onclick="book()" aria-label="Novo horário">${I.plus}</button>`:''}`;
   }
   const n=[['overview','home','Visão geral'],['clients','users','Assinantes'],['plans','sparkle','Planos'],['billing','wallet','Cobranças'],['settings','more','Mais']];
@@ -1823,6 +1861,128 @@ async function installAgendaApp(){
   const {error}=await sb.from('agenda_financial_entries').delete().eq('id',id).eq('business_id',companyCtx.business.id);
   if(error){console.error(error);return toast('Não foi possível excluir')}
   await loadCompanyData();render();toast('Lançamento excluído');
+}
+
+    function teamRoleLabel(role){
+  return role==='owner'?'Proprietário':role==='admin'?'Administrador':role==='professional'?'Profissional':'Visualização';
+}
+    function teamRoleClass(role){
+  return role==='owner'?'owner':role==='admin'?'admin':role==='professional'?'professional':'viewer';
+}
+    function teamLimitLabel(){
+  return teamState.maxUsers==null?'Ilimitados':String(teamState.maxUsers);
+}
+    function team(){
+  if(!canAdminCompany())return shell('<div class="empty-state">Seu perfil não permite gerenciar usuários.</div>');
+  const max=teamState.maxUsers;
+  const full=max!=null&&teamState.count>=max;
+  const usage=max==null?teamState.count+' usuários':teamState.count+' de '+max+' usuários';
+  const rows=teamState.members.map(m=>`<article class="team-member-card">
+    <div class="team-avatar">${appModalEscape((m.display_name||m.email||'U').trim().slice(0,2).toUpperCase())}</div>
+    <div class="team-member-main">
+      <div class="team-member-name"><b>${appModalEscape(m.display_name||'Usuário')}</b>${m.is_self?'<span class="team-you">Você</span>':''}</div>
+      <span>${appModalEscape(m.email||'')}</span>
+      <small class="team-role ${teamRoleClass(m.role)}">${teamRoleLabel(m.role)}</small>
+    </div>
+    <div class="team-member-actions">
+      ${m.role!=='owner'?`<button class="mini-btn" onclick="openTeamMemberEdit('${m.user_id}')">Editar</button>`:''}
+      ${m.role!=='owner'&&!m.is_self?`<button class="mini-btn danger" onclick="deleteTeamMember('${m.user_id}')">Excluir</button>`:''}
+    </div>
+  </article>`).join('');
+  return shell(`<div class="section-title team-title"><span class="eyebrow">Acessos da empresa</span><h2>Equipe e usuários</h2><p>Cadastre quem pode acessar a agenda e defina o nível de permissão de cada pessoa.</p></div>
+    <div class="team-summary">
+      <div class="team-summary-card"><span>Plano atual</span><b>${appModalEscape(companyCtx?.plan?.name||'Plano')}</b><small>${teamLimitLabel()} permitidos</small></div>
+      <div class="team-summary-card"><span>Usuários em uso</span><b>${usage}</b><small>${full?'Limite atingido':'Há espaço para novos acessos'}</small></div>
+      <div class="team-summary-card team-summary-action"><button class="btn primary" onclick="openTeamMemberCreate()" ${full?'disabled':''}>+ Novo usuário</button><small>${full?'Aumente o limite do plano para cadastrar mais.':'Crie um acesso individual para cada pessoa.'}</small></div>
+    </div>
+    <section class="panel team-panel">
+      <div class="head"><div><span class="eyebrow">Usuários cadastrados</span><h3>Quem tem acesso</h3></div><span class="team-usage-chip">${usage}</span></div>
+      ${teamState.loading&&!teamState.loaded?'<div class="team-loading">Carregando equipe...</div>':(rows||'<div class="empty-state" style="margin:16px">Nenhum usuário encontrado.</div>')}
+    </section>
+    <div class="context-note team-help"><b>Perfis:</b> Administrador gerencia a empresa e a equipe. Profissional pode operar agenda e atendimentos. Visualização apenas consulta as informações permitidas.</div>`);
+}
+    async function loadTeamMembers(redraw=true){
+  if(!companyCtx||!canAdminCompany()||teamState.loading)return;
+  teamState.loading=true;
+  if(redraw&&page==='team')render();
+  try{
+    const out=await callAgendaAdmin({action:'list_members',business_id:companyCtx.business.id});
+    teamState.members=Array.isArray(out.members)?out.members:[];
+    teamState.count=Number(out.count??teamState.members.length);
+    teamState.maxUsers=out.max_users==null?null:Number(out.max_users);
+    teamState.loaded=true;
+  }catch(err){
+    console.error(err);
+    toast(err?.message||'Não foi possível carregar a equipe');
+  }finally{
+    teamState.loading=false;
+    if(redraw&&page==='team')render();
+  }
+}
+    function openTeamMemberCreate(){
+  if(!canAdminCompany())return toast('Seu perfil não permite cadastrar usuários');
+  if(teamState.maxUsers!=null&&teamState.count>=teamState.maxUsers)return toast('Limite de usuários do plano atingido');
+  openAppModal({
+    title:'Adicionar usuário',
+    subtitle:'Crie um acesso individual para uma pessoa da equipe.',
+    submitLabel:'Criar usuário',
+    content:`<div class="app-modal-grid">
+      <div class="app-modal-field full"><label>Nome *</label><input id="teamMemberName" placeholder="Nome do usuário" autofocus></div>
+      <div class="app-modal-field full"><label>E-mail de acesso *</label><input id="teamMemberEmail" type="email" autocomplete="off" placeholder="usuario@empresa.com"></div>
+      <div class="app-modal-field"><label>Senha inicial *</label><input id="teamMemberPassword" type="password" autocomplete="new-password" placeholder="Mínimo 8 caracteres"></div>
+      <div class="app-modal-field"><label>Perfil *</label><select id="teamMemberRole"><option value="professional">Profissional</option><option value="admin">Administrador</option><option value="viewer">Visualização</option></select></div>
+      <div class="app-modal-note full"><b>Administrador:</b> pode gerenciar a empresa e usuários. <b>Profissional:</b> pode trabalhar com agenda e atendimentos. <b>Visualização:</b> acesso somente para consulta.</div>
+    </div>`,
+    onSubmit:async()=>{
+      const display_name=(document.getElementById('teamMemberName')?.value||'').trim();
+      const email=(document.getElementById('teamMemberEmail')?.value||'').trim().toLowerCase();
+      const password=document.getElementById('teamMemberPassword')?.value||'';
+      const role=document.getElementById('teamMemberRole')?.value||'professional';
+      if(display_name.length<2){toast('Informe o nome');return}
+      if(!/^\S+@\S+\.\S+$/.test(email)){toast('Informe um e-mail válido');return}
+      if(password.length<8){toast('A senha precisa ter pelo menos 8 caracteres');return}
+      await callAgendaAdmin({action:'create_member',business_id:companyCtx.business.id,display_name,email,password,role});
+      closeAppModal();
+      teamState.loaded=false;
+      await loadTeamMembers(false);
+      render();
+      toast('Usuário criado com sucesso');
+    }
+  });
+}
+    function openTeamMemberEdit(userId){
+  const m=teamState.members.find(x=>x.user_id===userId);if(!m||m.role==='owner')return;
+  openAppModal({
+    title:'Editar usuário',
+    subtitle:'Atualize o nome e o nível de acesso.',
+    submitLabel:'Salvar alterações',
+    content:`<div class="app-modal-grid">
+      <div class="app-modal-field full"><label>Nome *</label><input id="teamEditName" value="${appModalEscape(m.display_name||'')}" autofocus></div>
+      <div class="app-modal-field full"><label>E-mail</label><input value="${appModalEscape(m.email||'')}" disabled></div>
+      <div class="app-modal-field full"><label>Perfil</label><select id="teamEditRole"><option value="professional" ${m.role==='professional'?'selected':''}>Profissional</option><option value="admin" ${m.role==='admin'?'selected':''}>Administrador</option><option value="viewer" ${m.role==='viewer'?'selected':''}>Visualização</option></select></div>
+    </div>`,
+    onSubmit:async()=>{
+      const display_name=(document.getElementById('teamEditName')?.value||'').trim();
+      const role=document.getElementById('teamEditRole')?.value||'professional';
+      if(display_name.length<2){toast('Informe o nome');return}
+      await callAgendaAdmin({action:'update_member',business_id:companyCtx.business.id,user_id:userId,display_name,role});
+      closeAppModal();
+      await loadTeamMembers(false);
+      render();
+      toast('Usuário atualizado');
+    }
+  });
+}
+    async function deleteTeamMember(userId){
+  const m=teamState.members.find(x=>x.user_id===userId);if(!m||m.role==='owner'||m.is_self)return;
+  const ok=await askAppConfirm({title:'Excluir acesso de '+m.display_name+'?',message:'Esse usuário não conseguirá mais entrar nesta empresa.',confirmLabel:'Excluir usuário'});
+  if(!ok)return;
+  try{
+    await callAgendaAdmin({action:'delete_member',business_id:companyCtx.business.id,user_id:userId});
+    await loadTeamMembers(false);
+    render();
+    toast('Usuário excluído');
+  }catch(err){toast(err?.message||'Não foi possível excluir')}
 }
 
     function cash(){
@@ -3672,15 +3832,16 @@ async function installAgendaApp(){
   if(whatsappQueueTimer){clearInterval(whatsappQueueTimer);whatsappQueueTimer=null}
   if(baileysPollTimer){clearInterval(baileysPollTimer);baileysPollTimer=null}
   if(sb)sb.auth.signOut();
-  authUser=null;appMode=null;ownerLogged=false;companyCtx=null;companyData={customers:[],services:[],appointments:[]};whatsappQueue=[];page='home';adminTab='overview';loginMessage='';render();
+  authUser=null;appMode=null;ownerLogged=false;companyCtx=null;companyData={customers:[],services:[],appointments:[],financialEntries:[]};teamState={members:[],count:0,maxUsers:null,loading:false,loaded:false};whatsappQueue=[];page='home';adminTab='overview';loginMessage='';render();
 }
     function go(p){
   closeMobileMenu();
   if(!appMode){render();return}
   if(appMode==='owner'){page='admin';adminTab=['overview','clients','plans','billing','settings'].includes(p)?p:'overview';render();scrollTo(0,0);return}
-  const allowed={home:true,agenda:hasFeature('agenda'),services:hasFeature('agenda'),clients:hasFeature('clients'),cash:hasFeature('finance'),wa:true};
-  if(!allowed[p])return toast('Este recurso não está incluído no seu plano');
+  const allowed={home:true,agenda:hasFeature('agenda'),services:hasFeature('agenda'),clients:hasFeature('clients'),cash:hasFeature('finance'),wa:true,team:canAdminCompany()};
+  if(!allowed[p])return toast(p==='team'?'Seu perfil não permite gerenciar usuários':'Este recurso não está incluído no seu plano');
   page=p;render();scrollTo(0,0);
+  if(p==='team')setTimeout(()=>loadTeamMembers(true),0);
 }
     function book(){
   if(appMode!=='company')return toast('Agendamentos ficam no acesso das empresas');
@@ -3702,7 +3863,7 @@ async function installAgendaApp(){
   if(appMode==='owner'){document.title='Agenda Pro · Administração';page='admin';R.innerHTML=admin();return}
   document.title=(companyCtx?.business?.name||'Agenda Pro')+' · Agenda Pro';
   if(companyAccessBlocked()){R.innerHTML=companyBlockedView();return}
-  R.innerHTML=page==='book'?booking():({home,agenda,clients,services,cash,wa}[page]||home)();
+  R.innerHTML=page==='book'?booking():({home,agenda,clients,services,cash,wa,team}[page]||home)();
 }
     window.addEventListener('beforeinstallprompt',event=>{
       event.preventDefault();
@@ -3722,7 +3883,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-planmanager20',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-companyteam21',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
