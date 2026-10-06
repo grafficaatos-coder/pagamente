@@ -2355,6 +2355,15 @@ async function installAgendaApp(){
   const clean=String(value||'').trim().replace(/\s/g,'').replace(/R\$/gi,'').replace(/\./g,'').replace(',','.');
   return Number(clean||0);
 }
+    function formatCurrencyField(input){
+  if(!input)return;
+  const digits=String(input.value||'').replace(/\D/g,'');
+  const cents=Number(digits||0);
+  input.value=(cents/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  requestAnimationFrame(()=>{
+    try{input.setSelectionRange(input.value.length,input.value.length)}catch(e){}
+  });
+}
     function openCustomerModal(id=null,selectAfter=false){
   if(!hasFeature('clients'))return toast('Cadastro de clientes não incluído no plano');
   if(!canOperateCompany())return toast('Seu perfil não permite cadastrar clientes');
@@ -2416,7 +2425,7 @@ async function installAgendaApp(){
       <div class="app-modal-field"><label>Duração *</label><select id="modalServiceDuration">
         ${[15,30,45,60,75,90,120,150,180].map(v=>`<option value="${v}" ${v===duration?'selected':''}>${v} min</option>`).join('')}
       </select></div>
-      <div class="app-modal-field"><label>Valor</label><input id="modalServicePrice" inputmode="decimal" value="${appModalEscape(price)}" placeholder="0,00"></div>
+      <div class="app-modal-field"><label>Valor</label><input id="modalServicePrice" inputmode="numeric" value="${appModalEscape(price)}" placeholder="0,00" oninput="formatCurrencyField(this)" autocomplete="off"></div>
       <div class="app-modal-toggles full">
         <div class="app-toggle-row"><div class="app-toggle-copy"><b>Mostrar valor para o cliente</b><small>Exibe o preço no catálogo e nas mensagens de WhatsApp.</small></div><label class="app-switch"><input id="modalServiceShowPrice" type="checkbox" ${showPrice?'checked':''}><span></span></label></div>
         <div class="app-toggle-row"><div class="app-toggle-copy"><b>Ativo</b><small>Disponível para novos agendamentos.</small></div><label class="app-switch"><input id="modalServiceActive" type="checkbox" ${active?'checked':''}><span></span></label></div>
@@ -3328,7 +3337,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-polish8',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-money9',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
