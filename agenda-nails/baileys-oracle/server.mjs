@@ -133,11 +133,12 @@ function messageText(kind,business,customer,service,appointment){
   const professional=String(appointment.professional_name||"").trim();
   const terms=serviceTerms(business?.segment);
   const proLine=professional?"\n👤 Profissional: *"+professional+"*":"";
-  const confirmationUrl=appointment.confirmation_token
-    ? AGENDA_ORIGIN.replace(/\/$/,"")+"/?confirm="+encodeURIComponent(appointment.confirmation_token)
+  const confirmationKey=appointment.confirmation_code||appointment.confirmation_token||"";
+  const confirmationUrl=confirmationKey
+    ? AGENDA_ORIGIN.replace(/\/$/,"")+(appointment.confirmation_code?"/?c=":"/?confirm=")+encodeURIComponent(confirmationKey)
     : "";
   const confirmationBlock=confirmationUrl
-    ? "\n\n*Confirme seu horário pelo link abaixo:*\n✅ "+confirmationUrl+"\n\nSe não puder comparecer, o mesmo link também permite avisar."
+    ? "\n\n*Confirme seu horário:*\n✅ "+confirmationUrl
     : "";
   if(kind==="reminder"){
     const pendingConfirmation=!appointment.confirmed_by_customer_at&&appointment.status!=="cancelled";
@@ -156,8 +157,7 @@ function messageText(kind,business,customer,service,appointment){
     "\n🕐 *Horário:* "+when.time+
     "\n✨ *"+terms.one+":* "+service.name+
     (professional?"\n👤 *Profissional:* "+professional:"")+
-    confirmationBlock+
-    "\n\nDepois de confirmar, a Agenda Pro atualiza o status automaticamente.";
+    confirmationBlock;
 }
 async function cancelClaimed(businessId,job,reason){
   await rpc("agenda_baileys_cancel_job",{
@@ -178,7 +178,7 @@ async function claimAndValidate(businessId,leaseId){
     const appointment=await fetchOne(
       "/rest/v1/agenda_appointments?id=eq."+encodeURIComponent(job.appointment_id)+
       "&business_id=eq."+encodeURIComponent(businessId)+
-      "&select=id,business_id,customer_id,service_id,professional_name,starts_at,status,confirmation_token,confirmed_by_customer_at,customer_cancelled_at&limit=1"
+      "&select=id,business_id,customer_id,service_id,professional_name,starts_at,status,confirmation_code,confirmation_token,confirmed_by_customer_at,customer_cancelled_at&limit=1"
     );
     if(!appointment){await cancelClaimed(businessId,job,"Agendamento não existe mais.");continue}
     if(appointment.status==="cancelled"||appointment.status==="no_show"){
@@ -492,7 +492,7 @@ const server=http.createServer(async(req,res)=>{
   if(req.method==="OPTIONS")return json(res,204,{});
   try{
     const url=new URL(req.url||"/","http://localhost");
-    if(url.pathname==="/health")return json(res,200,{ok:true,service:"agenda-pro-baileys-oracle",version:"2026-10-06-confirmation-link",sessions:sessions.size});
+    if(url.pathname==="/health")return json(res,200,{ok:true,service:"agenda-pro-baileys-oracle",version:"2026-10-06-short-confirmation",sessions:sessions.size});
     const match=url.pathname.match(/^\/v1\/([^/]+)\/(status|connect|disconnect|pair-code|send-catalog)$/);
     if(!match)return json(res,404,{error:"Rota não encontrada"});
     const businessId=decodeURIComponent(match[1]);
