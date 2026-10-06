@@ -1,0 +1,12 @@
+[Unit]
+Description=Agenda Pro - verificar atualizações automaticamente
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=1min
+AccuracySec=15s
+Persistent=true
+Unit=agenda-pro-update.service
+
+[Install]
+WantedBy=timers.target
