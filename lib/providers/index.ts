@@ -1,2 +1,0 @@
-import {MockProvider} from './mock';import {MercadoPagoProvider} from './mercadopago';import {BankStubProvider} from './stub';
-export function getProvider(name:string){switch(name){case 'mercadopago':return new MercadoPagoProvider();case 'bradesco':return new BankStubProvider('Bradesco');case 'itau':return new BankStubProvider('Itaú');case 'caixa':return new BankStubProvider('CAIXA');default:return new MockProvider()}}
