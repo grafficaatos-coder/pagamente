@@ -1,4 +1,4 @@
-const CACHE_NAME='agenda-pro-shell-v9-money';
+const CACHE_NAME='agenda-pro-shell-v10-booking-price';
 const SHELL=['/','/manifest.webmanifest','/icons/app-icon.svg','/icons/app-icon-maskable.svg'];
 
 self.addEventListener('install',event=>{
