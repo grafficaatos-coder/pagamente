@@ -133,9 +133,17 @@ function messageText(kind,business,customer,service,appointment){
   const professional=String(appointment.professional_name||"").trim();
   const terms=serviceTerms(business?.segment);
   const proLine=professional?"\n👤 Profissional: *"+professional+"*":"";
+  const confirmationUrl=appointment.confirmation_token
+    ? AGENDA_ORIGIN.replace(/\/$/,"")+"/?confirm="+encodeURIComponent(appointment.confirmation_token)
+    : "";
+  const confirmationBlock=confirmationUrl
+    ? "\n\n*Confirme seu horário pelo link abaixo:*\n✅ "+confirmationUrl+"\n\nSe não puder comparecer, o mesmo link também permite avisar."
+    : "";
   if(kind==="reminder"){
+    const pendingConfirmation=!appointment.confirmed_by_customer_at&&appointment.status!=="cancelled";
     return "Olá, "+first+"! 😊\n\nPassando para lembrar do seu horário na *"+business.name+"*."+
       "\n\n📅 Data: *"+when.date+"*\n🕐 Horário: *"+when.time+"*\n✨ "+terms.one+": *"+service.name+"*"+proLine+
+      (pendingConfirmation?confirmationBlock:"")+
       "\n\nSe precisar alterar, fale com a gente por aqui.";
   }
   if(kind==="followup"){
@@ -143,13 +151,13 @@ function messageText(kind,business,customer,service,appointment){
       "\n\nEsperamos que tenha gostado. Quando quiser agendar novamente, é só chamar a gente por aqui. 💛";
   }
   return "Olá, "+first+"! ✨"+
-    "\nSeu horário na *"+business.name+"* está confirmado."+
+    "\nSeu horário na *"+business.name+"* foi agendado."+
     "\n\n📅 *Data:* "+when.date+
     "\n🕐 *Horário:* "+when.time+
     "\n✨ *"+terms.one+":* "+service.name+
     (professional?"\n👤 *Profissional:* "+professional:"")+
-    "\n\nSe precisar alterar o horário, é só *entrar em contato por aqui*. 💖"+
-    "\n*Te esperamos! ✨*";
+    confirmationBlock+
+    "\n\nDepois de confirmar, a Agenda Pro atualiza o status automaticamente.";
 }
 async function cancelClaimed(businessId,job,reason){
   await rpc("agenda_baileys_cancel_job",{
@@ -170,7 +178,7 @@ async function claimAndValidate(businessId,leaseId){
     const appointment=await fetchOne(
       "/rest/v1/agenda_appointments?id=eq."+encodeURIComponent(job.appointment_id)+
       "&business_id=eq."+encodeURIComponent(businessId)+
-      "&select=id,business_id,customer_id,service_id,professional_name,starts_at,status&limit=1"
+      "&select=id,business_id,customer_id,service_id,professional_name,starts_at,status,confirmation_token,confirmed_by_customer_at,customer_cancelled_at&limit=1"
     );
     if(!appointment){await cancelClaimed(businessId,job,"Agendamento não existe mais.");continue}
     if(appointment.status==="cancelled"||appointment.status==="no_show"){
