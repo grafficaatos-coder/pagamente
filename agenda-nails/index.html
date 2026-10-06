@@ -44,8 +44,11 @@
     .toolbar{display:flex;gap:10px;margin-bottom:12px;align-items:center}.search-wrap{position:relative;flex:1}.search-wrap svg{position:absolute;left:12px;top:50%;transform:translateY(-50%);width:16px;height:16px;stroke:#a38e97;fill:none;stroke-width:1.8}.search{width:100%;border:1px solid var(--line);background:#fff;border-radius:12px;padding:11px 12px 11px 38px;outline:0}.search:focus{border-color:#c9a8b5;box-shadow:0 0 0 3px rgba(146,90,111,.08)}
     .viewtoggle{display:inline-flex;background:#eee4e8;border:1px solid var(--line);border-radius:13px;padding:3px;margin-bottom:13px}.viewtoggle button{border:0;background:transparent;color:var(--muted);padding:9px 15px;border-radius:9px;font-weight:850}.viewtoggle button.on{background:#fff;color:var(--wine);box-shadow:0 2px 8px rgba(70,45,55,.07)}
     .agenda-header{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:12px}.agenda-header h2{margin:0;font-size:22px}.agenda-date{display:flex;align-items:center;gap:7px;color:var(--muted);font-weight:700}.agenda-date button{width:33px;height:33px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--wine)}
-    .weekgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:9px}.daycol{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;min-width:0}.dayhead{padding:12px;background:linear-gradient(180deg,#fdfafb,#f8f1f4);border-bottom:1px solid var(--line)}.dayhead b,.dayhead small{display:block}.dayhead small{color:var(--muted);margin-top:2px}.mini{padding:10px 11px;border-bottom:1px solid #f2e9ec}.mini:last-child{border-bottom:0}.mini b,.mini small{display:block}.mini small{color:var(--muted);margin-top:2px;font-size:10px}.mini .dot{width:7px;height:7px;border-radius:50%;background:#75a68e;display:inline-block;margin-right:5px}
+    .weekgrid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:9px}.daycol{background:#fff;border:1px solid var(--line);border-radius:16px;overflow:hidden;min-width:0}.dayhead{padding:12px;background:linear-gradient(180deg,#fdfafb,#f8f1f4);border-bottom:1px solid var(--line)}.dayhead b,.dayhead small{display:block}.dayhead small{color:var(--muted);margin-top:2px}.mini{padding:10px 11px;border-bottom:1px solid #f2e9ec}.mini:last-child{border-bottom:0}.mini b,.mini small{display:block}.mini small{color:var(--muted);margin-top:2px;font-size:10px}.mini .dot{width:7px;height:7px;border-radius:50%;background:#75a68e;display:inline-block;margin-right:5px}
     .month{display:grid;grid-template-columns:repeat(7,1fr);gap:7px}.month-label{text-align:center;color:var(--muted);font-size:10px;font-weight:900;padding:4px}.daybox{min-height:82px;border:1px solid var(--line);background:#fff;border-radius:13px;padding:9px}.daybox.muted{opacity:.45}.daybox.today{border-color:#b990a0;box-shadow:inset 0 0 0 1px #b990a0}.daybox b{font-size:11px}.daybox .count{margin-top:10px;display:inline-block;background:var(--rose);color:var(--wine);border-radius:999px;padding:5px 7px;font-size:9px;font-weight:900}
+    .agenda-period-nav{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 12px}.agenda-period-title{min-width:0}.agenda-period-title b{display:block;font-size:15px}.agenda-period-title small{display:block;color:var(--muted);font-size:10px;margin-top:2px}.agenda-nav-actions{display:flex;align-items:center;gap:6px}.agenda-nav-actions button{border:1px solid var(--line);background:#fff;color:var(--wine);border-radius:10px;min-width:36px;height:36px;padding:0 10px;font-weight:900}.agenda-nav-actions .agenda-today{width:auto;font-size:10px}
+    .agenda-day-group{margin-bottom:12px}.agenda-day-group:last-child{margin-bottom:0}.agenda-day-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 2px;border-bottom:1px solid var(--line);margin-bottom:2px}.agenda-day-heading b{font-size:12px}.agenda-day-heading small{color:var(--muted);font-size:9px}.daycol.clickable,.daybox.clickable{cursor:pointer}.daycol.clickable:hover,.daybox.clickable:hover{border-color:#c9a8b5}.dayhead.today{background:var(--rose)}.daybox .month-times{display:grid;gap:2px;margin-top:6px;color:var(--muted);font-size:8px;line-height:1.25}.daybox .month-times span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:block}
+    @media(max-width:720px){.agenda-period-nav{align-items:flex-start;flex-direction:column}.agenda-nav-actions{width:100%}.agenda-nav-actions button{flex:1}.month-label{font-size:8px}.daybox b{font-size:10px}.daybox .month-times{display:none}}
     .list{display:grid;gap:9px}.client{display:grid;grid-template-columns:48px minmax(0,1fr) auto auto;gap:11px;align-items:center;padding:13px}.round{width:48px;height:48px;border-radius:15px;background:linear-gradient(145deg,#f2dce5,#e8cad6);display:grid;place-items:center;font-weight:900;color:var(--wine);font-size:13px}.client small{display:block;color:var(--muted);margin-top:3px}.client-stat{text-align:right;min-width:92px}.client-stat b{display:block}.client-action{width:37px;height:37px;border:1px solid var(--line);border-radius:11px;background:#fff;display:grid;place-items:center;color:var(--wine)}.client-action svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.9}
     .services{display:grid;grid-template-columns:repeat(3,1fr);gap:11px}.service{padding:15px}.service-icon{width:42px;height:42px;border-radius:14px;background:var(--rose);display:grid;place-items:center;font-size:19px;margin-bottom:11px}.service h3{margin:4px 0;font-size:14px}.service p{color:var(--muted);font-size:11px;line-height:1.45;min-height:32px}.service footer{display:flex;justify-content:space-between;align-items:center;font-weight:900;padding-top:11px;border-top:1px solid #f2e9ec}.service footer span{color:var(--muted);font-size:11px}
     .money{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}.money .card{padding:15px}.money .card span{color:var(--muted);font-size:11px}.money .card b{display:block;font-size:23px;margin-top:7px}.money .card small{display:block;color:var(--muted);font-size:9px;margin-top:5px}.money .card.finance-income{border-color:#cce7d5;background:linear-gradient(180deg,#fff,#f5fcf7)}.money .card.finance-expense{border-color:#f1cccc;background:linear-gradient(180deg,#fff,#fff7f7)}.money .card.finance-balance{border-color:#decbd3;background:linear-gradient(180deg,#fff,#fbf6f8)}
@@ -607,7 +610,7 @@
     const SERVICE_DEFAULTS=Object.fromEntries(Object.entries(PROFILES).map(([k,v])=>[k,v.services.map(x=>[...x])]));
     let segment=localStorage.getItem('agendaProSegment')||'salon';
     if(!PROFILES[segment])segment='salon';
-    let page='home',agendaView='day',A=[];
+    let page='home',agendaView='day',agendaAnchorDate=new Date(),A=[];
     const SUPABASE_URL='https://zmrihyzwsyxjikdknfug.supabase.co';
     const SUPABASE_KEY='sb_publishable_nX-qLw9rEdLUvZpgXMj1LA_2gjB3umn';
     const AGENDA_ADMIN_FUNCTION=SUPABASE_URL+'/functions/v1/agenda-admin-access';
@@ -804,15 +807,111 @@ async function installAgendaApp(){
   }).join('');
   return shell(`<section class="hero"><div><span class="eyebrow">${companyCtx.business.name} · ${companyCtx.plan.name}</span><h2>${greeting()} 👋</h2><p>Gerencie sua empresa com os recursos liberados no seu plano.</p></div><span class="date-chip">${I.calendar}${todayText()}</span></section><section class="dashboard-grid">${nextCard}<section class="metrics">${p.metrics.map(m=>metric(...m)).join('')}</section></section><section class="section-grid"><section class="panel"><div class="head"><div><span class="eyebrow">Próximos horários</span><h3>Agenda</h3></div>${openAgendaButton}</div>${rows||'<div class="empty-state">Nenhum horário futuro.</div>'}</section><aside class="panel"><div class="head"><div><span class="eyebrow">Seu plano</span><h3>${companyCtx.plan.name}</h3></div></div><div class="feature-list">${Object.entries(CAPABILITIES).filter(([k])=>companyCtx.plan.permissions?.[k]).slice(0,7).map(([,label])=>`<div class="feature"><i>✓</i><span>${label}</span></div>`).join('')}</div></aside></section>`);
 }
+    function agendaDateKey(value){
+  const d=value instanceof Date?value:new Date(value);
+  if(Number.isNaN(d.getTime()))return '';
+  const y=d.getFullYear(),m=String(d.getMonth()+1).padStart(2,'0'),day=String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+day;
+}
+    function agendaStartOfWeek(value){
+  const d=new Date(value);d.setHours(0,0,0,0);
+  const day=d.getDay();
+  d.setDate(d.getDate()-(day===0?6:day-1));
+  return d;
+}
+    function setAgendaView(v){
+  agendaView=['day','week','month'].includes(v)?v:'day';
+  render();
+}
+    function moveAgendaPeriod(direction){
+  const d=new Date(agendaAnchorDate);
+  if(agendaView==='day')d.setDate(d.getDate()+direction);
+  else if(agendaView==='week')d.setDate(d.getDate()+(7*direction));
+  else d.setMonth(d.getMonth()+direction);
+  agendaAnchorDate=d;
+  render();
+}
+    function agendaGoToday(){agendaAnchorDate=new Date();render()}
+    function openAgendaDay(key){
+  const parts=String(key).split('-').map(Number);
+  if(parts.length!==3||!parts[0]||!parts[1]||!parts[2])return;
+  agendaAnchorDate=new Date(parts[0],parts[1]-1,parts[2],12,0,0);
+  agendaView='day';
+  render();
+  scrollTo(0,0);
+}
+    function agendaStatusText(status){
+  return status==='pending'?'Pendente':status==='cancelled'?'Cancelado':status==='completed'?'Concluído':status==='no_show'?'Faltou':'Confirmado';
+}
+    function agendaActions(a){
+  return canOperateCompany()?`<div class="agenda-actions"><select onchange="updateAppointmentStatus('${a.id}',this.value)"><option value="pending" ${a.status==='pending'?'selected':''}>Pendente</option><option value="confirmed" ${a.status==='confirmed'?'selected':''}>Confirmado</option><option value="completed" ${a.status==='completed'?'selected':''}>Concluído</option><option value="no_show" ${a.status==='no_show'?'selected':''}>Faltou</option><option value="cancelled" ${a.status==='cancelled'?'selected':''}>Cancelado</option></select><button class="mini-btn" onclick="editAppointment('${a.id}')">Editar</button>${canAdminCompany()?`<button class="mini-btn danger" onclick="deleteAppointment('${a.id}')">Excluir</button>`:''}</div>`:'';
+}
+    function agendaRow(a,showDate=false){
+  const d=new Date(a.starts_at),cu=companyData.customers.find(x=>x.id===a.customer_id),se=companyData.services.find(x=>x.id===a.service_id);
+  const statusText=agendaStatusText(a.status);
+  const tagClass=a.status==='pending'?'p':a.status==='cancelled'?'canceled':'';
+  return `<div class="appt agenda-real-row" data-search="${(cu?.name||'').toLowerCase()} ${(se?.name||'').toLowerCase()} ${(a.professional_name||'').toLowerCase()}"><div class="appt-time">${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div><span class="status-line ${a.status==='pending'?'p':''}"></span><div><strong>${cu?.name||'Cliente'}</strong><small>${showDate?d.toLocaleDateString('pt-BR')+' · ':''}${se?.name||P().service} · ${a.professional_name||P().professional}</small>${agendaActions(a)}</div><span class="tag ${tagClass}">${statusText}</span></div>`;
+}
     function agenda(){
-  const p=P(),list=[...companyData.appointments].sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at));
-  const rows=list.map(a=>{
-    const d=new Date(a.starts_at),cu=companyData.customers.find(x=>x.id===a.customer_id),se=companyData.services.find(x=>x.id===a.service_id);
-    const statusText=a.status==='pending'?'Pendente':a.status==='cancelled'?'Cancelado':a.status==='completed'?'Concluído':a.status==='no_show'?'Faltou':'Confirmado';
-    const actions=canOperateCompany()?`<div class="agenda-actions"><select onchange="updateAppointmentStatus('${a.id}',this.value)"><option value="pending" ${a.status==='pending'?'selected':''}>Pendente</option><option value="confirmed" ${a.status==='confirmed'?'selected':''}>Confirmado</option><option value="completed" ${a.status==='completed'?'selected':''}>Concluído</option><option value="no_show" ${a.status==='no_show'?'selected':''}>Faltou</option><option value="cancelled" ${a.status==='cancelled'?'selected':''}>Cancelado</option></select><button class="mini-btn" onclick="editAppointment('${a.id}')">Editar</button>${canAdminCompany()?`<button class="mini-btn danger" onclick="deleteAppointment('${a.id}')">Excluir</button>`:''}</div>`:'';
-    return `<div class="appt agenda-real-row" data-search="${(cu?.name||'').toLowerCase()} ${(se?.name||'').toLowerCase()}"><div class="appt-time">${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div><span class="status-line ${a.status==='pending'?'p':''}"></span><div><strong>${cu?.name||'Cliente'}</strong><small>${d.toLocaleDateString('pt-BR')} · ${se?.name||'Serviço'} · ${a.professional_name||'Profissional'}</small>${actions}</div><span class="tag ${a.status==='pending'?'p':''}">${statusText}</span></div>`;
-  }).join('');
-  return shell(`<div class="section-title"><span class="eyebrow">${p.segment}</span><h2>Sua agenda</h2><p>Horários salvos na conta desta empresa.</p></div><div class="toolbar"><div class="search-wrap">${I.search}<input class="search" placeholder="Buscar ${p.person.toLowerCase()}" oninput="filterAgendaRows(this.value)"></div>${canOperateCompany()?'<button class="btn primary" onclick="book()">+ Horário</button>':''}</div><section class="panel"><div class="head"><div><span class="eyebrow">Agendamentos</span><h3>Todos os horários</h3></div><span class="tag">${list.length} horários</span></div><div id="agendaRows">${rows||'<div class="empty-state">Nenhum agendamento cadastrado.</div>'}</div></section>`);
+  const p=P();
+  const all=[...companyData.appointments].sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at));
+  const anchor=new Date(agendaAnchorDate);
+  anchor.setHours(12,0,0,0);
+  const todayKey=agendaDateKey(new Date());
+  const customerMap=new Map(companyData.customers.map(x=>[x.id,x]));
+  const serviceMap=new Map(companyData.services.map(x=>[x.id,x]));
+  let periodTitle='',periodSubtitle='',viewHtml='',visibleCount=0;
+
+  if(agendaView==='day'){
+    const key=agendaDateKey(anchor);
+    const list=all.filter(a=>agendaDateKey(a.starts_at)===key);
+    visibleCount=list.length;
+    periodTitle=anchor.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long'});
+    periodSubtitle=anchor.toLocaleDateString('pt-BR',{year:'numeric'});
+    viewHtml=`<section class="panel"><div class="head"><div><span class="eyebrow">Agenda do dia</span><h3>${list.length?list.length+' horário(s)':'Nenhum horário'}</h3></div><span class="tag">${list.length}</span></div><div id="agendaRows">${list.map(a=>agendaRow(a,false)).join('')||'<div class="empty-state">Nenhum agendamento neste dia.</div>'}</div></section>`;
+  }else if(agendaView==='week'){
+    const start=agendaStartOfWeek(anchor);
+    const days=Array.from({length:7},(_,i)=>{const d=new Date(start);d.setDate(start.getDate()+i);return d});
+    const endWeek=new Date(start);endWeek.setDate(start.getDate()+6);
+    periodTitle=start.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'})+' – '+endWeek.toLocaleDateString('pt-BR',{day:'2-digit',month:'short'});
+    periodSubtitle='Semana completa';
+    const cols=days.map(d=>{
+      const key=agendaDateKey(d);
+      const list=all.filter(a=>agendaDateKey(a.starts_at)===key);
+      visibleCount+=list.length;
+      const minis=list.map(a=>{
+        const ad=new Date(a.starts_at),cu=customerMap.get(a.customer_id),se=serviceMap.get(a.service_id);
+        return `<div class="mini" data-search="${(cu?.name||'').toLowerCase()} ${(se?.name||'').toLowerCase()}"><b><span class="dot"></span>${ad.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})} · ${cu?.name||'Cliente'}</b><small>${se?.name||p.service} · ${agendaStatusText(a.status)}</small></div>`;
+      }).join('');
+      return `<div class="daycol clickable" onclick="if(event.target.closest('button,select'))return;openAgendaDay('${key}')"><div class="dayhead ${key===todayKey?'today':''}"><b>${d.toLocaleDateString('pt-BR',{weekday:'short'})}</b><small>${d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} · ${list.length} horário(s)</small></div>${minis||'<div class="mini"><small>Livre</small></div>'}</div>`;
+    }).join('');
+    viewHtml=`<div class="weekgrid">${cols}</div>`;
+  }else{
+    const monthStart=new Date(anchor.getFullYear(),anchor.getMonth(),1,12,0,0);
+    const first=agendaStartOfWeek(monthStart);
+    periodTitle=monthStart.toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+    periodSubtitle='Visão mensal';
+    const labels=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'].map(x=>`<div class="month-label">${x}</div>`).join('');
+    const cells=Array.from({length:42},(_,i)=>{
+      const d=new Date(first);d.setDate(first.getDate()+i);
+      const key=agendaDateKey(d);
+      const list=all.filter(a=>agendaDateKey(a.starts_at)===key);
+      if(d.getMonth()===monthStart.getMonth())visibleCount+=list.length;
+      const muted=d.getMonth()!==monthStart.getMonth();
+      const times=list.slice(0,2).map(a=>{
+        const ad=new Date(a.starts_at),cu=customerMap.get(a.customer_id);
+        return `<span>${ad.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})} ${cu?.name||''}</span>`;
+      }).join('');
+      return `<div class="daybox clickable ${muted?'muted':''} ${key===todayKey?'today':''}" onclick="openAgendaDay('${key}')"><b>${d.getDate()}</b>${list.length?`<div class="count">${list.length} horário${list.length===1?'':'s'}</div><div class="month-times">${times}</div>`:''}</div>`;
+    }).join('');
+    viewHtml=`<section class="panel"><div class="month">${labels}${cells}</div></section>`;
+  }
+
+  return shell(`<div class="section-title"><span class="eyebrow">${p.segment}</span><h2>Sua agenda</h2><p>Veja seus horários por dia, semana ou mês.</p></div>
+  <div class="toolbar"><div class="search-wrap">${I.search}<input class="search" placeholder="Buscar ${p.person.toLowerCase()}" oninput="filterAgendaRows(this.value)"></div>${canOperateCompany()?'<button class="btn primary" onclick="book()">+ Horário</button>':''}</div>
+  <div class="viewtoggle"><button class="${agendaView==='day'?'on':''}" onclick="setAgendaView('day')">Dia</button><button class="${agendaView==='week'?'on':''}" onclick="setAgendaView('week')">Semana</button><button class="${agendaView==='month'?'on':''}" onclick="setAgendaView('month')">Mês</button></div>
+  <div class="agenda-period-nav"><div class="agenda-period-title"><b>${periodTitle}</b><small>${periodSubtitle} · ${visibleCount} horário(s)</small></div><div class="agenda-nav-actions"><button onclick="moveAgendaPeriod(-1)" aria-label="Anterior">‹</button><button class="agenda-today" onclick="agendaGoToday()">Hoje</button><button onclick="moveAgendaPeriod(1)" aria-label="Próximo">›</button></div></div>
+  ${viewHtml}`);
 }
     function clients(){
   const p=P();
@@ -1680,7 +1779,7 @@ async function installAgendaApp(){
 }
     function filterAgendaRows(v){
   const q=String(v||'').toLowerCase();
-  document.querySelectorAll('.agenda-real-row').forEach(el=>el.style.display=(el.dataset.search||'').includes(q)?'':'none');
+  document.querySelectorAll('#agendaRows [data-search],.weekgrid [data-search]').forEach(el=>el.style.display=(el.dataset.search||'').includes(q)?'':'none');
 }
     function filterClientCards(v){
   const q=String(v||'').toLowerCase();
@@ -2424,7 +2523,6 @@ async function installAgendaApp(){
   if(sb)sb.auth.signOut();
   authUser=null;appMode=null;ownerLogged=false;companyCtx=null;companyData={customers:[],services:[],appointments:[]};whatsappQueue=[];page='home';adminTab='overview';loginMessage='';render();
 }
-    function setAgendaView(v){agendaView=v;render()}
     function go(p){
   closeMobileMenu();
   if(!appMode){render();return}
