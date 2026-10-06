@@ -492,6 +492,67 @@
       .signup-wrap{width:100%;min-width:0;max-width:100%;padding-left:14px;padding-right:14px}
       .signup-box,.signup-form,.signup-fields,.signup-plans{min-width:0;max-width:100%}
     }
+  
+    /* Menu mobile v3 - texto sempre visível + visual refinado */
+    @media(max-width:720px){
+      .mobile-menu-toggle{
+        display:inline-flex!important;
+        align-items:center!important;
+        justify-content:center!important;
+        height:44px!important;
+        min-width:104px!important;
+        padding:0 14px!important;
+        gap:9px!important;
+        border-radius:14px!important;
+        border:1px solid rgba(101,56,75,.16)!important;
+        background:linear-gradient(180deg,#ffffff 0%,#fbf7f9 100%)!important;
+        color:var(--wine)!important;
+        font-size:12px!important;
+        font-weight:850!important;
+        letter-spacing:0!important;
+        text-transform:none!important;
+        box-shadow:0 8px 20px rgba(70,45,55,.10),inset 0 1px 0 rgba(255,255,255,.95)!important;
+        flex:0 0 auto!important;
+      }
+      .mobile-menu-toggle svg{
+        width:19px!important;
+        height:19px!important;
+        flex:0 0 auto!important;
+      }
+      .mobile-menu-toggle .menu-label{
+        display:inline!important;
+        visibility:visible!important;
+        opacity:1!important;
+        width:auto!important;
+        max-width:none!important;
+        overflow:visible!important;
+        font-size:12px!important;
+        line-height:1!important;
+        white-space:nowrap!important;
+      }
+      .side{
+        width:min(86vw,320px)!important;
+        border-radius:0 24px 24px 0!important;
+        background:linear-gradient(180deg,#35242c 0%,#4b2d3a 52%,#38252e 100%)!important;
+        box-shadow:22px 0 50px rgba(35,20,27,.32)!important;
+      }
+      .side .nav button{
+        min-height:48px!important;
+        border-radius:14px!important;
+      }
+      .mobile-menu-overlay{
+        background:rgba(24,15,19,.50)!important;
+        backdrop-filter:blur(2px);
+        -webkit-backdrop-filter:blur(2px);
+      }
+      .top{
+        height:66px!important;
+        padding:0 12px!important;
+      }
+      .top-left{gap:10px!important}
+      .top h1{font-size:15px!important}
+    }
+
   </style>
 </head>
 <body>
@@ -2598,8 +2659,14 @@ async function installAgendaApp(){
       toast('Agenda Pro instalado com sucesso');
     });
     if('serviceWorker' in navigator){
+      let agendaSwRefreshing=false;
+      navigator.serviceWorker.addEventListener('controllerchange',()=>{
+        if(agendaSwRefreshing)return;
+        agendaSwRefreshing=true;
+        window.location.reload();
+      });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js',{scope:'/'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-menu3',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
