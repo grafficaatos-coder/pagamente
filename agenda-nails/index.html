@@ -1642,6 +1642,25 @@
       .wa-qr-help{grid-template-columns:1fr}
     }
 
+  
+    /* Conexão oficial pelo próprio celular */
+    .wa-mobile-connect-primary{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:18px;align-items:center;padding:24px;border:1px solid #dfe9e3;background:linear-gradient(145deg,#ffffff,#f5fbf7);box-shadow:0 14px 36px rgba(37,86,58,.08)}
+    .wa-mobile-connect-icon{width:64px;height:64px;border-radius:20px;display:grid;place-items:center;background:#25d366;color:#fff;font-weight:950;font-size:19px;box-shadow:0 12px 28px rgba(37,211,102,.22)}
+    .wa-mobile-connect-copy h3{margin:4px 0 6px;font-size:20px;letter-spacing:-.03em}
+    .wa-mobile-connect-copy p{margin:0;color:var(--muted);font-size:11px;line-height:1.55}
+    .wa-mobile-benefits{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    .wa-mobile-benefits span{padding:6px 8px;border-radius:999px;background:#eaf7ef;color:#216941;font-size:8px;font-weight:850}
+    .wa-mobile-connect-btn{min-height:50px;white-space:nowrap}
+    .wa-mobile-connect-primary .wa-simple-error{grid-column:1/-1;margin:0}
+    .baileys-card{margin-top:14px}
+    @media(max-width:720px){
+      .wa-mobile-connect-primary{grid-template-columns:52px 1fr;padding:18px;gap:12px}
+      .wa-mobile-connect-icon{width:52px;height:52px;border-radius:16px;font-size:16px}
+      .wa-mobile-connect-btn{grid-column:1/-1;width:100%}
+      .wa-mobile-benefits{gap:6px}
+      .wa-mobile-benefits span{font-size:7px}
+    }
+
   </style>
 </head>
 <body>
@@ -3016,7 +3035,7 @@ async function installAgendaApp(){
   const baileysWaiting=baileysSession.status==='qr'||baileysSession.status==='connecting';
   const baileysCard=baileysEnabled?`<section class="panel baileys-card wa-easy-connect ${baileysSession.status==='connected'?'connected':''}">
     <div class="head">
-      <div><span class="eyebrow">WhatsApp automático</span><h3>${baileysSession.status==='connected'?'WhatsApp conectado':'Conectar meu WhatsApp'}</h3></div>
+      <div><span class="eyebrow">Alternativa</span><h3>${baileysSession.status==='connected'?'WhatsApp conectado':'Conectar com QR Code'}</h3></div>
       <span class="status-badge ${baileysSession.status==='connected'?'status-active':baileysWaiting?'status-late':'status-neutral'}">${baileysSession.status==='connected'?'Conectado':baileysWaiting?'Aguardando':'Desconectado'}</span>
     </div>
     ${baileysSession.status==='connected'
@@ -3064,9 +3083,19 @@ async function installAgendaApp(){
   </section>`:'';
 
   const connectedCard=connected
-    ? `<section class="panel wa-status connected"><div class="head"><div><span class="eyebrow">Conectado ao sistema</span><h3>WhatsApp Business ativo</h3></div><span class="status-badge status-active">Conectado</span></div><div class="wa-status-grid"><div><small>Número</small><b>${conn.display_phone_number||'Conectado'}</b></div><div><small>Nome verificado</small><b>${conn.verified_name||'—'}</b></div><div><small>Qualidade</small><b>${conn.quality_rating||'—'}</b></div><div><small>Automático</small><b>${conn.auto_confirmation?'Ligado':'Desligado'}</b></div></div>${admin?`<div class="wa-connected-actions"><button class="btn wa-disconnect" onclick="disconnectWhatsAppBusiness()">Desconectar</button></div>`:''}</section>`
+    ? `<section class="panel wa-status connected"><div class="head"><div><span class="eyebrow">Conectado pelo celular</span><h3>WhatsApp Business ativo</h3></div><span class="status-badge status-active">Conectado</span></div><div class="wa-status-grid"><div><small>Número</small><b>${conn.display_phone_number||'Conectado'}</b></div><div><small>Nome</small><b>${conn.verified_name||'—'}</b></div><div><small>Status</small><b>${conn.quality_rating||'Ativo'}</b></div><div><small>Envio automático</small><b>${conn.auto_confirmation?'Ligado':'Disponível'}</b></div></div>${admin?`<div class="wa-connected-actions"><button class="btn wa-disconnect" onclick="disconnectWhatsAppBusiness()">Desconectar</button></div>`:''}</section>`
     : admin
-      ? `<section class="wa-simple-connect"><div class="wa-connect-brand">WA</div><div class="wa-simple-copy"><span class="eyebrow">Opcional</span><h3>Conectar WhatsApp Business oficial</h3><p>Se você quiser envio sem nenhum clique, conecte pela Meta. O modo gratuito abaixo continua funcionando sem essa conexão.</p></div><button id="waSimpleConnectBtn" class="btn wa-simple-button" onclick="startWhatsEmbeddedSignup()">Conectar meu WhatsApp Business</button><div id="waSimpleConnectError" class="login-error wa-simple-error"></div></section>`
+      ? `<section class="panel wa-mobile-connect-primary">
+          <div class="wa-mobile-connect-icon">WA</div>
+          <div class="wa-mobile-connect-copy">
+            <span class="eyebrow">Recomendado para celular</span>
+            <h3>Conectar pelo celular</h3>
+            <p>Faça a conexão inteira neste aparelho, sem QR Code e sem precisar de outro celular ou computador.</p>
+            <div class="wa-mobile-benefits"><span>✓ Sem escanear QR</span><span>✓ Feito no próprio celular</span><span>✓ Conexão oficial</span></div>
+          </div>
+          <button id="waSimpleConnectBtn" class="btn primary wa-mobile-connect-btn" onclick="startWhatsEmbeddedSignup()">Conectar pelo celular</button>
+          <div id="waSimpleConnectError" class="login-error wa-simple-error"></div>
+        </section>`
       : '';
 
   const automationSettings=connected&&admin
@@ -3077,7 +3106,8 @@ async function installAgendaApp(){
 
   return shell(`<div class="section-title"><span class="eyebrow">WhatsApp</span><h2>Conexão do WhatsApp</h2><p>Conecte o número que será usado pelo Agenda Pro para enviar as mensagens automáticas.</p></div>
 
-  ${baileysCard}`);
+  ${connectedCard}
+  ${!connected?baileysCard:''}`);
 }
     function setup(){const p=P();return shell(`<div class="section-title"><span class="eyebrow">Personalização</span><h2>Profissão / área</h2><p>O sistema adapta automaticamente clientes ou pacientes, serviços ou sessões e o fluxo de agendamento.</p></div><div class="setup-grid">${Object.values(PROFILES).map(x=>`<button class="setup-card ${x.key===segment?'on':''}" onclick="setSegment('${x.key}')"><span class="big-emoji">${x.emoji}</span><b>${x.segment}</b><small>${x.key==='salon'?'Clientes, serviços, profissionais, agenda e caixa.':x.key==='esthetic'?'Clientes, procedimentos, sessões, profissionais e pacotes.':'Pacientes, consultas, médicos, convênio e teleconsulta.'}</small></button>`).join('')}</div><div class="profile-row"><div class="profile-box"><span>Empresa demonstrada</span><b>${p.business}</b></div><div class="profile-box"><span>Terminologia ativa</span><b>${p.people} · ${p.serviceLabel} · ${p.professionals}</b></div></div><div class="context-note"><b>Multiempresa:</b> na versão comercial, cada assinante terá seu próprio cadastro, logo, equipe, horários, serviços e dados isolados. Esta tela demonstra como um único produto pode atender segmentos diferentes.</div>`)}
     function more(){const p=P();return shell(`<div class="section-title"><span class="eyebrow">Configurações</span><h2>Mais opções</h2><p>Personalize o sistema para ${p.business}.</p></div><div class="more-list"><button class="more-btn" onclick="go('admin')"><div class="quick-ico">${I.wallet}</div><b>Administração da plataforma</b><small>Planos, mensalidades, assinantes e bloqueios</small></button><button class="more-btn" onclick="go('setup')"><div class="quick-ico"><span style="font-size:18px">${p.emoji}</span></div><b>Tipo de negócio</b><small>${p.segment} · alterar modo</small></button><button class="more-btn" onclick="go('services')"><div class="quick-ico">${I.sparkle}</div><b>${p.serviceLabel}</b><small>Duração, valores e catálogo</small></button><button class="more-btn" onclick="go('wa')"><div class="quick-ico">${I.message}</div><b>WhatsApp</b><small>Confirmações e lembretes</small></button><button class="more-btn" onclick="book()"><div class="quick-ico">${I.calendar}</div><b>Novo horário</b><small>Cadastre ${p.appointment.toLowerCase()}</small></button><button class="more-btn" onclick="toast('Relatórios em breve')"><div class="quick-ico">${I.chart}</div><b>Relatórios</b><small>Indicadores de ${p.business}</small></button></div>`)}
@@ -4722,7 +4752,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-qrfirst40',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-mobileofficial41',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
