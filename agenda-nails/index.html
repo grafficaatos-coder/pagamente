@@ -1410,6 +1410,35 @@
       }
     }
 
+  
+    /* Cabeçalho mobile fixo + conteúdo abaixo */
+    @media(max-width:720px){
+      .top{
+        position:fixed!important;
+        top:0!important;
+        left:0!important;
+        right:0!important;
+        width:100%!important;
+        z-index:88!important;
+        padding:
+          max(10px,env(safe-area-inset-top))
+          12px
+          10px!important;
+        background:rgba(255,255,255,.96)!important;
+        box-shadow:0 5px 18px rgba(53,34,43,.08)!important;
+      }
+      .main{
+        padding-top:calc(76px + env(safe-area-inset-top))!important;
+      }
+      .top .mobile-menu-toggle{
+        position:relative!important;
+        top:0!important;
+        pointer-events:auto!important;
+      }
+      .mobile-menu-overlay{z-index:95!important}
+      .side{z-index:105!important}
+    }
+
   </style>
 </head>
 <body>
@@ -2433,7 +2462,7 @@ async function installAgendaApp(){
   }catch(ex){console.error(ex);toast(ex.message||'Não foi possível desconectar')}
 }
     async function copyWhatsTemplate(){
-  const text='Olá {{1}}! Seu horário na {{2}} foi confirmado para {{3}} às {{4}}. Serviço: {{5}}. Profissional: {{6}}.';
+  const text='Olá {{1}}! Seu horário com {{2}} foi confirmado para {{3}} às {{4}}. Serviço: {{5}}. Profissional: {{6}}.';
   try{await navigator.clipboard.writeText(text);toast('Modelo copiado')}catch(e){prompt('Copie o modelo:',text)}
 }
     function openMetaApps(){
@@ -2642,13 +2671,14 @@ async function installAgendaApp(){
   const business=companyCtx?.business?.name||'Agenda Pro';
   const service=item.service_name||'atendimento';
   const professional=item.professional_name||'';
+  const E={smile:'\u{1F60A}',calendar:'\u{1F4C5}',clock:'\u{1F550}',sparkle:'\u2728',person:'\u{1F464}',heart:'\u{1F49B}'};
   if(item.message_type==='reminder'){
-    return `Olá${first?', '+first:''}! 😊\n\nPassando para lembrar do seu horário na *${business}*.\n\n📅 Data: *${date}*\n🕐 Horário: *${time}*\n✨ ${P().service}: *${service}*${professional?`\n👤 ${P().professional}: *${professional}*`:''}\n\nSe precisar alterar, fale com a gente por aqui.`;
+    return `Olá${first?', '+first:''}! ${E.smile}\n\nPassando para lembrar do seu horário com *${business}*.\n\n${E.calendar} Data: *${date}*\n${E.clock} Horário: *${time}*\n${E.sparkle} ${P().service}: *${service}*${professional?`\n${E.person} ${P().professional}: *${professional}*`:''}\n\nSe precisar alterar, fale com a gente por aqui.`;
   }
   if(item.message_type==='followup'){
-    return `Olá${first?', '+first:''}! 😊\n\nObrigado pelo seu atendimento na *${business}*.\n\nEsperamos que tenha gostado. Quando quiser agendar novamente, é só chamar a gente por aqui. 💛`;
+    return `Olá${first?', '+first:''}! ${E.smile}\n\nObrigado pelo seu atendimento com *${business}*.\n\nEsperamos que tenha gostado. Quando quiser agendar novamente, é só chamar a gente por aqui. ${E.heart}`;
   }
-  return `Olá${first?', '+first:''}! 😊\n\nSeu horário na *${business}* foi agendado.\n\n📅 Data: *${date}*\n🕐 Horário: *${time}*\n✨ ${P().service}: *${service}*${professional?`\n👤 ${P().professional}: *${professional}*`:''}\n\nSe precisar alterar o horário, fale com a gente por aqui.`;
+  return `Olá${first?', '+first:''}! ${E.smile}\n\nSeu horário com *${business}* foi agendado.\n\n${E.calendar} Data: *${date}*\n${E.clock} Horário: *${time}*\n${E.sparkle} ${P().service}: *${service}*${professional?`\n${E.person} ${P().professional}: *${professional}*`:''}\n\nSe precisar alterar o horário, fale com a gente por aqui.`;
 }
     function dueWhatsappQueue(){
   const now=Date.now();
@@ -3863,18 +3893,26 @@ async function installAgendaApp(){
   const first=(customer?.name||'').trim().split(/\s+/)[0]||'';
   const dateBR=String(date||'').split('-').reverse().join('/');
   const link=includeConfirmation?confirmationLink(confirmationKey):'';
+  const EMOJI={
+    smile:'\u{1F60A}',
+    calendar:'\u{1F4C5}',
+    clock:'\u{1F550}',
+    sparkle:'\u2728',
+    person:'\u{1F464}',
+    check:'\u2705'
+  };
   const lines=[
-    `Olá${first?', '+first:''}! 😊`,
+    `Olá${first?', '+first:''}! ${EMOJI.smile}`,
     '',
-    `Seu horário na *${companyCtx.business.name}* foi agendado.`,
+    `Seu horário com *${companyCtx.business.name}* foi agendado.`,
     '',
-    `📅 Data: *${dateBR}*`,
-    `🕐 Horário: *${time}*`,
-    `✨ ${P().service}: *${service?.name||''}*`,
-    professional?`👤 ${P().professional}: *${professional}*`:null,
+    `${EMOJI.calendar} Data: *${dateBR}*`,
+    `${EMOJI.clock} Horário: *${time}*`,
+    `${EMOJI.sparkle} ${P().service}: *${service?.name||''}*`,
+    professional?`${EMOJI.person} ${P().professional}: *${professional}*`:null,
     link?'':'',
     link?'*Confirme seu horário:*':null,
-    link?`✅ ${link}`:null
+    link?`${EMOJI.check} ${link}`:null
   ].filter(v=>v!==null&&v!==undefined);
   return lines.join('\n');
 }
@@ -4399,7 +4437,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-whatsappdirect30',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-mobileemoji31',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
