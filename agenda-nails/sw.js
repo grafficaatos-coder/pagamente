@@ -1,4 +1,4 @@
-const CACHE_NAME='agenda-pro-shell-v19-service-value-only';
+const CACHE_NAME='agenda-pro-shell-v20-plan-manager';
 const SHELL=['/','/manifest.webmanifest','/icons/app-icon.svg','/icons/app-icon-maskable.svg'];
 
 self.addEventListener('install',event=>{
