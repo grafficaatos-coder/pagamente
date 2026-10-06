@@ -48,7 +48,7 @@
     .hero h1 em{font-style:normal;color:var(--wine)}
     .hero p{font-size:18px;line-height:1.68;color:#6d6469;max-width:670px;margin:0}
     .hero-actions{display:flex;gap:11px;flex-wrap:wrap;margin-top:30px}
-    .trust-row{display:flex;gap:18px;flex-wrap:wrap;margin-top:24px;color:#756c71;font-size:12px}
+    .trial-hero-note{display:inline-flex;margin-top:18px;padding:8px 11px;border-radius:999px;background:#edf8f1;color:#216b47;font-size:11px;font-weight:850;border:1px solid #d6ecdf}.trust-row{display:flex;gap:18px;flex-wrap:wrap;margin-top:14px;color:#756c71;font-size:12px}
     .trust-row span{display:flex;align-items:center;gap:7px}
     .trust-row i{width:20px;height:20px;border-radius:50%;background:var(--green-bg);color:var(--green);display:grid;place-items:center;font-style:normal;font-size:11px;font-weight:900}
     .product-shell{position:relative}
@@ -139,7 +139,7 @@
       </nav>
       <div class="nav-actions">
         <a class="btn secondary" href="https://agenda-pro-iucw.vercel.app/?utm_source=site&utm_medium=landing&utm_campaign=agenda_pro">Entrar</a>
-        <a class="btn primary" href="https://agenda-pro-iucw.vercel.app/?utm_source=site&utm_medium=landing&utm_campaign=agenda_pro">Criar conta</a>
+        <a class="btn primary" href="https://agenda-pro-iucw.vercel.app/?cadastro=1&utm_source=site&utm_medium=landing&utm_campaign=agenda_pro">Criar conta</a>
       </div>
     </div>
   </header>
@@ -152,9 +152,10 @@
           <h1>Menos confusão na agenda. <em>Mais controle do seu negócio.</em></h1>
           <p>O Agenda Pro reúne horários, clientes, serviços, financeiro, equipe e confirmações pelo WhatsApp em um só lugar — com uma experiência simples para usar todos os dias.</p>
           <div class="hero-actions">
-            <a class="btn primary large" href="https://agenda-pro-iucw.vercel.app/?utm_source=site&utm_medium=hero&utm_campaign=agenda_pro">Criar minha conta</a>
+            <a class="btn primary large" href="https://agenda-pro-iucw.vercel.app/?cadastro=1&utm_source=site&utm_medium=hero&utm_campaign=agenda_pro">Criar minha conta</a>
             <a class="btn secondary large" href="#demonstracao">Ver como funciona</a>
           </div>
+          <div id="trialHeroNote" class="trial-hero-note">Cadastro rápido e teste disponível conforme configuração atual.</div>
           <div class="trust-row">
             <span><i>✓</i> Funciona no celular e computador</span>
             <span><i>✓</i> Vários tipos de profissionais</span>
@@ -323,7 +324,7 @@
       <div class="container">
         <div class="cta-card">
           <div><h2>Pronto para organizar seus atendimentos de um jeito mais profissional?</h2><p>Crie sua conta no Agenda Pro e comece a centralizar sua rotina em um único sistema.</p></div>
-          <a class="btn light large" href="https://agenda-pro-iucw.vercel.app/?utm_source=site&utm_medium=cta&utm_campaign=agenda_pro">Criar minha conta</a>
+          <a class="btn light large" href="https://agenda-pro-iucw.vercel.app/?cadastro=1&utm_source=site&utm_medium=cta&utm_campaign=agenda_pro">Criar minha conta</a>
         </div>
       </div>
     </section>
@@ -336,7 +337,7 @@
     </div>
   </footer>
 
-  <div class="mobile-cta"><a class="btn primary" href="https://agenda-pro-iucw.vercel.app/?utm_source=site&utm_medium=mobile_cta&utm_campaign=agenda_pro">Criar minha conta</a></div>
+  <div class="mobile-cta"><a class="btn primary" href="https://agenda-pro-iucw.vercel.app/?cadastro=1&utm_source=site&utm_medium=mobile_cta&utm_campaign=agenda_pro">Criar minha conta</a></div>
 
   <script>
     const APP_URL='https://agenda-pro-iucw.vercel.app/';
@@ -373,12 +374,19 @@
     async function loadPlans(){
       const root=document.getElementById('pricing');
       try{
-        const r=await fetch(SUPABASE_URL+'/rest/v1/agenda_plans?select=code,name,monthly_price_cents,max_users,permissions,description,visible,active&active=eq.true&visible=eq.true&order=monthly_price_cents.asc',{
-          headers:{apikey:SUPABASE_KEY},
-          cache:'no-store'
-        });
+        const [r,sr]=await Promise.all([
+          fetch(SUPABASE_URL+'/rest/v1/agenda_plans?select=code,name,monthly_price_cents,max_users,permissions,description,visible,active&active=eq.true&visible=eq.true&order=monthly_price_cents.asc',{headers:{apikey:SUPABASE_KEY},cache:'no-store'}),
+          fetch(SUPABASE_URL+'/rest/v1/agenda_platform_settings?select=free_trial_enabled,trial_days&id=eq.true',{headers:{apikey:SUPABASE_KEY},cache:'no-store'})
+        ]);
         if(!r.ok)throw new Error('Falha ao carregar planos');
         const plans=await r.json();
+        const settings=sr.ok?(await sr.json())?.[0]:null;
+        const trialNote=document.getElementById('trialHeroNote');
+        if(trialNote&&settings?.free_trial_enabled){
+          trialNote.textContent='✓ Comece com '+Number(settings.trial_days||7)+' dias de teste grátis';
+        }else if(trialNote){
+          trialNote.textContent='Cadastro rápido para começar';
+        }
         if(!Array.isArray(plans)||!plans.length)throw new Error('Nenhum plano disponível');
         const middle=Math.floor(plans.length/2);
         root.innerHTML=plans.map((p,i)=>{
@@ -390,7 +398,7 @@
             <div class="desc">${String(p.description||'Plano para organizar sua rotina de atendimentos.')}</div>
             <div class="price">${money(p.monthly_price_cents)} <small>/mês</small></div>
             <ul><li>${users}</li>${features.map(x=>'<li>'+x+'</li>').join('')}</ul>
-            <a class="btn ${i===middle&&plans.length>1?'primary':'secondary'}" href="${APP_URL}?utm_source=site&utm_medium=pricing&utm_campaign=agenda_pro&utm_content=${encodeURIComponent(p.code||'plano')}">Escolher este plano</a>
+            <a class="btn ${i===middle&&plans.length>1?'primary':'secondary'}" href="${APP_URL}?cadastro=1&plano=${encodeURIComponent(p.code||'')}&utm_source=site&utm_medium=pricing&utm_campaign=agenda_pro&utm_content=${encodeURIComponent(p.code||'plano')}">Escolher este plano</a>
           </article>`;
         }).join('');
       }catch(err){
