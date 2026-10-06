@@ -1668,7 +1668,7 @@
     function companyTitles(){
   const p=P();
   return {
-    home:['Início',companyCtx?.business?.name||p.business],
+    home:['Início',displayBusinessName(companyCtx?.business?.name||p.business)],
     agenda:['Agenda','Organize seus horários'],
     clients:[p.people,'Cadastro e histórico'],
     services:[p.serviceLabel,p.catalog],
@@ -1759,7 +1759,7 @@ async function installAgendaApp(){
     n.push(['wa','message','WhatsApp']);
     if(canAdminCompany())n.push(['team','userplus','Equipe']);
     n.push(['profile','users','Meu perfil']);
-    return `<aside class="side"><div class="brand"><div class="logo">${p.initials}</div><div><b>${companyCtx?.business?.name||p.brand}</b><small>${companyCtx?.plan?.name||'PLANO'}</small></div></div><nav class="nav">${n.map(x=>`<button class="${page===x[0]?'on':''}" onclick="go('${x[0]}')">${I[x[1]]}<span class="label">${x[2]}</span></button>`).join('')}${pwaInstallEntry()}</nav><div class="side-foot"><small>Acesso da empresa</small><b>${subscriptionLabel()}</b></div></aside>`;
+    return `<aside class="side"><div class="brand"><div class="logo">${p.initials}</div><div><b>${displayBusinessName(companyCtx?.business?.name||p.brand)}</b><small>${companyCtx?.plan?.name||'PLANO'}</small></div></div><nav class="nav">${n.map(x=>`<button class="${page===x[0]?'on':''}" onclick="go('${x[0]}')">${I[x[1]]}<span class="label">${x[2]}</span></button>`).join('')}${pwaInstallEntry()}</nav><div class="side-foot"><small>Acesso da empresa</small><b>${subscriptionLabel()}</b></div></aside>`;
   }
   const n=[['overview','home','Visão geral'],['clients','users','Assinantes'],['plans','sparkle','Planos'],['billing','wallet','Cobranças'],['settings','more','Configurações']];
   return `<aside class="side"><div class="brand"><div class="logo">AP</div><div><b>Agenda Pro</b><small>PROPRIETÁRIO</small></div></div><nav class="nav">${n.map(x=>`<button class="${adminTab===x[0]?'on':''}" onclick="setAdminTab('${x[0]}')">${I[x[1]]}<span class="label">${x[2]}</span></button>`).join('')}${pwaInstallEntry()}</nav><div class="side-foot"><small>Acesso</small><b>Administrador da plataforma</b></div></aside>`;
@@ -1819,7 +1819,7 @@ async function installAgendaApp(){
     const d=new Date(a.starts_at),cu=companyData.customers.find(x=>x.id===a.customer_id),se=companyData.services.find(x=>x.id===a.service_id);
     return `<div class="appt"><div class="appt-time">${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div><span class="status-line ${a.status==='pending'?'p':''}"></span><div><strong>${cu?.name||'Cliente'}</strong><small>${d.toLocaleDateString('pt-BR')} · ${se?.name||'Serviço'}</small></div><span class="tag ${a.status==='pending'?'p':''}">${a.status==='pending'?'Pendente':'Confirmado'}</span></div>`;
   }).join('');
-  return shell(`<section class="hero"><div><span class="eyebrow">${companyCtx.business.name} · ${companyCtx.plan.name}</span><h2>${greeting()} 👋</h2><p>Gerencie sua empresa com os recursos liberados no seu plano.</p></div><span class="date-chip">${I.calendar}${todayText()}</span></section><section class="dashboard-grid">${nextCard}<section class="metrics">${p.metrics.map(m=>metric(...m)).join('')}</section></section><section class="section-grid"><section class="panel"><div class="head"><div><span class="eyebrow">Próximos horários</span><h3>Agenda</h3></div>${openAgendaButton}</div>${rows||'<div class="empty-state">Nenhum horário futuro.</div>'}</section><aside class="panel"><div class="head"><div><span class="eyebrow">Seu plano</span><h3>${companyCtx.plan.name}</h3></div></div><div class="feature-list">${Object.entries(CAPABILITIES).filter(([k])=>companyCtx.plan.permissions?.[k]).slice(0,7).map(([,label])=>`<div class="feature"><i>✓</i><span>${label}</span></div>`).join('')}</div></aside></section>`);
+  return shell(`<section class="hero"><div><span class="eyebrow">${displayBusinessName(companyCtx.business.name)} · ${companyCtx.plan.name}</span><h2>${greeting()} 👋</h2><p>Gerencie sua empresa com os recursos liberados no seu plano.</p></div><span class="date-chip">${I.calendar}${todayText()}</span></section><section class="dashboard-grid">${nextCard}<section class="metrics">${p.metrics.map(m=>metric(...m)).join('')}</section></section><section class="section-grid"><section class="panel"><div class="head"><div><span class="eyebrow">Próximos horários</span><h3>Agenda</h3></div>${openAgendaButton}</div>${rows||'<div class="empty-state">Nenhum horário futuro.</div>'}</section><aside class="panel"><div class="head"><div><span class="eyebrow">Seu plano</span><h3>${companyCtx.plan.name}</h3></div></div><div class="feature-list">${Object.entries(CAPABILITIES).filter(([k])=>companyCtx.plan.permissions?.[k]).slice(0,7).map(([,label])=>`<div class="feature"><i>✓</i><span>${label}</span></div>`).join('')}</div></aside></section>`);
 }
     function agendaDateKey(value){
   const d=value instanceof Date?value:new Date(value);
@@ -1930,10 +1930,13 @@ async function installAgendaApp(){
     function clients(){
   const p=P();
   const cards=companyData.customers.map(x=>`<div class="card client client-real-card" data-search="${x.name.toLowerCase()} ${(x.phone||'').toLowerCase()}"><div class="round">${x.name.split(' ').map(z=>z[0]).slice(0,2).join('').toUpperCase()}</div><div><b>${x.name}</b><small>${x.phone||'Sem telefone'}${x.email?' · '+x.email:''}</small><div class="inline-actions"><button class="mini-btn whats-mini" onclick="sendServicesToCustomer('${x.id}')">WhatsApp · Enviar serviços</button>${canOperateCompany()?`<button class="mini-btn" onclick="editCompanyCustomer('${x.id}')">Editar</button>`:''}${canAdminCompany()?`<button class="mini-btn danger" onclick="deleteCompanyCustomer('${x.id}')">Excluir</button>`:''}</div></div><div class="client-stat"><b>${companyData.appointments.filter(a=>a.customer_id===x.id).length}</b><small>${p.visit}</small></div></div>`).join('');
-  return shell(`<div class="section-title"><span class="eyebrow">Relacionamento</span><h2>${p.people}</h2><p>Dados pertencentes somente a ${companyCtx.business.name}.</p></div><div class="toolbar"><div class="search-wrap">${I.search}<input class="search" placeholder="Buscar ${p.person.toLowerCase()}" oninput="filterClientCards(this.value)"></div>${canOperateCompany()?`<button class="btn primary" onclick="addCompanyCustomer()">+ Novo ${p.person.toLowerCase()}</button>`:''}</div><div class="list" id="clientCards">${cards||'<div class="empty-state">Nenhum cadastro ainda.</div>'}</div>`);
+  return shell(`<div class="section-title"><span class="eyebrow">Relacionamento</span><h2>${p.people}</h2><p>Dados pertencentes somente a ${displayBusinessName(companyCtx.business.name)}.</p></div><div class="toolbar"><div class="search-wrap">${I.search}<input class="search" placeholder="Buscar ${p.person.toLowerCase()}" oninput="filterClientCards(this.value)"></div>${canOperateCompany()?`<button class="btn primary" onclick="addCompanyCustomer()">+ Novo ${p.person.toLowerCase()}</button>`:''}</div><div class="list" id="clientCards">${cards||'<div class="empty-state">Nenhum cadastro ainda.</div>'}</div>`);
+}
+    function displayBusinessName(name){
+  return String(name||'Agenda Pro').replace(/^\s*by\s+/i,'').trim()||'Agenda Pro';
 }
     function whatsappBusinessName(name){
-  return String(name||'Agenda Pro').replace(/^\s*by\s+/i,'').trim()||'Agenda Pro';
+  return displayBusinessName(name);
 }
     function normalizeWhatsPhone(phone){
   let n=String(phone||'').replace(/\D/g,'');
@@ -1945,7 +1948,7 @@ async function installAgendaApp(){
     function whatsCatalogMessage(customerName=''){
   const active=companyData.services.filter(s=>s.active);
   const hello=customerName?`Olá, ${customerName}! 😊`:'Olá! 😊';
-  const title=`Segue nosso catálogo de ${P().serviceLabel.toLowerCase()} da *${companyCtx.business.name}*:`;
+  const title=`Segue nosso catálogo de ${P().serviceLabel.toLowerCase()} da *${displayBusinessName(companyCtx.business.name)}*:`;
   const items=active.map(s=>`• *${s.name}*${s.show_price_to_client===false?'':' — '+moneyBR(Number(s.price_cents||0)/100)}`).join('\n');
   return `${hello}\n\n${title}\n\n${items}\n\nSe quiser agendar, é só falar com a gente por aqui.`;
 }
@@ -2108,7 +2111,7 @@ async function installAgendaApp(){
         <div class="profile-avatar">${appModalEscape(profileInitials())}</div>
         <h3>${appModalEscape(name)}</h3>
         <span>${appModalEscape(role)}</span>
-        <small>${appModalEscape(companyCtx?.business?.name||'')}</small>
+        <small>${appModalEscape(displayBusinessName(companyCtx?.business?.name||''))}</small>
         <div class="profile-summary-line"><b>E-mail de acesso</b><span>${appModalEscape(email)}</span></div>
         <div class="profile-summary-line"><b>Telefone</b><span>${appModalEscape(phone||'Não informado')}</span></div>
       </aside>
@@ -2499,7 +2502,7 @@ async function installAgendaApp(){
   const x=companyData.customers.find(c=>c.id===id);
   const first=(x?.name||'').trim().split(/\s+/)[0]||'';
   const box=document.getElementById('waQuickMessage');
-  if(box&&!box.value.trim())box.value=`Olá${first?', '+first:''}! 😊\n\nAqui é da ${companyCtx.business.name}. Como podemos ajudar?`;
+  if(box&&!box.value.trim())box.value=`Olá${first?', '+first:''}! 😊\n\nAqui é da ${displayBusinessName(companyCtx.business.name)}. Como podemos ajudar?`;
 }
     async function callWhatsOnboarding(payload){
   if(!sb)throw new Error('Sessão indisponível');
@@ -3097,7 +3100,7 @@ async function installAgendaApp(){
       <div class="app-modal-field full"><label>Nome *</label><input id="modalCustomerName" value="${appModalEscape(x?.name||'')}" placeholder="Nome completo" autofocus></div>
       <div class="app-modal-field"><label>WhatsApp / telefone</label><input id="modalCustomerPhone" value="${appModalEscape(x?.phone||'')}" inputmode="tel" placeholder="(41) 99999-9999"></div>
       <div class="app-modal-field"><label>E-mail</label><input id="modalCustomerEmail" type="email" value="${appModalEscape(x?.email||'')}" placeholder="cliente@email.com"></div>
-      <div class="app-modal-note full">Esses dados ficam vinculados somente a <b>${appModalEscape(companyCtx.business.name)}</b>.</div>
+      <div class="app-modal-note full">Esses dados ficam vinculados somente a <b>${appModalEscape(displayBusinessName(companyCtx.business.name))}</b>.</div>
     </div>`,
     onSubmit:async()=>{
       const name=(document.getElementById('modalCustomerName')?.value||'').trim();
@@ -3885,7 +3888,7 @@ async function installAgendaApp(){
     </div>
     <button type="button" class="booking-price-toggle ${showBookingPrice?'on':''}" onclick="toggleBookingPriceVisibility()" aria-pressed="${showBookingPrice?'true':'false'}"><span></span></button>
   </div>`:'';
-  return `<div class="booking"><div class="bookwrap"><section class="bookintro"><div class="logo">${p.initials}</div><h1>Novo horário</h1><p>Agendamento de ${companyCtx.business.name}.</p><button class="btn secondary" onclick="go('agenda')">← Voltar</button></section><section class="book"><div class="book-title"><div><span class="eyebrow">${p.segment}</span><h2>Cadastrar ${p.appointment.toLowerCase()}</h2><p>Os dados serão salvos somente nesta empresa.</p></div><span class="tag">Novo</span></div>${pricePreference}<div class="formgrid"><div class="field"><div class="field-title-row"><b>${p.person}</b><button type="button" class="inline-add-customer" onclick="addCustomerFromBooking()">+ Cadastrar ${p.person.toLowerCase()}</button></div><select id="fclient"><option value="">Selecione</option>${companyData.customers.map(x=>`<option value="${x.id}">${appModalEscape(x.name)}</option>`).join('')}</select></div><div class="field"><b>${p.service}</b><select id="fservice"><option value="">Selecione</option>${serviceOptions}</select></div><div class="field"><b>${p.professional}</b><input id="fpro" placeholder="Nome do profissional"></div><div class="field"><b>Data</b><input id="fdate" type="date"></div><div class="field"><b>Horário</b><input id="ftime" type="time"></div><div class="field"><b>Status</b><div class="booking-status-fixed"><div><span class="booking-status-dot"></span><strong>Pendente</strong></div><small>Aguardando confirmação do cliente</small></div></div></div><div class="field"><b>Observação administrativa</b><textarea id="fnote" placeholder="${p.notePlaceholder}"></textarea></div><div class="booking-whats-note"><b>WhatsApp automático:</b> ao salvar, o cliente recebe primeiro os dados do agendamento. <b>24 horas antes</b>, recebe um novo lembrete com o link para confirmar o horário.</div><button class="btn primary" style="width:100%;margin-top:12px;min-height:48px" onclick="saveAppointment()">Salvar horário</button></section></div></div>`;
+  return `<div class="booking"><div class="bookwrap"><section class="bookintro"><div class="logo">${p.initials}</div><h1>Novo horário</h1><p>Agendamento de ${displayBusinessName(companyCtx.business.name)}.</p><button class="btn secondary" onclick="go('agenda')">← Voltar</button></section><section class="book"><div class="book-title"><div><span class="eyebrow">${p.segment}</span><h2>Cadastrar ${p.appointment.toLowerCase()}</h2><p>Os dados serão salvos somente nesta empresa.</p></div><span class="tag">Novo</span></div>${pricePreference}<div class="formgrid"><div class="field"><div class="field-title-row"><b>${p.person}</b><button type="button" class="inline-add-customer" onclick="addCustomerFromBooking()">+ Cadastrar ${p.person.toLowerCase()}</button></div><select id="fclient"><option value="">Selecione</option>${companyData.customers.map(x=>`<option value="${x.id}">${appModalEscape(x.name)}</option>`).join('')}</select></div><div class="field"><b>${p.service}</b><select id="fservice"><option value="">Selecione</option>${serviceOptions}</select></div><div class="field"><b>${p.professional}</b><input id="fpro" placeholder="Nome do profissional"></div><div class="field"><b>Data</b><input id="fdate" type="date"></div><div class="field"><b>Horário</b><input id="ftime" type="time"></div><div class="field"><b>Status</b><div class="booking-status-fixed"><div><span class="booking-status-dot"></span><strong>Pendente</strong></div><small>Aguardando confirmação do cliente</small></div></div></div><div class="field"><b>Observação administrativa</b><textarea id="fnote" placeholder="${p.notePlaceholder}"></textarea></div><div class="booking-whats-note"><b>WhatsApp automático:</b> ao salvar, o cliente recebe primeiro os dados do agendamento. <b>24 horas antes</b>, recebe um novo lembrete com o link para confirmar o horário.</div><button class="btn primary" style="width:100%;margin-top:12px;min-height:48px" onclick="saveAppointment()">Salvar horário</button></section></div></div>`;
 }
     function fillPhone(){const n=document.getElementById('fclient').value,c=P().peopleData.find(x=>x[0]===n);document.getElementById('fphone').value=c?c[1]:''}
     async function addCustomerFromBooking(){
@@ -4126,7 +4129,7 @@ async function installAgendaApp(){
 }
 
     function companyBlockedView(){
-  const name=companyCtx?.business?.name||'Sua empresa';
+  const name=displayBusinessName(companyCtx?.business?.name||'Sua empresa');
   return `<div class="blocked-screen"><div class="blocked-card"><div class="logo">AP</div><span class="eyebrow">Acesso suspenso</span><h2>${name}</h2><p>O acesso desta empresa está bloqueado ou a assinatura não está ativa. Entre em contato com o administrador da plataforma para regularizar.</p><div class="blocked-plan"><span>Plano</span><b>${companyCtx?.plan?.name||'—'}</b><span>Status</span><b>${subscriptionLabel()}</b></div><button class="btn primary" onclick="ownerLogout()">Sair</button></div></div>`;
 }
     async function initSupabase(){
@@ -4418,7 +4421,7 @@ async function installAgendaApp(){
   if(signupMode){document.title='Agenda Pro · Criar conta';R.innerHTML=signupView();return}
   if(!appMode){document.title='Agenda Pro · Login';R.innerHTML=loginView();return}
   if(appMode==='owner'){document.title='Agenda Pro · Administração';page='admin';R.innerHTML=admin();return}
-  document.title=(companyCtx?.business?.name||'Agenda Pro')+' · Agenda Pro';
+  document.title=displayBusinessName(companyCtx?.business?.name||'Agenda Pro')+' · Agenda Pro';
   if(companyAccessBlocked()){R.innerHTML=companyBlockedView();return}
   R.innerHTML=page==='book'?booking():({home,agenda,clients,services,cash,wa,team,profile:myProfile}[page]||home)();
 }
@@ -4440,7 +4443,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-whatsappname32',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-displayname33',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
