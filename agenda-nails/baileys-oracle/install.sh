@@ -134,6 +134,10 @@ fi
 $SUDO docker compose build --pull
 $SUDO docker compose up -d
 
+if [ -f "$INSTALL_DIR/agenda-nails/baileys-oracle/enable-auto-update.sh" ]; then
+  $SUDO bash "$INSTALL_DIR/agenda-nails/baileys-oracle/enable-auto-update.sh"
+fi
+
 echo
 echo "Aguardando o serviço..."
 for i in $(seq 1 36); do
