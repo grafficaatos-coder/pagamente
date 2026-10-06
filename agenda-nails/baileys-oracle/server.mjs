@@ -77,6 +77,11 @@ async function fetchOne(pathname){
   const rows=await r.json();
   return rows[0]||null;
 }
+async function fetchMany(pathname){
+  const r=await db(pathname);
+  if(!r.ok)throw new Error("Banco: "+r.status+" "+await r.text());
+  return r.json();
+}
 async function verifyMember(req,businessId){
   const bearer=req.headers.authorization||"";
   if(!bearer.toLowerCase().startsWith("bearer "))throw Object.assign(new Error("Sessão ausente"),{status:401});
@@ -103,6 +108,15 @@ function formatAppointment(iso){
     date:new Intl.DateTimeFormat("pt-BR",{timeZone:"America/Sao_Paulo",day:"2-digit",month:"2-digit",year:"numeric"}).format(d),
     time:new Intl.DateTimeFormat("pt-BR",{timeZone:"America/Sao_Paulo",hour:"2-digit",minute:"2-digit",hour12:false}).format(d)
   };
+}
+function moneyBRFromCents(cents){
+  return new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Number(cents||0)/100);
+}
+function catalogText(business,customer,services){
+  const first=String(customer?.name||"").trim().split(/\s+/)[0]||"Cliente";
+  const items=services.map(s=>"• *"+s.name+"* — "+moneyBRFromCents(s.price_cents)+" · "+s.duration_minutes+" min").join("\n");
+  return "Olá, "+first+"! ✨\n\nSegue nosso catálogo de serviços da *"+business.name+"*:\n\n"+items+
+    "\n\nSe quiser agendar, é só entrar em contato por aqui. 💖";
 }
 function messageText(kind,business,customer,service,appointment){
   const first=String(customer.name||"").trim().split(/\s+/)[0]||"Cliente";
@@ -198,7 +212,8 @@ class WhatsSession{
     this.authDir=path.join(DATA_DIR,"sessions",businessId);
     this.leaseId=process.pid+"-"+Date.now()+"-"+businessId.slice(0,8)+"-"+Math.random().toString(36).slice(2,8);
     this.sock=null;this.state="offline";this.error="";this.phone=null;this.qrSvg=null;
-    this.leaseOwned=false;this.connectBusy=false;this.dispatchBusy=false;this.stopped=false;
+    this.leaseOwned=false;this.connectBusy=false;this.dispatchBusy=false;this.broadcastBusy=false;this.stopped=false;
+    this.catalogBroadcast={running:false,total:0,sent:0,failed:0,started_at:null,finished_at:null};
     this.timers=[];
   }
   async start(){
@@ -331,13 +346,66 @@ class WhatsSession{
       }
     }finally{this.dispatchBusy=false}
   }
+  async startCatalogBroadcast(){
+    if(this.broadcastBusy||this.catalogBroadcast.running){
+      throw Object.assign(new Error("Já existe um envio de catálogo em andamento."),{status:409});
+    }
+    if(this.state!=="online"||!this.sock||!this.leaseOwned||this.stopped){
+      throw Object.assign(new Error("Conecte o WhatsApp por QR Code antes de enviar o catálogo."),{status:409});
+    }
+    const [customers,services,business]=await Promise.all([
+      fetchMany("/rest/v1/agenda_customers?business_id=eq."+encodeURIComponent(this.businessId)+"&select=id,name,phone&order=name.asc"),
+      fetchMany("/rest/v1/agenda_services?business_id=eq."+encodeURIComponent(this.businessId)+"&active=eq.true&select=id,name,duration_minutes,price_cents&order=name.asc"),
+      fetchOne("/rest/v1/agenda_businesses?id=eq."+encodeURIComponent(this.businessId)+"&select=id,name&limit=1")
+    ]);
+    if(!business)throw Object.assign(new Error("Empresa não encontrada."),{status:404});
+    if(!services.length)throw Object.assign(new Error("Cadastre pelo menos um serviço ativo antes de enviar."),{status:400});
+    const targets=customers
+      .map(customer=>({...customer,normalized_phone:normalizePhone(customer.phone)}))
+      .filter(customer=>customer.normalized_phone);
+    if(!targets.length)throw Object.assign(new Error("Nenhum cliente com WhatsApp cadastrado."),{status:400});
+
+    this.broadcastBusy=true;
+    this.catalogBroadcast={
+      running:true,total:targets.length,sent:0,failed:0,
+      started_at:new Date().toISOString(),finished_at:null
+    };
+    void this.runCatalogBroadcast(targets,services,business);
+    return {targets:targets.length};
+  }
+  async runCatalogBroadcast(targets,services,business){
+    try{
+      for(const customer of targets){
+        if(this.stopped||this.state!=="online"||!this.sock||!this.leaseOwned)break;
+        try{
+          const found=await this.sock.onWhatsApp(customer.normalized_phone).catch(()=>[]);
+          const target=Array.isArray(found)?found.find(x=>x?.exists):null;
+          if(!target?.jid){
+            this.catalogBroadcast.failed++;
+            continue;
+          }
+          await this.sock.sendMessage(target.jid,{text:catalogText(business,customer,services)});
+          this.catalogBroadcast.sent++;
+        }catch(e){
+          this.catalogBroadcast.failed++;
+          logger.warn({business:this.businessId,customer:customer.id,error:String(e?.message||e)},"Falha no envio de catálogo");
+        }
+        await sleep(1500);
+      }
+    }finally{
+      this.catalogBroadcast.running=false;
+      this.catalogBroadcast.finished_at=new Date().toISOString();
+      this.broadcastBusy=false;
+    }
+  }
   status(){
     return {
       status:this.state==="online"?"connected":
         this.state==="waiting_qr"?"qr":
         this.state==="error"?"error":"connecting",
       phone:this.phone,qr_svg:this.state==="waiting_qr"?this.qrSvg:null,
-      last_error:this.error||null
+      last_error:this.error||null,
+      catalog_broadcast:this.catalogBroadcast
     };
   }
   async disconnect(){
@@ -383,19 +451,25 @@ const server=http.createServer(async(req,res)=>{
   try{
     const url=new URL(req.url||"/","http://localhost");
     if(url.pathname==="/health")return json(res,200,{ok:true,service:"agenda-pro-baileys-oracle",sessions:sessions.size});
-    const match=url.pathname.match(/^\/v1\/([^/]+)\/(status|connect|disconnect)$/);
+    const match=url.pathname.match(/^\/v1\/([^/]+)\/(status|connect|disconnect|send-catalog)$/);
     if(!match)return json(res,404,{error:"Rota não encontrada"});
     const businessId=decodeURIComponent(match[1]);
     const action=match[2];
     const access=await verifyMember(req,businessId);
-    if((action==="connect"||action==="disconnect")&&!["owner","admin"].includes(access.role)){
-      return json(res,403,{error:"Somente o administrador da empresa pode conectar o WhatsApp"});
+    if(["connect","disconnect","send-catalog"].includes(action)&&!["owner","admin"].includes(access.role)){
+      return json(res,403,{error:"Somente o administrador da empresa pode executar esta ação no WhatsApp"});
     }
     if(action==="connect"){
       const s=await ensureSession(businessId);
       const start=Date.now();
       while(Date.now()-start<12000&&!["online","waiting_qr","error"].includes(s.state))await sleep(250);
       return json(res,200,{ok:true,...s.status()});
+    }
+    if(action==="send-catalog"){
+      const s=sessions.get(businessId);
+      if(!s||s.stopped)throw Object.assign(new Error("Conecte o WhatsApp por QR Code antes de enviar o catálogo."),{status:409});
+      const result=await s.startCatalogBroadcast();
+      return json(res,202,{ok:true,started:true,...result});
     }
     if(action==="status"){
       const s=sessions.get(businessId);
