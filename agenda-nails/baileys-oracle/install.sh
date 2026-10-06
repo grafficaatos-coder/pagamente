@@ -86,7 +86,7 @@ fi
 PUBLIC_HOST="${PUBLIC_IP}.sslip.io"
 
 echo
-echo "Cole agora a SUPABASE SERVICE ROLE KEY."
+echo "Cole agora a chave secreta do Supabase (sb_secret_... ou service_role legado)."
 echo "O valor não aparecerá na tela e será salvo somente nesta VM."
 read -r -s SERVICE_KEY
 echo
