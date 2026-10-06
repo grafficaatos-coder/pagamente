@@ -1342,8 +1342,11 @@
     const AGENDA_WHATSAPP_FUNCTION=SUPABASE_URL+'/functions/v1/agenda-whatsapp';
     const AGENDA_WHATSAPP_ONBOARDING_FUNCTION=SUPABASE_URL+'/functions/v1/agenda-whatsapp-onboarding';
     const AGENDA_CONFIRMATION_FUNCTION=SUPABASE_URL+'/functions/v1/agenda-confirmation';
-    const PUBLIC_CONFIRMATION_TOKEN=(new URLSearchParams(location.search).get('confirm')||'').trim();
-    let publicConfirmationState={loading:!!PUBLIC_CONFIRMATION_TOKEN,requested:false,submitting:false,error:'',appointment:null,message:''};
+    const CONFIRMATION_PARAMS=new URLSearchParams(location.search);
+    const PUBLIC_CONFIRMATION_CODE=(CONFIRMATION_PARAMS.get('c')||'').trim();
+    const PUBLIC_CONFIRMATION_TOKEN=(CONFIRMATION_PARAMS.get('confirm')||'').trim();
+    const PUBLIC_CONFIRMATION_KEY=PUBLIC_CONFIRMATION_CODE||PUBLIC_CONFIRMATION_TOKEN;
+    let publicConfirmationState={loading:!!PUBLIC_CONFIRMATION_KEY,requested:false,submitting:false,error:'',appointment:null,message:''};
     let sb=null,authUser=null,appMode=null,ownerLogged=false,authLoading=true,loginMessage='',passwordRecovery=false,signupMode=false,signupLoading=false,signupMessage='',signupWaitingEmail='',signupPlans=[],signupSettings={public_signup_enabled:true,free_trial_enabled:true,trial_days:7},signupSelectedPlan='profissional',loginPrefillEmail='';
     let companyCtx=null;
     let companyData={customers:[],services:[],appointments:[],financialEntries:[]};
@@ -3128,10 +3131,10 @@ async function installAgendaApp(){
   openCustomerModal(null,true);
 }
 
-    function appointmentWhatsMessage(customer,service,date,time,professional,status,confirmationToken=''){
+    function appointmentWhatsMessage(customer,service,date,time,professional,status,confirmationKey=''){
   const first=(customer?.name||'').trim().split(/\s+/)[0]||'';
   const dateBR=String(date||'').split('-').reverse().join('/');
-  const link=confirmationLink(confirmationToken);
+  const link=confirmationLink(confirmationKey);
   const statusText=link?'Aguardando sua confirmação':status==='pending'?'Pendente':status==='cancelled'?'Cancelado':'Confirmado';
   const lines=[
     `Olá${first?', '+first:''}! 😊`,
@@ -3145,9 +3148,7 @@ async function installAgendaApp(){
     `✅ Status: *${statusText}*`,
     link?'':'',
     link?'*Confirme seu horário pelo link abaixo:*':null,
-    link?`✅ ${link}`:null,
-    '',
-    'Se precisar alterar o horário, fale com a gente por aqui.'
+    link?`✅ ${link}`:null
   ].filter(v=>v!==null&&v!==undefined);
   return lines.join('\n');
 }
@@ -3182,7 +3183,7 @@ async function installAgendaApp(){
     starts_at,
     status,
     notes:notes||null
-  }).select('id,confirmation_token').single();
+  }).select('id,confirmation_code,confirmation_token').single();
 
   if(error){
     console.error(error);
@@ -3199,13 +3200,13 @@ async function installAgendaApp(){
     }catch(ex){
       console.error(ex);
       toast('Horário salvo. O envio automático falhou; abrindo WhatsApp manual.');
-      const msg=appointmentWhatsMessage(customer,service,date,time,professional_name,status,created?.confirmation_token);
+      const msg=appointmentWhatsMessage(customer,service,date,time,professional_name,status,created?.confirmation_code||created?.confirmation_token);
       const url='https://wa.me/'+phone+'?text='+encodeURIComponent(msg);
       window.open(url,'_blank','noopener,noreferrer');
       await markQueueByAppointment(created.id,'confirmation','opened');
     }
   }else if(phone&&!baileysConnected){
-    const msg=appointmentWhatsMessage(customer,service,date,time,professional_name,status,created?.confirmation_token);
+    const msg=appointmentWhatsMessage(customer,service,date,time,professional_name,status,created?.confirmation_code||created?.confirmation_token);
     const url='https://wa.me/'+phone+'?text='+encodeURIComponent(msg);
     if(whatsWindow&&!whatsWindow.closed)whatsWindow.location.href=url;
     else window.open(url,'_blank','noopener,noreferrer');
@@ -3220,9 +3221,10 @@ async function installAgendaApp(){
   else if(baileysConnected)toast('Horário salvo. A confirmação entrou na fila automática do WhatsApp.');
   else if(!autoConnected)toast('Horário salvo. Lembretes futuros já foram preparados automaticamente.');
 }
-    function confirmationLink(token){
-  if(!token)return '';
-  return location.origin+location.pathname+'?confirm='+encodeURIComponent(token);
+    function confirmationLink(key){
+  if(!key)return '';
+  const compact=String(key).length<=20;
+  return location.origin+location.pathname+(compact?'?c=':'?confirm=')+encodeURIComponent(key);
 }
     function publicConfirmationStatusText(a){
   if(a?.confirmed_by_customer_at)return 'Confirmado pelo cliente';
@@ -3267,12 +3269,13 @@ async function installAgendaApp(){
   </div></div>`;
 }
     async function loadPublicConfirmation(){
-  if(!PUBLIC_CONFIRMATION_TOKEN||publicConfirmationState.requested)return;
+  if(!PUBLIC_CONFIRMATION_KEY||publicConfirmationState.requested)return;
   publicConfirmationState.requested=true;
   publicConfirmationState.loading=true;
   render();
   try{
-    const r=await fetch(AGENDA_CONFIRMATION_FUNCTION+'?token='+encodeURIComponent(PUBLIC_CONFIRMATION_TOKEN),{cache:'no-store'});
+    const query=PUBLIC_CONFIRMATION_CODE?'?c='+encodeURIComponent(PUBLIC_CONFIRMATION_CODE):'?token='+encodeURIComponent(PUBLIC_CONFIRMATION_TOKEN);
+    const r=await fetch(AGENDA_CONFIRMATION_FUNCTION+query,{cache:'no-store'});
     const out=await r.json().catch(()=>({}));
     if(!r.ok)throw new Error(out.error||'Não foi possível carregar o horário');
     publicConfirmationState.appointment=out.appointment||null;
@@ -3286,7 +3289,7 @@ async function installAgendaApp(){
   }
 }
     async function submitPublicConfirmation(action){
-  if(!PUBLIC_CONFIRMATION_TOKEN||publicConfirmationState.submitting)return;
+  if(!PUBLIC_CONFIRMATION_KEY||publicConfirmationState.submitting)return;
   publicConfirmationState.submitting=true;
   publicConfirmationState.message=action==='confirm'?'Confirmando seu horário...':'Registrando sua resposta...';
   render();
@@ -3294,7 +3297,7 @@ async function installAgendaApp(){
     const r=await fetch(AGENDA_CONFIRMATION_FUNCTION,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({token:PUBLIC_CONFIRMATION_TOKEN,action})
+      body:JSON.stringify({code:PUBLIC_CONFIRMATION_CODE||undefined,token:PUBLIC_CONFIRMATION_TOKEN||undefined,action})
     });
     const out=await r.json().catch(()=>({}));
     if(!r.ok)throw new Error(out.error||'Não foi possível enviar sua resposta');
@@ -3317,7 +3320,7 @@ async function installAgendaApp(){
   const d=new Date(a.starts_at);
   const localDate=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
   const time=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-  const msg=appointmentWhatsMessage(customer,service,localDate,time,a.professional_name||'',a.status,a.confirmation_token);
+  const msg=appointmentWhatsMessage(customer,service,localDate,time,a.professional_name||'',a.status,a.confirmation_code||a.confirmation_token);
   window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg),'_blank','noopener,noreferrer');
   toast('Mensagem de confirmação preparada no WhatsApp');
 }
@@ -3593,7 +3596,7 @@ async function installAgendaApp(){
 }
     function toast(x){const e=document.getElementById('toast');e.textContent=x;e.hidden=false;clearTimeout(window.__toastTimer);window.__toastTimer=setTimeout(()=>e.hidden=true,1900)}
     function render(){
-  if(PUBLIC_CONFIRMATION_TOKEN){
+  if(PUBLIC_CONFIRMATION_KEY){
     document.title='Confirmar horário · Agenda Pro';
     R.innerHTML=publicConfirmationView();
     return;
@@ -3625,13 +3628,13 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-confirm13',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-shortlink14',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
     }
     render();
-    if(PUBLIC_CONFIRMATION_TOKEN)loadPublicConfirmation();
+    if(PUBLIC_CONFIRMATION_KEY)loadPublicConfirmation();
     else initSupabase();
   </script>
 </body>
