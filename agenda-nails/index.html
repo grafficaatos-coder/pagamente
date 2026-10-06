@@ -1431,6 +1431,8 @@
     const PUBLIC_CONFIRMATION_CODE=(CONFIRMATION_PARAMS.get('c')||'').trim();
     const PUBLIC_CONFIRMATION_TOKEN=(CONFIRMATION_PARAMS.get('confirm')||'').trim();
     const PUBLIC_CONFIRMATION_KEY=PUBLIC_CONFIRMATION_CODE||PUBLIC_CONFIRMATION_TOKEN;
+    const PUBLIC_SIGNUP_REQUESTED=['1','true','sim'].includes((CONFIRMATION_PARAMS.get('cadastro')||'').toLowerCase());
+    const PUBLIC_SIGNUP_PLAN=(CONFIRMATION_PARAMS.get('plano')||'').trim();
     let publicConfirmationState={loading:!!PUBLIC_CONFIRMATION_KEY,requested:false,submitting:false,error:'',appointment:null,message:'',autoClosing:false};
     let sb=null,authUser=null,appMode=null,ownerLogged=false,authLoading=true,loginMessage='',passwordRecovery=false,signupMode=false,signupLoading=false,signupMessage='',signupWaitingEmail='',signupPlans=[],signupSettings={public_signup_enabled:true,free_trial_enabled:true,trial_days:7},signupSelectedPlan='profissional',loginPrefillEmail='';
     let companyCtx=null;
@@ -3708,7 +3710,14 @@ async function installAgendaApp(){
         const {data}=await sb.auth.getSession();
         authLoading=false;
         if(passwordRecovery){render();return}
-        if(data?.session?.user)await detectAgendaAccess(data.session.user);else render();
+        if(data?.session?.user){
+          await detectAgendaAccess(data.session.user);
+        }else if(PUBLIC_SIGNUP_REQUESTED){
+          if(PUBLIC_SIGNUP_PLAN)signupSelectedPlan=PUBLIC_SIGNUP_PLAN;
+          await openSignup();
+        }else{
+          render();
+        }
       }catch(err){
         console.error(err);authLoading=false;loginMessage='Não foi possível conectar ao login seguro.';render();
       }
@@ -3997,7 +4006,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-changeplan23',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-marketing24',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
