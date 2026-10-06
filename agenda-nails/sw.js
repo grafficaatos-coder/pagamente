@@ -1,4 +1,4 @@
-const CACHE_NAME='agenda-pro-shell-v29-mobile-menu-safe';
+const CACHE_NAME='agenda-pro-shell-v30-whatsapp-direct';
 const SHELL=['/','/manifest.webmanifest','/icons/app-icon.svg','/icons/app-icon-maskable.svg'];
 
 self.addEventListener('install',event=>{
