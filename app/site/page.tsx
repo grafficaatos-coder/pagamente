@@ -19,6 +19,7 @@ import {
   Zap
 } from 'lucide-react';
 import styles from './page.module.css';
+import AgendaRecoveryRedirect from '../../components/AgendaRecoveryRedirect';
 
 const features = [
   {
@@ -63,6 +64,7 @@ const steps = [
 export default function SitePage() {
   return (
     <main className={styles.page}>
+      <AgendaRecoveryRedirect />
       <header className={styles.header}>
         <div className={styles.headerInner}>
           <Link href="/" className={styles.brand} aria-label="JP Sistema de Cobrança">
