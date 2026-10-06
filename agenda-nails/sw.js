@@ -1,4 +1,4 @@
-const CACHE_NAME='agenda-pro-shell-v21-company-team';
+const CACHE_NAME='agenda-pro-shell-v22-plan-create';
 const SHELL=['/','/manifest.webmanifest','/icons/app-icon.svg','/icons/app-icon-maskable.svg'];
 
 self.addEventListener('install',event=>{
