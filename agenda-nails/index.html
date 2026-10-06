@@ -948,6 +948,93 @@
       *,*:before,*:after{scroll-behavior:auto!important;transition:none!important}
     }
 
+  
+    /* Modais profissionais v1 */
+    body.app-modal-open{overflow:hidden}
+    .app-modal-layer{position:fixed;inset:0;z-index:200;display:grid;place-items:center;padding:22px}
+    .app-modal-backdrop{position:absolute;inset:0;background:rgba(30,21,26,.48);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);animation:modalFade .16s ease}
+    .app-modal{
+      position:relative;z-index:1;width:min(100%,640px);max-height:min(88vh,760px);overflow:auto;
+      background:#fff;border:1px solid rgba(94,67,79,.12);border-radius:20px;
+      box-shadow:0 28px 80px rgba(39,25,32,.22);animation:modalUp .18s ease
+    }
+    .app-modal.wide{width:min(100%,760px)}
+    .app-modal-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px;padding:22px 24px 16px;border-bottom:1px solid var(--line)}
+    .app-modal-title h2{margin:3px 0 5px;font-size:21px;line-height:1.15;letter-spacing:-.035em}
+    .app-modal-title p{margin:0;color:var(--muted);font-size:11px;line-height:1.5}
+    .app-modal-close{
+      width:36px;height:36px;flex:0 0 auto;border:1px solid var(--line);border-radius:10px;background:#fff;
+      color:#766a70;font-size:21px;line-height:1;display:grid;place-items:center
+    }
+    .app-modal-close:hover{background:#f7f4f5;color:var(--wine)}
+    .app-modal-body{padding:20px 24px}
+    .app-modal-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .app-modal-grid .full{grid-column:1/-1}
+    .app-modal-field{display:grid;gap:7px;min-width:0}
+    .app-modal-field label{font-size:10px;font-weight:850;color:#4f464b}
+    .app-modal-field input,.app-modal-field select,.app-modal-field textarea{
+      width:100%;min-width:0;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--ink);
+      padding:12px 13px;outline:none;transition:.15s ease
+    }
+    .app-modal-field textarea{min-height:92px;resize:vertical}
+    .app-modal-field input:focus,.app-modal-field select:focus,.app-modal-field textarea:focus{
+      border-color:#a47b8e;box-shadow:0 0 0 3px rgba(97,54,74,.08)
+    }
+    .app-modal-hint{color:var(--muted);font-size:9px;line-height:1.45}
+    .app-modal-toggles{display:grid;gap:9px;margin-top:2px}
+    .app-toggle-row{
+      display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 13px;
+      border:1px solid var(--line);border-radius:12px;background:#faf9f9
+    }
+    .app-toggle-copy b,.app-toggle-copy small{display:block}
+    .app-toggle-copy b{font-size:11px}
+    .app-toggle-copy small{margin-top:3px;color:var(--muted);font-size:9px;line-height:1.4}
+    .app-switch{position:relative;width:44px;height:25px;flex:0 0 auto}
+    .app-switch input{position:absolute;opacity:0;pointer-events:none}
+    .app-switch span{position:absolute;inset:0;border-radius:999px;background:#d7d0d3;transition:.18s}
+    .app-switch span:after{content:"";position:absolute;width:19px;height:19px;left:3px;top:3px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.18);transition:.18s}
+    .app-switch input:checked+span{background:var(--wine)}
+    .app-switch input:checked+span:after{transform:translateX(19px)}
+    .app-modal-actions{display:flex;justify-content:flex-end;gap:9px;padding:15px 24px 20px;border-top:1px solid var(--line)}
+    .app-modal-actions .btn{min-width:112px}
+    .app-modal-actions .btn[disabled]{opacity:.62;cursor:wait}
+    .app-modal-note{padding:11px 13px;border:1px solid #eadfe3;background:#faf7f8;border-radius:11px;color:#75676e;font-size:9px;line-height:1.5}
+    @keyframes modalFade{from{opacity:0}to{opacity:1}}
+    @keyframes modalUp{from{opacity:0;transform:translateY(8px) scale(.99)}to{opacity:1;transform:none}}
+    @media(max-width:640px){
+      .app-modal-layer{padding:10px;align-items:end}
+      .app-modal{width:100%;max-height:92dvh;border-radius:20px 20px 10px 10px}
+      .app-modal.wide{width:100%}
+      .app-modal-head{padding:18px 17px 14px}
+      .app-modal-body{padding:16px 17px}
+      .app-modal-grid{grid-template-columns:1fr;gap:12px}
+      .app-modal-grid .full{grid-column:auto}
+      .app-modal-actions{padding:13px 17px calc(14px + env(safe-area-inset-bottom));position:sticky;bottom:0;background:#fff}
+      .app-modal-actions .btn{flex:1;min-width:0}
+    }
+
+  
+    /* Ações profissionais v2 */
+    .service-add,.toolbar .primary{
+      min-height:44px;
+      padding:10px 16px;
+      border-radius:11px;
+      font-size:11px;
+      letter-spacing:-.01em;
+      box-shadow:0 7px 16px rgba(97,54,74,.14)
+    }
+    .service-add:before{content:"＋";font-size:15px;line-height:0;margin-right:5px}
+    .service-card-actions{border-top:1px solid #eee9eb;padding-top:11px}
+    .service-card-actions button{min-height:34px}
+    .service-card-actions button:last-child{color:#9b4545;background:#fffafa;border-color:#efdcdc}
+    .inline-add-customer{box-shadow:none;border-radius:9px}
+    @media(max-width:720px){
+      .service-top-actions{display:grid;grid-template-columns:1fr}
+      .service-top-actions .btn{width:100%;min-width:0}
+      .toolbar{align-items:stretch}
+      .toolbar .primary{min-width:116px}
+    }
+
   </style>
 </head>
 <body>
@@ -2164,26 +2251,200 @@ async function installAgendaApp(){
     [hasFeature('finance')?'money':'chart',hasFeature('finance')?'A receber':'Plano',hasFeature('finance')?moneyBR(receivableRevenue):companyCtx.plan.name,hasFeature('finance')?'agendamentos confirmados':subscriptionLabel(),false,hasFeature('finance')?'receivable':'home']
   ];
 }
-    async function changeMyPassword(){
-      if(!sb||!authUser)return;
-      const p=prompt('Digite a nova senha (mínimo 8 caracteres):');if(p===null)return;
-      if(p.length<8)return toast('A senha precisa ter pelo menos 8 caracteres');
-      const confirmPass=prompt('Digite a nova senha novamente:');if(confirmPass!==p)return toast('As senhas não conferem');
-      const {error}=await sb.auth.updateUser({password:p});
-      if(error){console.error(error);return toast('Não foi possível alterar a senha')}
-      toast('Senha alterada com sucesso');
+    function appModalEscape(v){
+  return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]));
+}
+    let appModalSubmitHandler=null;
+    let appModalKeyHandler=null;
+    function closeAppModal(){
+  const layer=document.getElementById('appModalLayer');
+  if(layer)layer.remove();
+  document.body.classList.remove('app-modal-open');
+  if(appModalKeyHandler){document.removeEventListener('keydown',appModalKeyHandler);appModalKeyHandler=null}
+  appModalSubmitHandler=null;
+}
+    function openAppModal({title,subtitle='',content='',submitLabel='Salvar',size='',onSubmit}){
+  closeAppModal();
+  const layer=document.createElement('div');
+  layer.id='appModalLayer';
+  layer.className='app-modal-layer';
+  layer.innerHTML=`<div class="app-modal-backdrop" data-modal-close></div><section class="app-modal ${size==='wide'?'wide':''}" role="dialog" aria-modal="true" aria-labelledby="appModalTitle"><form id="appModalForm"><header class="app-modal-head"><div class="app-modal-title"><span class="eyebrow">Agenda Pro</span><h2 id="appModalTitle">${appModalEscape(title)}</h2>${subtitle?`<p>${appModalEscape(subtitle)}</p>`:''}</div><button class="app-modal-close" type="button" data-modal-close aria-label="Fechar">×</button></header><div class="app-modal-body">${content}</div><footer class="app-modal-actions"><button class="btn secondary" type="button" data-modal-close>Cancelar</button><button class="btn primary" id="appModalSubmit" type="submit">${appModalEscape(submitLabel)}</button></footer></form></section>`;
+  document.body.appendChild(layer);
+  document.body.classList.add('app-modal-open');
+  layer.querySelectorAll('[data-modal-close]').forEach(el=>el.addEventListener('click',closeAppModal));
+  appModalSubmitHandler=onSubmit;
+  const form=layer.querySelector('#appModalForm');
+  form.addEventListener('submit',async ev=>{
+    ev.preventDefault();
+    const btn=document.getElementById('appModalSubmit');
+    if(btn){btn.disabled=true;btn.dataset.original=btn.textContent;btn.textContent='Salvando...'}
+    try{if(appModalSubmitHandler)await appModalSubmitHandler()}
+    catch(err){console.error(err);toast(err?.message||'Não foi possível concluir a ação')}
+    finally{
+      const current=document.getElementById('appModalSubmit');
+      if(current){current.disabled=false;current.textContent=current.dataset.original||submitLabel}
     }
+  });
+  appModalKeyHandler=ev=>{if(ev.key==='Escape')closeAppModal()};
+  document.addEventListener('keydown',appModalKeyHandler);
+  setTimeout(()=>layer.querySelector('[autofocus],input,select,textarea')?.focus(),40);
+}
+    function modalMoneyValue(cents){
+  return (Number(cents||0)/100).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+}
+    function parseModalMoney(value){
+  const clean=String(value||'').trim().replace(/\s/g,'').replace(/R\$/gi,'').replace(/\./g,'').replace(',','.');
+  return Number(clean||0);
+}
+    function openCustomerModal(id=null,selectAfter=false){
+  if(!hasFeature('clients'))return toast('Cadastro de clientes não incluído no plano');
+  if(!canOperateCompany())return toast('Seu perfil não permite cadastrar clientes');
+  const p=P(),x=id?companyData.customers.find(y=>y.id===id):null,isEdit=!!x;
+  openAppModal({
+    title:isEdit?'Editar '+p.person.toLowerCase():'Adicionar '+p.person.toLowerCase(),
+    subtitle:isEdit?'Atualize os dados do cadastro.':'Cadastre os dados principais em uma única tela.',
+    submitLabel:isEdit?'Salvar alterações':'Salvar '+p.person.toLowerCase(),
+    content:`<div class="app-modal-grid">
+      <div class="app-modal-field full"><label>Nome *</label><input id="modalCustomerName" value="${appModalEscape(x?.name||'')}" placeholder="Nome completo" autofocus></div>
+      <div class="app-modal-field"><label>WhatsApp / telefone</label><input id="modalCustomerPhone" value="${appModalEscape(x?.phone||'')}" inputmode="tel" placeholder="(41) 99999-9999"></div>
+      <div class="app-modal-field"><label>E-mail</label><input id="modalCustomerEmail" type="email" value="${appModalEscape(x?.email||'')}" placeholder="cliente@email.com"></div>
+      <div class="app-modal-note full">Esses dados ficam vinculados somente a <b>${appModalEscape(companyCtx.business.name)}</b>.</div>
+    </div>`,
+    onSubmit:async()=>{
+      const name=(document.getElementById('modalCustomerName')?.value||'').trim();
+      const phone=(document.getElementById('modalCustomerPhone')?.value||'').trim();
+      const email=(document.getElementById('modalCustomerEmail')?.value||'').trim();
+      if(!name){toast('Informe o nome');document.getElementById('modalCustomerName')?.focus();return}
+      if(email&&!/^\S+@\S+\.\S+$/.test(email)){toast('Digite um e-mail válido');document.getElementById('modalCustomerEmail')?.focus();return}
+      if(isEdit){
+        const {error}=await sb.from('agenda_customers').update({name,phone:phone||null,email:email||null,updated_at:new Date().toISOString()}).eq('id',id).eq('business_id',companyCtx.business.id);
+        if(error){console.error(error);toast('Não foi possível editar');return}
+        closeAppModal();await loadCompanyData();render();toast('Cadastro atualizado');return;
+      }
+      const {data,error}=await sb.from('agenda_customers').insert({business_id:companyCtx.business.id,name,phone:phone||null,email:email||null}).select('*').single();
+      if(error){console.error(error);toast('Não foi possível cadastrar');return}
+      closeAppModal();
+      if(selectAfter){
+        companyData.customers.push(data);
+        companyData.customers.sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
+        const select=document.getElementById('fclient');
+        if(select){
+          const option=document.createElement('option');
+          option.value=data.id;option.textContent=data.name;option.selected=true;
+          select.appendChild(option);select.value=data.id;
+        }
+        toast(p.person+' cadastrado e selecionado');
+      }else{
+        await loadCompanyData();render();toast(p.person+' cadastrado');
+      }
+    }
+  });
+}
+    function openServiceModal(id=null){
+  if(!hasFeature('agenda'))return toast('Serviços não incluídos no plano');
+  if(!canAdminCompany())return toast('Somente administrador pode cadastrar ou editar serviços');
+  const p=P(),x=id?companyData.services.find(y=>y.id===id):null,isEdit=!!x;
+  const duration=Number(x?.duration_minutes||60);
+  const price=modalMoneyValue(x?.price_cents||0);
+  const showPrice=x?.show_price_to_client!==false;
+  const active=x?.active!==false;
+  openAppModal({
+    title:isEdit?'Editar '+p.service.toLowerCase():'Adicionar '+p.service.toLowerCase(),
+    subtitle:isEdit?'Atualize as informações do item.':'Cadastre um novo item para esta empresa.',
+    submitLabel:isEdit?'Salvar alterações':'Salvar '+p.service.toLowerCase(),
+    content:`<div class="app-modal-grid">
+      <div class="app-modal-field full"><label>Nome do ${appModalEscape(p.service.toLowerCase())} *</label><input id="modalServiceName" value="${appModalEscape(x?.name||'')}" placeholder="Ex.: Corte feminino" autofocus></div>
+      <div class="app-modal-field"><label>Duração *</label><select id="modalServiceDuration">
+        ${[15,30,45,60,75,90,120,150,180].map(v=>`<option value="${v}" ${v===duration?'selected':''}>${v} min</option>`).join('')}
+      </select></div>
+      <div class="app-modal-field"><label>Valor</label><input id="modalServicePrice" inputmode="decimal" value="${appModalEscape(price)}" placeholder="0,00"></div>
+      <div class="app-modal-toggles full">
+        <div class="app-toggle-row"><div class="app-toggle-copy"><b>Mostrar valor para o cliente</b><small>Exibe o preço no catálogo e nas mensagens de WhatsApp.</small></div><label class="app-switch"><input id="modalServiceShowPrice" type="checkbox" ${showPrice?'checked':''}><span></span></label></div>
+        <div class="app-toggle-row"><div class="app-toggle-copy"><b>Ativo</b><small>Disponível para novos agendamentos.</small></div><label class="app-switch"><input id="modalServiceActive" type="checkbox" ${active?'checked':''}><span></span></label></div>
+      </div>
+    </div>`,
+    onSubmit:async()=>{
+      const name=(document.getElementById('modalServiceName')?.value||'').trim();
+      const duration=Number(document.getElementById('modalServiceDuration')?.value||0);
+      const price=parseModalMoney(document.getElementById('modalServicePrice')?.value||'0');
+      const show_price_to_client=!!document.getElementById('modalServiceShowPrice')?.checked;
+      const active=!!document.getElementById('modalServiceActive')?.checked;
+      if(!name){toast('Informe o nome');document.getElementById('modalServiceName')?.focus();return}
+      if(!Number.isFinite(duration)||duration<=0){toast('Duração inválida');return}
+      if(!Number.isFinite(price)||price<0){toast('Valor inválido');document.getElementById('modalServicePrice')?.focus();return}
+      const payload={name,duration_minutes:Math.round(duration),price_cents:Math.round(price*100),show_price_to_client,active,updated_at:new Date().toISOString()};
+      const query=isEdit?sb.from('agenda_services').update(payload).eq('id',id).eq('business_id',companyCtx.business.id):sb.from('agenda_services').insert({...payload,business_id:companyCtx.business.id});
+      const {error}=await query;
+      if(error){console.error(error);toast(isEdit?'Não foi possível editar':'Não foi possível cadastrar');return}
+      closeAppModal();await loadCompanyData();render();toast(isEdit?p.service+' atualizado':p.service+' cadastrado');
+    }
+  });
+}
+    function openAppointmentEditModal(id){
+  if(!canOperateCompany())return toast('Seu perfil não permite editar');
+  const a=companyData.appointments.find(x=>x.id===id);if(!a)return;
+  const d=new Date(a.starts_at);
+  const localDate=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+  const localTime=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  const p=P();
+  openAppModal({
+    title:'Editar agendamento',
+    subtitle:'Atualize horário, cliente, serviço, profissional e status.',
+    submitLabel:'Salvar alterações',
+    size:'wide',
+    content:`<div class="app-modal-grid">
+      <div class="app-modal-field"><label>${appModalEscape(p.person)} *</label><select id="modalAppointmentCustomer">${companyData.customers.map(x=>`<option value="${x.id}" ${x.id===a.customer_id?'selected':''}>${appModalEscape(x.name)}</option>`).join('')}</select></div>
+      <div class="app-modal-field"><label>${appModalEscape(p.service)} *</label><select id="modalAppointmentService">${companyData.services.filter(x=>x.active||x.id===a.service_id).map(x=>`<option value="${x.id}" ${x.id===a.service_id?'selected':''}>${appModalEscape(x.name)}</option>`).join('')}</select></div>
+      <div class="app-modal-field"><label>Data *</label><input id="modalAppointmentDate" type="date" value="${localDate}"></div>
+      <div class="app-modal-field"><label>Horário *</label><input id="modalAppointmentTime" type="time" value="${appModalEscape(localTime)}"></div>
+      <div class="app-modal-field"><label>${appModalEscape(p.professional)}</label><input id="modalAppointmentProfessional" value="${appModalEscape(a.professional_name||'')}" placeholder="Nome do profissional"></div>
+      <div class="app-modal-field"><label>Status</label><select id="modalAppointmentStatus">
+        ${[['pending','Pendente'],['confirmed','Confirmado'],['completed','Concluído'],['cancelled','Cancelado'],['no_show','Faltou']].map(([v,l])=>`<option value="${v}" ${v===a.status?'selected':''}>${l}</option>`).join('')}
+      </select></div>
+      <div class="app-modal-field full"><label>Observação administrativa</label><textarea id="modalAppointmentNotes" placeholder="Opcional">${appModalEscape(a.notes||'')}</textarea></div>
+    </div>`,
+    onSubmit:async()=>{
+      const customer_id=document.getElementById('modalAppointmentCustomer')?.value;
+      const service_id=document.getElementById('modalAppointmentService')?.value;
+      const date=document.getElementById('modalAppointmentDate')?.value;
+      const time=document.getElementById('modalAppointmentTime')?.value;
+      const professional_name=(document.getElementById('modalAppointmentProfessional')?.value||'').trim();
+      const status=document.getElementById('modalAppointmentStatus')?.value||'confirmed';
+      const notes=(document.getElementById('modalAppointmentNotes')?.value||'').trim();
+      if(!customer_id||!service_id||!date||!time){toast('Preencha cliente, serviço, data e horário');return}
+      const starts=new Date(date+'T'+time+':00');if(Number.isNaN(starts.getTime())){toast('Data ou horário inválido');return}
+      const {error}=await sb.from('agenda_appointments').update({customer_id,service_id,starts_at:starts.toISOString(),professional_name:professional_name||null,status,notes:notes||null,updated_at:new Date().toISOString()}).eq('id',id).eq('business_id',companyCtx.business.id);
+      if(error){console.error(error);toast('Não foi possível editar');return}
+      closeAppModal();await loadCompanyData();render();toast('Agendamento atualizado');
+    }
+  });
+}
+
+    async function changeMyPassword(){
+  if(!sb||!authUser)return;
+  openAppModal({
+    title:'Alterar senha',
+    subtitle:'Crie uma nova senha com pelo menos 8 caracteres.',
+    submitLabel:'Salvar nova senha',
+    content:`<div class="app-modal-grid">
+      <div class="app-modal-field full"><label>Nova senha *</label><input id="modalPassword1" type="password" autocomplete="new-password" placeholder="Mínimo de 8 caracteres" autofocus></div>
+      <div class="app-modal-field full"><label>Confirmar nova senha *</label><input id="modalPassword2" type="password" autocomplete="new-password" placeholder="Digite novamente"></div>
+    </div>`,
+    onSubmit:async()=>{
+      const p=document.getElementById('modalPassword1')?.value||'';
+      const p2=document.getElementById('modalPassword2')?.value||'';
+      if(p.length<8){toast('A senha precisa ter pelo menos 8 caracteres');return}
+      if(p!==p2){toast('As senhas não conferem');return}
+      const {error}=await sb.auth.updateUser({password:p});
+      if(error){console.error(error);toast('Não foi possível alterar a senha');return}
+      closeAppModal();toast('Senha alterada com sucesso');
+    }
+  });
+}
 
     async function editCompanyCustomer(id){
-      if(!canOperateCompany())return toast('Seu perfil não permite editar');
-      const x=companyData.customers.find(y=>y.id===id);if(!x)return;
-      const name=prompt('Nome:',x.name);if(name===null||!name.trim())return;
-      const phone=prompt('Telefone / WhatsApp:',x.phone||'');if(phone===null)return;
-      const email=prompt('E-mail:',x.email||'');if(email===null)return;
-      const {error}=await sb.from('agenda_customers').update({name:name.trim(),phone:phone.trim()||null,email:email.trim()||null,updated_at:new Date().toISOString()}).eq('id',id).eq('business_id',companyCtx.business.id);
-      if(error){console.error(error);return toast('Não foi possível editar')}
-      await loadCompanyData();render();toast('Cadastro atualizado');
-    }
+  openCustomerModal(id,false);
+}
 
     async function deleteCompanyCustomer(id){
       if(!canAdminCompany())return toast('Somente administrador pode excluir');
@@ -2195,19 +2456,8 @@ async function installAgendaApp(){
     }
 
     async function editCompanyService(id){
-      if(!canAdminCompany())return toast('Somente administrador pode editar serviços');
-      const x=companyData.services.find(y=>y.id===id);if(!x)return;
-      const name=prompt('Nome do serviço/procedimento/consulta:',x.name);if(name===null||!name.trim())return;
-      const duration=Number(prompt('Duração em minutos:',String(x.duration_minutes)));if(!Number.isFinite(duration)||duration<=0)return toast('Duração inválida');
-      const priceText=prompt('Valor interno para o financeiro (em reais):',String(Number(x.price_cents||0)/100).replace('.',','));if(priceText===null)return;
-      const price=Number(String(priceText).replace('.','').replace(',','.'));if(!Number.isFinite(price)||price<0)return toast('Valor inválido');
-      const showChoice=prompt('Mostrar este valor ao cliente nas mensagens/catálogo do WhatsApp?\n\n1 - Sim\n2 - Não',x.show_price_to_client===false?'2':'1');
-      if(showChoice===null)return;
-      const showPrice=String(showChoice).trim()!=='2';
-      const {error}=await sb.from('agenda_services').update({name:name.trim(),duration_minutes:Math.round(duration),price_cents:Math.round(price*100),show_price_to_client:showPrice,updated_at:new Date().toISOString()}).eq('id',id).eq('business_id',companyCtx.business.id);
-      if(error){console.error(error);return toast('Não foi possível editar')}
-      await loadCompanyData();render();toast('Serviço atualizado');
-    }
+  openServiceModal(id);
+}
 
     async function toggleCompanyService(id){
       if(!canAdminCompany())return;
@@ -2235,19 +2485,8 @@ async function installAgendaApp(){
     }
 
     async function editAppointment(id){
-      if(!canOperateCompany())return toast('Seu perfil não permite editar');
-      const a=companyData.appointments.find(x=>x.id===id);if(!a)return;
-      const d=new Date(a.starts_at);
-      const localDate=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
-      const localTime=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-      const date=prompt('Data (AAAA-MM-DD):',localDate);if(date===null)return;
-      const time=prompt('Horário (HH:MM):',localTime);if(time===null)return;
-      const professional=prompt('Profissional:',a.professional_name||'');if(professional===null)return;
-      const starts=new Date(date+'T'+time+':00');if(Number.isNaN(starts.getTime()))return toast('Data ou horário inválido');
-      const {error}=await sb.from('agenda_appointments').update({starts_at:starts.toISOString(),professional_name:professional.trim()||null,updated_at:new Date().toISOString()}).eq('id',id).eq('business_id',companyCtx.business.id);
-      if(error){console.error(error);return toast('Não foi possível editar')}
-      await loadCompanyData();render();toast('Agendamento atualizado');
-    }
+  openAppointmentEditModal(id);
+}
 
     async function deleteAppointment(id){
       if(!canAdminCompany())return toast('Somente administrador pode excluir');
@@ -2258,31 +2497,13 @@ async function installAgendaApp(){
     }
 
     async function addCompanyCustomer(){
-  if(!hasFeature('clients'))return toast('Cadastro de clientes não incluído no plano');
-  const name=prompt('Nome do '+P().person.toLowerCase()+':');if(!name)return;
-  const phone=prompt('WhatsApp / telefone:','')||'';
-  const email=prompt('E-mail (opcional):','')||'';
-  const {error}=await sb.from('agenda_customers').insert({
-    business_id:companyCtx.business.id,name:name.trim(),phone:phone.trim()||null,email:email.trim()||null
-  });
-  if(error){console.error(error);return toast('Não foi possível cadastrar')}
-  await loadCompanyData();render();toast(P().person+' cadastrado');
+  openCustomerModal(null,false);
 }
+
     async function addCompanyService(){
-  if(!hasFeature('agenda'))return toast('Serviços não incluídos no plano');
-  const name=prompt('Nome do '+P().service.toLowerCase()+':');if(!name)return;
-  const duration=Number(prompt('Duração em minutos:','60'));if(!Number.isFinite(duration)||duration<=0)return toast('Duração inválida');
-  const value=String(prompt('Valor em reais:','0')||'0').replace('.','').replace(',','.');
-  const price=Number(value);if(!Number.isFinite(price)||price<0)return toast('Valor inválido');
-  const showChoice=prompt('Mostrar este valor ao cliente nas mensagens/catálogo do WhatsApp?\n\n1 - Sim\n2 - Não','1');
-  if(showChoice===null)return;
-  const showPrice=String(showChoice).trim()!=='2';
-  const {error}=await sb.from('agenda_services').insert({
-    business_id:companyCtx.business.id,name:name.trim(),duration_minutes:Math.round(duration),price_cents:Math.round(price*100),show_price_to_client:showPrice,active:true
-  });
-  if(error){console.error(error);return toast('Não foi possível cadastrar')}
-  await loadCompanyData();render();toast(P().service+' cadastrado');
+  openServiceModal(null);
 }
+
     function filterAgendaRows(v){
   const q=String(v||'').toLowerCase();
   document.querySelectorAll('#agendaRows [data-search],.weekgrid [data-search]').forEach(el=>el.style.display=(el.dataset.search||'').includes(q)?'':'none');
@@ -2664,36 +2885,9 @@ async function installAgendaApp(){
 }
     function fillPhone(){const n=document.getElementById('fclient').value,c=P().peopleData.find(x=>x[0]===n);document.getElementById('fphone').value=c?c[1]:''}
     async function addCustomerFromBooking(){
-  if(!hasFeature('clients'))return toast('Cadastro de clientes não incluído no plano');
-  if(!canOperateCompany())return toast('Seu perfil não permite cadastrar clientes');
-  const p=P();
-  const name=prompt('Nome do '+p.person.toLowerCase()+':');
-  if(!name||!name.trim())return;
-  const phone=prompt('WhatsApp / telefone:','')||'';
-  const email=prompt('E-mail (opcional):','')||'';
-  const {data,error}=await sb.from('agenda_customers').insert({
-    business_id:companyCtx.business.id,
-    name:name.trim(),
-    phone:phone.trim()||null,
-    email:email.trim()||null
-  }).select('*').single();
-  if(error){
-    console.error(error);
-    return toast('Não foi possível cadastrar '+p.person.toLowerCase());
-  }
-  companyData.customers.push(data);
-  companyData.customers.sort((a,b)=>a.name.localeCompare(b.name,'pt-BR'));
-  const select=document.getElementById('fclient');
-  if(select){
-    const option=document.createElement('option');
-    option.value=data.id;
-    option.textContent=data.name;
-    option.selected=true;
-    select.appendChild(option);
-    select.value=data.id;
-  }
-  toast(p.person+' cadastrado e selecionado');
+  openCustomerModal(null,true);
 }
+
     function appointmentWhatsMessage(customer,service,date,time,professional,status){
   const first=(customer?.name||'').trim().split(/\s+/)[0]||'';
   const dateBR=String(date||'').split('-').reverse().join('/');
@@ -3072,7 +3266,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-premium5',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-modals6',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
