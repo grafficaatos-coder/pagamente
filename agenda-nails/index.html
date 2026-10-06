@@ -2332,8 +2332,10 @@ async function installAgendaApp(){
     document.body.appendChild(layer);
     document.body.classList.add('app-modal-open');
     let done=false;
+    let key=null;
     const finish=value=>{
       if(done)return;done=true;
+      if(key)document.removeEventListener('keydown',key);
       const el=document.getElementById('appModalLayer');if(el)el.remove();
       document.body.classList.remove('app-modal-open');
       resolve(value);
@@ -2341,8 +2343,8 @@ async function installAgendaApp(){
     layer.querySelector('.app-modal-backdrop')?.addEventListener('click',()=>finish(false));
     layer.querySelectorAll('[data-cancel]').forEach(el=>el.addEventListener('click',()=>finish(false)));
     layer.querySelector('[data-confirm]')?.addEventListener('click',()=>finish(true));
-    const key=ev=>{if(ev.key==='Escape'){document.removeEventListener('keydown',key);finish(false)}};
-    document.addEventListener('keydown',key,{once:false});
+    key=ev=>{if(ev.key==='Escape')finish(false)};
+    document.addEventListener('keydown',key);
     setTimeout(()=>layer.querySelector('[data-confirm]')?.focus(),30);
   });
 }
@@ -3326,7 +3328,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-polish7',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-polish8',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
