@@ -553,6 +553,25 @@
       .top h1{font-size:15px!important}
     }
 
+  
+    /* Cards do resumo clicáveis */
+    .metric-link{
+      cursor:pointer;
+      transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;
+      user-select:none;
+      outline:none;
+    }
+    .metric-link:hover{
+      transform:translateY(-2px);
+      border-color:#d8bcc7;
+      box-shadow:0 12px 28px rgba(70,45,55,.08);
+    }
+    .metric-link:active{transform:translateY(0)}
+    .metric-link:focus-visible{
+      box-shadow:0 0 0 3px rgba(101,56,75,.14),0 12px 28px rgba(70,45,55,.08);
+      border-color:#b98fa0;
+    }
+
   </style>
 </head>
 <body>
@@ -888,7 +907,18 @@ async function installAgendaApp(){
     function greeting(){const h=new Date().getHours();return h<12?'Bom dia':h<18?'Boa tarde':'Boa noite'}
     function todayText(){return new Intl.DateTimeFormat('pt-BR',{weekday:'long',day:'2-digit',month:'long'}).format(new Date()).replace(/^./,m=>m.toUpperCase())}
     function appointment(a){return `<div class="appt"><div class="appt-time">${a[0]}</div><span class="status-line ${a[4]==='p'?'p':''}"></span><div><strong>${a[1]}</strong><small>${a[2]} · ${a[3]}</small></div><span class="tag ${a[4]==='p'?'p':''}">${a[4]==='p'?'Pendente':'Confirmado'}</span></div>`}
-    function metric(icon,label,value,foot,good=false){return `<div class="metric"><div class="metric-top"><span>${label}</span><div class="metric-icon">${I[icon]}</div></div><b>${value}</b><small class="${good?'good':''}">${foot}</small></div>`}
+    function openDashboardMetric(target){
+  if(target==='receivable'){
+    financeTab='receivable';
+    go('cash');
+    return;
+  }
+  go(target);
+}
+    function metric(icon,label,value,foot,good=false,target=''){
+  const clickable=!!target;
+  return `<div class="metric ${clickable?'metric-link':''}" ${clickable?`onclick="openDashboardMetric('${target}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openDashboardMetric('${target}')}"`:''}><div class="metric-top"><span>${label}</span><div class="metric-icon">${I[icon]}</div></div><b>${value}</b><small class="${good?'good':''}">${foot}</small></div>`;
+}
     function home(){
   const p=P();
   const upcoming=companyData.appointments
@@ -1752,10 +1782,10 @@ async function installAgendaApp(){
   const receivableAppointments=companyData.appointments.filter(a=>a.status==='confirmed');
   const receivableRevenue=receivableAppointments.reduce((sum,a)=>sum+Number(serviceMap.get(a.service_id)?.price_cents||0),0)/100;
   p.metrics=[
-    ['calendar','Horários',String(companyData.appointments.length),'agendamentos cadastrados'],
-    ['users',p.people,String(companyData.customers.length),'cadastros da empresa'],
-    ['sparkle',p.serviceLabel,String(companyData.services.length),'itens ativos'],
-    [hasFeature('finance')?'money':'chart',hasFeature('finance')?'A receber':'Plano',hasFeature('finance')?moneyBR(receivableRevenue):companyCtx.plan.name,hasFeature('finance')?'agendamentos confirmados':subscriptionLabel()]
+    ['calendar','Horários',String(companyData.appointments.length),'agendamentos cadastrados',false,'agenda'],
+    ['users',p.people,String(companyData.customers.length),'cadastros da empresa',false,'clients'],
+    ['sparkle',p.serviceLabel,String(companyData.services.length),'itens ativos',false,'services'],
+    [hasFeature('finance')?'money':'chart',hasFeature('finance')?'A receber':'Plano',hasFeature('finance')?moneyBR(receivableRevenue):companyCtx.plan.name,hasFeature('finance')?'agendamentos confirmados':subscriptionLabel(),false,hasFeature('finance')?'receivable':'home']
   ];
 }
     async function changeMyPassword(){
@@ -2666,7 +2696,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-menu3',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-cards4',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
