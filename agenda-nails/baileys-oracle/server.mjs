@@ -112,20 +112,30 @@ function formatAppointment(iso){
 function moneyBRFromCents(cents){
   return new Intl.NumberFormat("pt-BR",{style:"currency",currency:"BRL"}).format(Number(cents||0)/100);
 }
+function serviceTerms(segment){
+  const key=String(segment||"").toLowerCase();
+  if(["doctor","psychiatrist","nutritionist"].includes(key))return {one:"Consulta",many:"consultas"};
+  if(["psychologist","therapist","physiotherapist","speech_therapist","occupational_therapist","massage_therapist"].includes(key))return {one:"Sessão",many:"sessões"};
+  if(["esthetic","dentist","podiatrist"].includes(key))return {one:"Procedimento",many:"procedimentos"};
+  if(key==="personal_trainer")return {one:"Aula",many:"aulas"};
+  return {one:"Serviço",many:"serviços"};
+}
 function catalogText(business,customer,services){
   const first=String(customer?.name||"").trim().split(/\s+/)[0]||"Cliente";
-  const items=services.map(s=>"• *"+s.name+"* — "+moneyBRFromCents(s.price_cents)+" · "+s.duration_minutes+" min").join("\n");
-  return "Olá, "+first+"! ✨\n\nSegue nosso catálogo de serviços da *"+business.name+"*:\n\n"+items+
+  const terms=serviceTerms(business?.segment);
+  const items=services.map(s=>"• *"+s.name+"*"+(s.show_price_to_client===false?"":" — "+moneyBRFromCents(s.price_cents))+" · "+s.duration_minutes+" min").join("\n");
+  return "Olá, "+first+"! ✨\n\nSegue nosso catálogo de "+terms.many+" da *"+business.name+"*:\n\n"+items+
     "\n\nSe quiser agendar, é só entrar em contato por aqui. 💖";
 }
 function messageText(kind,business,customer,service,appointment){
   const first=String(customer.name||"").trim().split(/\s+/)[0]||"Cliente";
   const when=formatAppointment(appointment.starts_at);
   const professional=String(appointment.professional_name||"").trim();
+  const terms=serviceTerms(business?.segment);
   const proLine=professional?"\n👤 Profissional: *"+professional+"*":"";
   if(kind==="reminder"){
     return "Olá, "+first+"! 😊\n\nPassando para lembrar do seu horário na *"+business.name+"*."+
-      "\n\n📅 Data: *"+when.date+"*\n🕐 Horário: *"+when.time+"*\n✨ Serviço: *"+service.name+"*"+proLine+
+      "\n\n📅 Data: *"+when.date+"*\n🕐 Horário: *"+when.time+"*\n✨ "+terms.one+": *"+service.name+"*"+proLine+
       "\n\nSe precisar alterar, fale com a gente por aqui.";
   }
   if(kind==="followup"){
@@ -136,7 +146,7 @@ function messageText(kind,business,customer,service,appointment){
     "\nSeu horário na *"+business.name+"* está confirmado."+
     "\n\n📅 *Data:* "+when.date+
     "\n🕐 *Horário:* "+when.time+
-    "\n💇‍♀️ *Serviço:* "+service.name+
+    "\n✨ *"+terms.one+":* "+service.name+
     (professional?"\n👤 *Profissional:* "+professional:"")+
     "\n\nSe precisar alterar o horário, é só *entrar em contato por aqui*. 💖"+
     "\n*Te esperamos! ✨*";
@@ -176,7 +186,7 @@ async function claimAndValidate(businessId,leaseId){
     const [customer,service,business]=await Promise.all([
       fetchOne("/rest/v1/agenda_customers?id=eq."+encodeURIComponent(appointment.customer_id)+"&business_id=eq."+encodeURIComponent(businessId)+"&select=id,name,phone&limit=1"),
       fetchOne("/rest/v1/agenda_services?id=eq."+encodeURIComponent(appointment.service_id)+"&business_id=eq."+encodeURIComponent(businessId)+"&select=id,name,duration_minutes&limit=1"),
-      fetchOne("/rest/v1/agenda_businesses?id=eq."+encodeURIComponent(businessId)+"&select=id,name&limit=1")
+      fetchOne("/rest/v1/agenda_businesses?id=eq."+encodeURIComponent(businessId)+"&select=id,name,segment&limit=1")
     ]);
     if(!customer||!service||!business){
       await cancelClaimed(businessId,job,"Cliente, serviço ou empresa não encontrado na revalidação.");continue;
@@ -355,8 +365,8 @@ class WhatsSession{
     }
     const [customers,services,business]=await Promise.all([
       fetchMany("/rest/v1/agenda_customers?business_id=eq."+encodeURIComponent(this.businessId)+"&select=id,name,phone&order=name.asc"),
-      fetchMany("/rest/v1/agenda_services?business_id=eq."+encodeURIComponent(this.businessId)+"&active=eq.true&select=id,name,duration_minutes,price_cents&order=name.asc"),
-      fetchOne("/rest/v1/agenda_businesses?id=eq."+encodeURIComponent(this.businessId)+"&select=id,name&limit=1")
+      fetchMany("/rest/v1/agenda_services?business_id=eq."+encodeURIComponent(this.businessId)+"&active=eq.true&select=id,name,duration_minutes,price_cents,show_price_to_client&order=name.asc"),
+      fetchOne("/rest/v1/agenda_businesses?id=eq."+encodeURIComponent(this.businessId)+"&select=id,name,segment&limit=1")
     ]);
     if(!business)throw Object.assign(new Error("Empresa não encontrada."),{status:404});
     if(!services.length)throw Object.assign(new Error("Cadastre pelo menos um serviço ativo antes de enviar."),{status:400});
