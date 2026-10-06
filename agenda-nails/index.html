@@ -1276,6 +1276,35 @@
       .subscriber-table{min-width:1180px}
     }
 
+  
+    /* Meu perfil */
+    .profile-layout{display:grid;grid-template-columns:290px minmax(0,1fr);gap:16px;align-items:start}
+    .profile-summary-card{padding:25px;border:1px solid var(--line);border-radius:18px;background:linear-gradient(155deg,#fff,#faf7f9);box-shadow:0 12px 30px rgba(59,37,48,.05)}
+    .profile-avatar{width:68px;height:68px;border-radius:20px;display:grid;place-items:center;background:linear-gradient(145deg,#6f465a,#4a2d3c);color:#fff;font-size:20px;font-weight:900;box-shadow:0 13px 28px rgba(74,45,60,.22)}
+    .profile-summary-card h3{margin:17px 0 3px;font-size:18px;letter-spacing:-.03em}
+    .profile-summary-card>span{display:inline-block;padding:5px 8px;border-radius:999px;background:#f1e8ed;color:var(--wine);font-size:8px;font-weight:900}
+    .profile-summary-card>small{display:block;margin-top:8px;color:var(--muted);font-size:9px}
+    .profile-summary-line{padding-top:15px;margin-top:15px;border-top:1px solid var(--line)}
+    .profile-summary-line b,.profile-summary-line span{display:block}
+    .profile-summary-line b{font-size:8px;text-transform:uppercase;letter-spacing:.07em;color:#8b7f85}
+    .profile-summary-line span{margin-top:5px;font-size:10px;overflow-wrap:anywhere}
+    .profile-edit-card{padding-bottom:18px}
+    .profile-form{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:17px}
+    .profile-form .full{grid-column:1/-1}
+    .profile-email-note{padding:11px 12px;border:1px solid #e9e0e5;border-radius:12px;background:#faf7f9;color:#75686f;font-size:9px;line-height:1.5}
+    .profile-email-note b{color:#5f4050}
+    .profile-save-message{min-height:16px;color:#286b49;font-size:9px;font-weight:800}
+    .profile-form-actions{display:flex;justify-content:flex-end;gap:9px;padding-top:2px}
+    .profile-form-actions .btn{min-width:140px}
+    @media(max-width:760px){
+      .profile-layout{grid-template-columns:1fr}
+      .profile-summary-card{padding:20px}
+      .profile-form{grid-template-columns:1fr;padding:14px}
+      .profile-form .full{grid-column:auto}
+      .profile-form-actions{display:grid;grid-template-columns:1fr}
+      .profile-form-actions .btn{width:100%}
+    }
+
   </style>
 </head>
 <body>
@@ -1512,6 +1541,7 @@
     cash:['Financeiro','Resumo do negócio'],
     wa:['WhatsApp','Lembretes e confirmações'],
     team:['Equipe','Usuários e permissões'],
+    profile:['Meu perfil','Dados pessoais e acesso'],
     book:['Novo horário','Cadastrar atendimento']
   };
 }
@@ -1594,6 +1624,7 @@ async function installAgendaApp(){
     if(hasFeature('finance'))n.push(['cash','wallet','Financeiro']);
     n.push(['wa','message','WhatsApp']);
     if(canAdminCompany())n.push(['team','userplus','Equipe']);
+    n.push(['profile','users','Meu perfil']);
     return `<aside class="side"><div class="brand"><div class="logo">${p.initials}</div><div><b>${companyCtx?.business?.name||p.brand}</b><small>${companyCtx?.plan?.name||'PLANO'}</small></div></div><nav class="nav">${n.map(x=>`<button class="${page===x[0]?'on':''}" onclick="go('${x[0]}')">${I[x[1]]}<span class="label">${x[2]}</span></button>`).join('')}${pwaInstallEntry()}</nav><div class="side-foot"><small>Acesso da empresa</small><b>${subscriptionLabel()}</b></div></aside>`;
   }
   const n=[['overview','home','Visão geral'],['clients','users','Assinantes'],['plans','sparkle','Planos'],['billing','wallet','Cobranças'],['settings','more','Configurações']];
@@ -1607,6 +1638,7 @@ async function installAgendaApp(){
     if(hasFeature('finance'))n.push(['cash','wallet','Financeiro']);
     n.push(['wa','message','WhatsApp']);
     if(canAdminCompany())n.push(['team','userplus','Equipe']);
+    n.push(['profile','users','Perfil']);
     return `<nav class="bottom company-bottom">${n.map(x=>`<button class="${page===x[0]?'on':''}" onclick="go('${x[0]}')">${I[x[1]]}${x[2]}</button>`).join('')}</nav>${hasFeature('agenda')?`<button class="fab" onclick="book()" aria-label="Novo horário">${I.plus}</button>`:''}`;
   }
   const n=[['overview','home','Visão geral'],['clients','users','Assinantes'],['plans','sparkle','Planos'],['billing','wallet','Cobranças'],['settings','more','Mais']];
@@ -1895,6 +1927,99 @@ async function installAgendaApp(){
   const {error}=await sb.from('agenda_financial_entries').delete().eq('id',id).eq('business_id',companyCtx.business.id);
   if(error){console.error(error);return toast('Não foi possível excluir')}
   await loadCompanyData();render();toast('Lançamento excluído');
+}
+
+    function profileInitials(){
+  const name=companyCtx?.profile?.display_name||authUser?.email||'Usuário';
+  const parts=String(name).trim().split(/\s+/).filter(Boolean);
+  return (parts.length>1?(parts[0][0]+parts[parts.length-1][0]):String(name).slice(0,2)).toUpperCase();
+}
+    function myProfile(){
+  const profile=companyCtx?.profile||{};
+  const name=profile.display_name||'Usuário';
+  const phone=profile.phone?formatBusinessPhone(profile.phone):'';
+  const email=authUser?.email||'';
+  const role=teamRoleLabel(companyRole());
+  return shell(`<div class="profile-page">
+    <div class="section-title profile-title"><span class="eyebrow">Sua conta</span><h2>Meu perfil</h2><p>Atualize seus dados pessoais usados para acessar o Agenda Pro.</p></div>
+    <div class="profile-layout">
+      <aside class="profile-summary-card">
+        <div class="profile-avatar">${appModalEscape(profileInitials())}</div>
+        <h3>${appModalEscape(name)}</h3>
+        <span>${appModalEscape(role)}</span>
+        <small>${appModalEscape(companyCtx?.business?.name||'')}</small>
+        <div class="profile-summary-line"><b>E-mail de acesso</b><span>${appModalEscape(email)}</span></div>
+        <div class="profile-summary-line"><b>Telefone</b><span>${appModalEscape(phone||'Não informado')}</span></div>
+      </aside>
+      <section class="panel profile-edit-card">
+        <div class="head"><div><span class="eyebrow">Dados pessoais</span><h3>Editar perfil</h3></div></div>
+        <form class="profile-form" onsubmit="event.preventDefault();saveMyProfile()">
+          <div class="app-modal-field"><label>Nome *</label><input id="profileName" value="${appModalEscape(name)}" autocomplete="name" placeholder="Seu nome completo"></div>
+          <div class="app-modal-field"><label>Telefone / WhatsApp *</label><input id="profilePhone" type="tel" inputmode="tel" autocomplete="tel" value="${appModalEscape(phone)}" placeholder="(41) 99999-9999"></div>
+          <div class="app-modal-field full"><label>E-mail de acesso *</label><input id="profileEmail" type="email" autocomplete="email" value="${appModalEscape(email)}" placeholder="seu@email.com"></div>
+          <div class="profile-email-note full"><b>Alteração de e-mail:</b> por segurança, se você trocar o e-mail, será necessário confirmar o novo endereço antes que a mudança seja concluída.</div>
+          <div id="profileSaveMessage" class="profile-save-message full"></div>
+          <div class="profile-form-actions full"><button type="button" class="btn secondary" onclick="changeMyPassword()">Alterar senha</button><button id="profileSaveButton" type="submit" class="btn primary">Salvar alterações</button></div>
+        </form>
+      </section>
+    </div>
+  </div>`);
+}
+    async function saveMyProfile(){
+  if(!sb||!authUser||!companyCtx)return;
+  const name=(document.getElementById('profileName')?.value||'').trim();
+  const phone=(document.getElementById('profilePhone')?.value||'').replace(/\D/g,'');
+  const email=(document.getElementById('profileEmail')?.value||'').trim().toLowerCase();
+  const msg=document.getElementById('profileSaveMessage');
+  const btn=document.getElementById('profileSaveButton');
+  if(name.length<2){if(msg)msg.textContent='Informe seu nome.';return}
+  if(phone.length<10||phone.length>13){if(msg)msg.textContent='Informe um telefone válido com DDD.';return}
+  if(!/^\S+@\S+\.\S+$/.test(email)){if(msg)msg.textContent='Informe um e-mail válido.';return}
+  if(btn){btn.disabled=true;btn.textContent='Salvando...'}
+  if(msg)msg.textContent='';
+  try{
+    const {error:profileError}=await sb.from('profiles').update({
+      display_name:name,
+      phone,
+      updated_at:new Date().toISOString()
+    }).eq('id',authUser.id);
+    if(profileError)throw profileError;
+
+    if(companyRole()==='owner'){
+      const {error:businessPhoneError}=await sb.from('agenda_businesses').update({
+        phone,
+        updated_at:new Date().toISOString()
+      }).eq('id',companyCtx.business.id);
+      if(businessPhoneError)console.error(businessPhoneError);
+      companyCtx.business.phone=phone;
+    }
+
+    let emailPending=false;
+    if(email!==String(authUser.email||'').toLowerCase()){
+      const {data:updateData,error:emailError}=await sb.auth.updateUser(
+        {email},
+        {emailRedirectTo:AGENDA_PRO_URL}
+      );
+      if(emailError)throw emailError;
+      emailPending=true;
+      if(updateData?.user)authUser=updateData.user;
+    }
+
+    companyCtx.profile={...(companyCtx.profile||{}),display_name:name,phone};
+    render();
+    const out=document.getElementById('profileSaveMessage');
+    if(out)out.textContent=emailPending
+      ?'Nome e telefone salvos. Confirme o novo e-mail na mensagem enviada para concluir a alteração.'
+      :'Perfil atualizado com sucesso.';
+    toast(emailPending?'Confirme o novo e-mail':'Perfil atualizado');
+  }catch(err){
+    console.error(err);
+    const out=document.getElementById('profileSaveMessage');
+    if(out)out.textContent=String(err?.message||'Não foi possível atualizar o perfil.');
+  }finally{
+    const b=document.getElementById('profileSaveButton');
+    if(b){b.disabled=false;b.textContent='Salvar alterações'}
+  }
 }
 
     function teamRoleLabel(role){
@@ -3885,7 +4010,7 @@ async function installAgendaApp(){
 }
     async function detectAgendaAccess(user){
   authUser=user;
-  const {data:profile}=await sb.from('profiles').select('is_platform_admin,display_name').eq('id',user.id).maybeSingle();
+  const {data:profile}=await sb.from('profiles').select('is_platform_admin,display_name,phone').eq('id',user.id).maybeSingle();
   if(profile?.is_platform_admin){
     appMode='owner';ownerLogged=true;companyCtx=null;page='admin';adminTab='overview';
     if(typeof loadOwnerData==='function')await loadOwnerData();
@@ -3916,6 +4041,7 @@ async function installAgendaApp(){
     membership:member,
     subscription,
     plan,
+    profile:{display_name:profile?.display_name||user.user_metadata?.display_name||'Usuário',phone:profile?.phone||'',email:user.email||''},
     settings:settings||{auto_block:true,grace_days:5},
     preferences:preferences||{business_id:business.id,show_price_on_booking:true}
   };
@@ -4105,7 +4231,7 @@ async function installAgendaApp(){
   closeMobileMenu();
   if(!appMode){render();return}
   if(appMode==='owner'){page='admin';adminTab=['overview','clients','plans','billing','settings'].includes(p)?p:'overview';render();scrollTo(0,0);return}
-  const allowed={home:true,agenda:hasFeature('agenda'),services:hasFeature('agenda'),clients:hasFeature('clients'),cash:hasFeature('finance'),wa:true,team:canAdminCompany()};
+  const allowed={home:true,agenda:hasFeature('agenda'),services:hasFeature('agenda'),clients:hasFeature('clients'),cash:hasFeature('finance'),wa:true,team:canAdminCompany(),profile:true};
   if(!allowed[p])return toast(p==='team'?'Seu perfil não permite gerenciar usuários':'Este recurso não está incluído no seu plano');
   page=p;render();scrollTo(0,0);
   if(p==='team')setTimeout(()=>loadTeamMembers(true),0);
@@ -4130,7 +4256,7 @@ async function installAgendaApp(){
   if(appMode==='owner'){document.title='Agenda Pro · Administração';page='admin';R.innerHTML=admin();return}
   document.title=(companyCtx?.business?.name||'Agenda Pro')+' · Agenda Pro';
   if(companyAccessBlocked()){R.innerHTML=companyBlockedView();return}
-  R.innerHTML=page==='book'?booking():({home,agenda,clients,services,cash,wa,team}[page]||home)();
+  R.innerHTML=page==='book'?booking():({home,agenda,clients,services,cash,wa,team,profile:myProfile}[page]||home)();
 }
     window.addEventListener('beforeinstallprompt',event=>{
       event.preventDefault();
@@ -4150,7 +4276,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-subscriberphone27',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-profile28',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
