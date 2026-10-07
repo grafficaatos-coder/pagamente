@@ -56,7 +56,7 @@ async function queueMessage(job){
 class Runtime{
   constructor(bid){
     this.bid=bid;this.authDir=path.join(DATA_DIR,bid);this.agentId=`${AGENT_NAME}:${bid}`;this.leaseId=`${process.pid}-${Date.now()}-${randomUUID().slice(0,8)}:${bid}`;
-    this.socket=null;this.state='disconnected';this.phone='';this.qr='';this.qrSvg='';this.pairingCode='';this.lastError='';this.desired=false;this.starting=null;this.reconnectTimer=null;this.reconnectAttempts=0;this.pairRequest=null;this.pairTriggered=false;this.lastCheckpointAt=null;this.dispatchBusy=false;this.leaseOwned=false;
+    this.socket=null;this.state='disconnected';this.phone='';this.qr='';this.qrSvg='';this.pairingCode='';this.pendingPairPhone='';this.lastError='';this.desired=false;this.starting=null;this.reconnectTimer=null;this.reconnectAttempts=0;this.pairRequest=null;this.pairTriggered=false;this.lastCheckpointAt=null;this.dispatchBusy=false;this.leaseOwned=false;
   }
   payload(){
     const status=this.state==='online'?'connected':(this.state==='waiting_pairing'||this.state==='waiting_qr')?'qr':(this.state==='connecting'||this.state==='restarting')?'connecting':this.state==='error'?'error':'disconnected';
@@ -76,9 +76,11 @@ class Runtime{
     await admin.from('agenda_baileys_sessions').upsert({business_id:this.bid,status:this.state==='online'?'connected':this.state==='waiting_pairing'?'qr':this.state,phone:this.phone||null,qr:this.qr||null,pairing_code:this.pairingCode||null,last_error:this.lastError||null,desired_online:this.desired,agent_id:this.agentId,profile_key:'oracle:'+this.bid,last_seen_at:new Date().toISOString(),updated_at:new Date().toISOString()},{onConflict:'business_id'});
   }
   async clearAuth(){await rm(this.authDir,{recursive:true,force:true}).catch(()=>{});await mkdir(this.authDir,{recursive:true})}
-  schedule(delay=1000){if(!this.desired)return;if(this.reconnectTimer)clearTimeout(this.reconnectTimer);this.reconnectTimer=setTimeout(()=>{this.reconnectTimer=null;void this.startSocket().catch(e=>{this.lastError=String(e?.message||e).slice(0,1000)})},delay);this.reconnectTimer.unref?.()}
+  schedule(delay=1000){if(!this.desired)return;if(this.reconnectTimer)clearTimeout(this.reconnectTimer);this.reconnectTimer=setTimeout(()=>{this.reconnectTimer=null;void this.startSocket({pairPhone:this.pendingPairPhone}).catch(e=>{this.lastError=String(e?.message||e).slice(0,1000)})},delay);this.reconnectTimer.unref?.()}
   async stop(){const s=this.socket;this.socket=null;try{s?.end(new Error('Restarting Agenda Pro runtime'))}catch{}}
   async startSocket({pairPhone=''}={}){
+    if(pairPhone)this.pendingPairPhone=phone(pairPhone);
+    const pairTarget=phone(pairPhone||this.pendingPairPhone);
     if(this.starting)return this.starting;
     this.starting=(async()=>{
       if(!this.desired)return;
@@ -86,18 +88,33 @@ class Runtime{
       await mkdir(this.authDir,{recursive:true});
       this.state='connecting';this.lastError='';this.qr='';this.qrSvg='';this.pairTriggered=false;await this.persist().catch(()=>{});
       const{state,saveCreds}=await useMultiFileAuthState(this.authDir);
-      const registered=Boolean(state.creds.registered);
-      const sock=makeWASocket({auth:state,logger,browser:Browsers.macOS('Desktop'),printQRInTerminal:false,markOnlineOnConnect:false,syncFullHistory:false,generateHighQualityLinkPreview:false,connectTimeoutMs:30000,defaultQueryTimeoutMs:30000,keepAliveIntervalMs:15000});
+      const sock=makeWASocket({auth:state,logger,browser:Browsers.macOS('Desktop'),markOnlineOnConnect:false,syncFullHistory:false,generateHighQualityLinkPreview:false,connectTimeoutMs:45000,defaultQueryTimeoutMs:45000,keepAliveIntervalMs:15000});
       this.socket=sock;
 
       const requestPair=async update=>{
-        if(!pairPhone||registered||this.pairTriggered||this.socket!==sock)return;
-        if(!(update?.connection==='connecting'||update?.qr))return;
-        this.pairTriggered=true;this.state='waiting_pairing';this.phone=pairPhone;this.qr='';this.qrSvg='';
+        const registered=Boolean(sock.authState?.creds?.registered||state.creds.registered);
+        if(!pairTarget||registered||this.pairTriggered||this.socket!==sock)return;
+        // Baileys recomenda usar o evento QR como sinal de que o socket
+        // está pronto antes de requestPairingCode(). Pedir durante
+        // connection=connecting pode causar "Connection Closed" (428).
+        if(!update?.qr)return;
+        this.pairTriggered=true;this.state='waiting_pairing';this.phone=pairTarget;this.qr='';this.qrSvg='';
         try{
-          const code=await sock.requestPairingCode(pairPhone);
+          const code=await sock.requestPairingCode(pairTarget);
           this.pairingCode=String(code||'').replace(/\s/g,'').toUpperCase();this.lastError='';await this.persist().catch(()=>{});this.pairRequest?.resolve?.(this.pairingCode);
-        }catch(e){this.lastError=String(e?.message||e).slice(0,1000);this.state='error';await this.persist().catch(()=>{});this.pairRequest?.reject?.(e)}
+        }catch(e){
+          const status=Number(e?.output?.statusCode||e?.data?.statusCode||e?.statusCode||0)||0;
+          const message=String(e?.message||e);
+          this.lastError=message.slice(0,1000);
+          // Se o WhatsApp fechar o socket antes do código, preserva o telefone
+          // e recria o socket. O mesmo pairRequest continua aguardando.
+          if(status===428||/connection closed/i.test(message)){
+            this.pairTriggered=false;this.state='connecting';await this.persist().catch(()=>{});
+            setTimeout(()=>{void(async()=>{await this.stop();this.desired=true;await this.startSocket({pairPhone:pairTarget})})().catch(err=>this.pairRequest?.reject?.(err))},700).unref?.();
+            return;
+          }
+          this.state='error';await this.persist().catch(()=>{});this.pairRequest?.reject?.(e)
+        }
       };
 
       sock.ev.on('creds.update',async()=>{try{await saveCreds();this.lastCheckpointAt=new Date().toISOString();await this.persist().catch(()=>{})}catch(e){this.lastError=('Falha ao salvar credenciais: '+String(e?.message||e)).slice(0,1000)}});
@@ -110,12 +127,12 @@ class Runtime{
         }
         if(update.connection==='connecting'&&this.state!=='waiting_pairing'&&this.state!=='waiting_qr')this.state='connecting';
         if(update.connection==='open'){
-          this.state='online';this.lastError='';this.qr='';this.qrSvg='';this.pairingCode='';this.phone=String(sock?.user?.id||'').split(':')[0].split('@')[0]||this.phone;this.reconnectAttempts=0;this.pairRequest?.resolve?.('connected');void this.persist();void this.heartbeat();
+          this.state='online';this.lastError='';this.qr='';this.qrSvg='';this.pairingCode='';this.pendingPairPhone='';this.phone=String(sock?.user?.id||'').split(':')[0].split('@')[0]||this.phone;this.reconnectAttempts=0;this.pairRequest?.resolve?.('connected');void this.persist();void this.heartbeat();
         }
         if(update.connection==='close'){
           const code=disconnectCode(update.lastDisconnect);if(this.socket===sock)this.socket=null;
           if(!this.desired){this.state='disconnected';return}
-          if(code===DisconnectReason.loggedOut){this.state='disconnected';this.lastError='Sessão removida pelo WhatsApp; conecte novamente.';this.pairingCode='';this.phone='';void this.clearAuth().then(()=>this.persist());return}
+          if(code===DisconnectReason.loggedOut){this.state='disconnected';this.lastError='Sessão removida pelo WhatsApp; conecte novamente.';this.pairingCode='';this.pendingPairPhone='';this.phone='';void this.clearAuth().then(()=>this.persist());return}
           if(code===DisconnectReason.restartRequired||code===515){this.state='restarting';this.lastError='';this.pairingCode='';this.pairRequest?.resolve?.('accepted');void this.persist();this.schedule(250);return}
           this.reconnectAttempts+=1;this.state='connecting';this.lastError=code?`Conexão reiniciando (${code}).`:'Conexão reiniciando.';void this.persist();this.schedule(Math.min(15000,1000*Math.max(1,this.reconnectAttempts)));
         }
@@ -125,7 +142,7 @@ class Runtime{
   }
   async pair(v){
     const p=phone(v);if(p.length<12||p.length>13)throw new Error('Informe o número com DDD e código do país.');
-    this.desired=true;this.phone=p;this.pairingCode='';this.lastError='';if(this.reconnectTimer)clearTimeout(this.reconnectTimer);await this.stop();await this.clearAuth();
+    this.desired=true;this.phone=p;this.pendingPairPhone=p;this.pairingCode='';this.lastError='';if(this.reconnectTimer)clearTimeout(this.reconnectTimer);await this.stop();await this.clearAuth();
     let timeout;
     const promise=new Promise((resolve,reject)=>{this.pairRequest={resolve,reject};timeout=setTimeout(()=>reject(new Error('O WhatsApp demorou para gerar o código. Tente novamente.')),25000);timeout.unref?.()});
     await this.startSocket({pairPhone:p});
@@ -136,7 +153,7 @@ class Runtime{
     const end=Date.now()+15000;while(Date.now()<end){if(this.qrSvg||this.state==='online')break;await new Promise(r=>setTimeout(r,250))}return this.payload();
   }
   async disconnect(){
-    this.desired=false;if(this.reconnectTimer)clearTimeout(this.reconnectTimer);
+    this.desired=false;this.pendingPairPhone='';if(this.reconnectTimer)clearTimeout(this.reconnectTimer);
     try{if(this.socket?.user)await this.socket.logout();else this.socket?.end(new Error('Manual disconnect'))}catch{}
     this.socket=null;this.state='disconnected';this.phone='';this.qr='';this.qrSvg='';this.pairingCode='';this.lastError='';await this.clearAuth();
     await admin.from('agenda_baileys_sessions').upsert({business_id:this.bid,status:'disconnected',desired_online:false,phone:null,qr:null,pairing_code:null,last_error:null,runtime_lease_id:null,runtime_lease_expires_at:null,updated_at:new Date().toISOString()},{onConflict:'business_id'});
