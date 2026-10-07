@@ -3145,6 +3145,21 @@ async function installAgendaApp(){
   whatsappQueueTimer=setInterval(()=>loadWhatsappQueue(page==='wa'),60000);
   checkWhatsappQueueNotifications();
 }
+    function friendlyBaileysError(message){
+  const raw=String(message||'').trim();
+  if(!raw)return '';
+  const m=raw.toLowerCase();
+  if(m.includes('connection closed')||m.includes('connection reset')||m.includes('socket closed')||m.includes('not open')){
+    return 'A conexão anterior foi encerrada. Gere um novo código e tente novamente.';
+  }
+  if(m.includes('load failed')||m.includes('failed to fetch')||m.includes('network')){
+    return 'Não foi possível acessar o servidor do WhatsApp agora. Tente novamente em instantes.';
+  }
+  if(m.includes('timeout')||m.includes('timed out')){
+    return 'O servidor demorou para responder. Tente novamente em alguns segundos.';
+  }
+  return raw;
+}
     function baileysPreferredPhone(){
   return companyCtx?.business?.phone||companyCtx?.profile?.phone||'';
 }
@@ -3231,7 +3246,7 @@ async function installAgendaApp(){
             ${baileysSession.qr_svg?`<div class="baileys-qr wa-easy-qr"><div class="wa-qr-title">QR Code alternativo</div>${baileysSession.qr_svg}<div class="wa-qr-wait">Aguardando conexão...</div></div>`:''}
           </div>`
     }
-    <div id="baileysConnectError" class="login-error wa-easy-error">${friendlyBaileysError?friendlyBaileysError(baileysSession.last_error):baileysSession.last_error||''}</div>
+    <div id="baileysConnectError" class="login-error wa-easy-error">${friendlyBaileysError(baileysSession.last_error)}</div>
     <details class="wa-security-note"><summary>Sobre esta conexão</summary><p>O WhatsApp fica conectado em um processo persistente no Oracle Cloud. A sessão é separada por empresa e continua ativa após reinícios normais do sistema.</p></details>
   </section>`:'';
 
@@ -4931,7 +4946,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-oraclepair44',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-whatsappopen44',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
