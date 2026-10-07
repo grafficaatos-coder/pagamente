@@ -8,7 +8,7 @@ Permitir que cada empresa conecte o WhatsApp usando **somente o próprio celular
 
 1. a empresa informa o número;
 2. o servidor Oracle abre o socket Baileys;
-3. o código só é solicitado depois que o socket entra em `connecting`/QR;
+3. o código só é solicitado quando o evento `qr` confirma que o socket está pronto;
 4. o código é mostrado no Agenda Pro;
 5. o usuário digita esse código em **WhatsApp → Aparelhos conectados → Conectar um aparelho → Conectar com número de telefone**;
 6. quando o WhatsApp responde com `515 / restartRequired`, o runtime salva as credenciais e recria o socket automaticamente;
@@ -62,4 +62,4 @@ O retorno deve conter `"ok":true`.
 
 ## Correções importantes do pareamento por celular
 
-O runtime usa um browser canônico (`Browsers.macOS('Desktop')`) e não um nome personalizado. O pedido de código acontece apenas depois do evento de conexão inicial. O fechamento 515 é tratado como reinício esperado após o pareamento, e não como erro terminal.
+O runtime usa um browser canônico (`Browsers.macOS('Desktop')`) e não um nome personalizado. O pedido de código acontece somente após o evento `qr`, conforme o fluxo atual recomendado pelo Baileys; o sistema não usa `connecting` como gatilho. O fechamento 515 é tratado como reinício esperado após o pareamento, e não como erro terminal.
