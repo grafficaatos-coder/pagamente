@@ -88,7 +88,7 @@ class Runtime{
       await mkdir(this.authDir,{recursive:true});
       this.state='connecting';this.lastError='';this.qr='';this.qrSvg='';this.pairTriggered=false;await this.persist().catch(()=>{});
       const{state,saveCreds}=await useMultiFileAuthState(this.authDir);
-      const sock=makeWASocket({auth:state,logger,browser:Browsers.macOS('Desktop'),markOnlineOnConnect:false,syncFullHistory:false,generateHighQualityLinkPreview:false,connectTimeoutMs:45000,defaultQueryTimeoutMs:45000,keepAliveIntervalMs:15000});
+      const sock=makeWASocket({auth:state,logger,browser:Browsers.macOS('Desktop'),markOnlineOnConnect:false,syncFullHistory:false,generateHighQualityLinkPreview:false,connectTimeoutMs:45000,defaultQueryTimeoutMs:undefined,keepAliveIntervalMs:15000});
       this.socket=sock;
 
       const requestPair=async update=>{
@@ -203,7 +203,7 @@ const server=http.createServer(async(req,res)=>{
   if(req.method==='OPTIONS'){res.writeHead(204,{'access-control-allow-origin':'*','access-control-allow-headers':'authorization, content-type, apikey, x-client-info','access-control-allow-methods':'GET, POST, OPTIONS'});return res.end()}
   try{
     const url=new URL(req.url||'/','http://localhost');
-    if(url.pathname==='/ready')return respond(res,200,{ok:true,service:'agenda-pro-baileys-oracle',runtimes:runtimes.size});
+    if(url.pathname==='/ready')return respond(res,200,{ok:true,service:'agenda-pro-baileys-oracle',version:'2.1.0',baileys:'6.7.24',runtimes:runtimes.size});
     const m=url.pathname.match(/^\/v1\/([0-9a-f-]{36})\/(status|connect|pair-code|disconnect|send-message|send-queue)$/i);
     if(!m)return respond(res,404,{error:'Not found'});
     const bid=businessId(m[1]);if(!bid)return respond(res,400,{error:'Empresa inválida'});await authorize(req,bid);
