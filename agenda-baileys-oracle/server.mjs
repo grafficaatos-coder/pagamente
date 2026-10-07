@@ -10,9 +10,9 @@ import{randomUUID}from'node:crypto';
 const PORT=Number(process.env.PORT||3000);
 const DATA_DIR=process.env.DATA_DIR||'/data/sessions';
 const SUPABASE_URL=String(process.env.SUPABASE_URL||'').replace(/\/$/,'');
-const SUPABASE_ANON_KEY=String(process.env.SUPABASE_ANON_KEY||'');
+const SUPABASE_ANON_KEY=String(process.env.SUPABASE_ANON_KEY||process.env.SUPABASE_SERVICE_ROLE_KEY||'');
 const SUPABASE_SERVICE_ROLE_KEY=String(process.env.SUPABASE_SERVICE_ROLE_KEY||'');
-const AGENT_NAME=process.env.AGENT_NAME||'agenda-pro-oracle';
+const AGENT_NAME=process.env.AGENT_NAME||'agenda-pro-oracle-v2';
 const LEASE_SECONDS=Number(process.env.RUNTIME_LEASE_SECONDS||20);
 const logger=pino({level:process.env.WHATSAPP_LOG_LEVEL||'silent'});
 if(!SUPABASE_URL||!SUPABASE_ANON_KEY||!SUPABASE_SERVICE_ROLE_KEY){console.error('Defina SUPABASE_URL, SUPABASE_ANON_KEY e SUPABASE_SERVICE_ROLE_KEY.');process.exit(1)}
@@ -56,7 +56,7 @@ async function queueMessage(job){
 class Runtime{
   constructor(bid){
     this.bid=bid;this.authDir=path.join(DATA_DIR,bid);this.agentId=`${AGENT_NAME}:${bid}`;this.leaseId=`${process.pid}-${Date.now()}-${randomUUID().slice(0,8)}:${bid}`;
-    this.socket=null;this.state='disconnected';this.phone='';this.qr='';this.qrSvg='';this.pairingCode='';this.pendingPairPhone='';this.lastError='';this.desired=false;this.starting=null;this.reconnectTimer=null;this.reconnectAttempts=0;this.pairRequest=null;this.pairTriggered=false;this.lastCheckpointAt=null;this.dispatchBusy=false;this.leaseOwned=false;
+    this.socket=null;this.state='disconnected';this.phone='';this.qr='';this.qrSvg='';this.pairingCode='';this.pendingPairPhone='';this.lastError='';this.desired=false;this.starting=null;this.reconnectTimer=null;this.reconnectAttempts=0;this.pairRequest=null;this.pairTriggered=false;this.lastCheckpointAt=null;this.dispatchBusy=false;this.leaseOwned=false;this.lastCloseCode=0;
   }
   payload(){
     const status=this.state==='online'?'connected':(this.state==='waiting_pairing'||this.state==='waiting_qr')?'qr':(this.state==='connecting'||this.state==='restarting')?'connecting':this.state==='error'?'error':'disconnected';
@@ -98,10 +98,18 @@ class Runtime{
         // está pronto antes de requestPairingCode(). Pedir durante
         // connection=connecting pode causar "Connection Closed" (428).
         if(!update?.qr)return;
-        this.pairTriggered=true;this.state='waiting_pairing';this.phone=pairTarget;this.qr='';this.qrSvg='';
+        this.pairTriggered=true;this.state='waiting_pairing';this.phone=pairTarget;this.qr='';this.qrSvg='';this.lastCloseCode=0;
         try{
           const code=await sock.requestPairingCode(pairTarget);
-          this.pairingCode=String(code||'').replace(/\s/g,'').toUpperCase();this.lastError='';await this.persist().catch(()=>{});this.pairRequest?.resolve?.(this.pairingCode);
+          const candidate=String(code||'').replace(/\s/g,'').toUpperCase();
+          // Baileys pode devolver um código local antes de o WhatsApp aceitar
+          // o companion_hello. Aguarda um curto período e não exibe código
+          // se o socket tiver sido rejeitado logo em seguida.
+          await new Promise(resolve=>setTimeout(resolve,1500));
+          if(this.socket!==sock||[400,428].includes(Number(this.lastCloseCode||0))){
+            throw Object.assign(new Error('O WhatsApp rejeitou esta tentativa antes de aceitar o código. Gerando uma sessão nova.'),{statusCode:this.lastCloseCode||428});
+          }
+          this.pairingCode=candidate;this.lastError='';await this.persist().catch(()=>{});this.pairRequest?.resolve?.(this.pairingCode);
         }catch(e){
           const status=Number(e?.output?.statusCode||e?.data?.statusCode||e?.statusCode||0)||0;
           const message=String(e?.message||e);
@@ -130,7 +138,7 @@ class Runtime{
           this.state='online';this.lastError='';this.qr='';this.qrSvg='';this.pairingCode='';this.pendingPairPhone='';this.phone=String(sock?.user?.id||'').split(':')[0].split('@')[0]||this.phone;this.reconnectAttempts=0;this.pairRequest?.resolve?.('connected');void this.persist();void this.heartbeat();
         }
         if(update.connection==='close'){
-          const code=disconnectCode(update.lastDisconnect);if(this.socket===sock)this.socket=null;
+          const code=disconnectCode(update.lastDisconnect);this.lastCloseCode=code;if(this.socket===sock)this.socket=null;
           if(!this.desired){this.state='disconnected';return}
           if(code===DisconnectReason.loggedOut){this.state='disconnected';this.lastError='Sessão removida pelo WhatsApp; conecte novamente.';this.pairingCode='';this.pendingPairPhone='';this.phone='';void this.clearAuth().then(()=>this.persist());return}
           if(code===DisconnectReason.restartRequired||code===515){this.state='restarting';this.lastError='';this.pairingCode='';this.pairRequest?.resolve?.('accepted');void this.persist();this.schedule(250);return}
