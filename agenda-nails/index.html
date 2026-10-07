@@ -3216,7 +3216,7 @@ async function installAgendaApp(){
               <div><b>2</b><span>Toque em <strong>Conectar um aparelho</strong>.</span></div>
               <div><b>3</b><span>Escolha <strong>Conectar com número de telefone</strong> e digite o código acima.</span></div>
             </div>
-            <div class="wa-code-warning">Não precisa de outro aparelho nem de QR Code. Depois que o código for aceito, o servidor Oracle reinicia a conexão automaticamente e mantém a sessão salva.</div>
+            <div class="wa-code-warning">Não precisa de outro aparelho nem de QR Code. Depois que o código for aceito, o Oracle trata o reinício do WhatsApp automaticamente e mantém a sessão salva para os próximos acessos.</div>
             <div class="wa-waiting-line"><span></span>Aguardando o WhatsApp concluir o vínculo...</div>
             <button class="btn primary wa-verify-btn" onclick="verifyBaileysNow()">Já digitei o código · verificar</button>
           </div>`
@@ -3224,7 +3224,7 @@ async function installAgendaApp(){
             <div class="wa-connect-progress"><span class="active">1</span><i></i><span>2</span><i></i><span>3</span></div>
             <span class="wa-step-label">PASSO 1 DE 3</span>
             <h4>Conectar usando este celular</h4>
-            <p>Informe o número do WhatsApp que ficará vinculado ao Agenda Pro. O sistema gera um código para você digitar no próprio WhatsApp, sem escanear QR.</p>
+            <p>Informe o número do WhatsApp que ficará vinculado ao Agenda Pro. O servidor Oracle espera a conexão ficar pronta e só então gera o código para você digitar no próprio WhatsApp, sem escanear QR.</p>
             ${admin?`<div class="wa-phone-box"><label>Número com DDD</label><div class="wa-phone-input"><span>🇧🇷 +55</span><input id="baileysPhone" inputmode="tel" autocomplete="tel" value="${appModalEscape(preferredPhone)}" placeholder="41 99999-9999"></div></div>
             <button id="baileysPhoneBtn" class="btn primary wa-main-connect" onclick="connectBaileysByPhone()">Gerar código no celular</button>
             <details class="wa-qr-alternative"><summary>Usar QR Code como alternativa</summary><div><button id="baileysConnectBtn" class="btn secondary" onclick="connectBaileys()">Gerar QR Code</button></div></details>`:''}
@@ -4931,7 +4931,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261007-oracle-phone44',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-oraclepair44',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
