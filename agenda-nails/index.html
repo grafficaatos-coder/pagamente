@@ -3939,31 +3939,45 @@ async function installAgendaApp(){
   const err=document.getElementById('baileysConnectError');
   const phone=normalizeWhatsPhone(forcedPhone||input?.value||baileysPreferredPhone());
   if(!phone)return toast('Digite o número do WhatsApp com DDD');
-  if(btn){btn.disabled=true;btn.textContent='Gerando código...'}
+  if(btn){btn.disabled=true;btn.textContent='Preparando WhatsApp...'}
   if(err)err.textContent='';
   try{
-    const out=await callBaileys('pair-code','POST',{phone});
-    const code=String(out.pairing_code||'').replace(/\s/g,'').toUpperCase();
-    baileysSession={
-      status:out.status||'connecting',
-      phone:out.phone||phone,
-      qr_svg:null,
-      pairing_code:code||null,
-      last_error:out.last_error||null
-    };
-    if(!code&&baileysSession.status!=='connected')throw new Error(out.last_error||'O servidor ainda não gerou o código. Tente novamente.');
+    const localPhone=phone.replace(/^55(?=\d{10,11}$)/,'');
+    try{
+      await sb.from('agenda_businesses').update({phone:localPhone,updated_at:new Date().toISOString()}).eq('id',companyCtx.business.id);
+      companyCtx.business.phone=localPhone;
+      if(companyRole()==='owner'&&authUser?.id){
+        await sb.from('profiles').update({phone:localPhone,updated_at:new Date().toISOString()}).eq('id',authUser.id);
+        companyCtx.profile={...(companyCtx.profile||{}),phone:localPhone};
+      }
+    }catch(phoneSaveError){console.warn(phoneSaveError)}
+
+    baileysSession={status:'connecting',phone,qr_svg:null,pairing_code:null,last_error:null};
     render();
-    if(baileysSession.status!=='connected')startBaileysPoll();
-    toast(code?'Código gerado. Digite no WhatsApp deste celular.':'WhatsApp conectado');
+
+    const out=await callBaileys('pair-code','POST',{phone});
+    const code=String(out?.pairing_code||'').replace(/\s/g,'').toUpperCase();
+    if(!code)throw new Error('O Oracle não gerou o código. Aguarde alguns segundos e tente novamente.');
+
+    baileysSession={
+      status:out?.status||'qr',
+      phone:out?.phone||phone,
+      qr_svg:null,
+      pairing_code:code,
+      last_error:null
+    };
+    render();
+    startBaileysPoll();
+    toast('Código gerado. Digite este código agora no WhatsApp.');
   }catch(ex){
     console.error(ex);
-    const message=typeof friendlyBaileysError==='function'?friendlyBaileysError(ex?.message):String(ex?.message||'Não foi possível gerar o código');
+    const message=friendlyBaileysError(ex?.message||'Não foi possível gerar o código');
     baileysSession={status:'disconnected',phone:null,qr_svg:null,pairing_code:null,last_error:message};
     render();
     toast(message);
   }finally{
     const b=document.getElementById('baileysPhoneBtn');
-    if(b){b.disabled=false;b.textContent='Gerar código no celular'}
+    if(b){b.disabled=false;b.textContent='Gerar código para conectar'}
   }
 }
     function regenerateBaileysCode(){
@@ -4946,7 +4960,7 @@ async function installAgendaApp(){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-whatsappopen44',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261006-oraclepair44',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
