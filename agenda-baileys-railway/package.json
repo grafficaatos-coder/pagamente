@@ -1,0 +1,19 @@
+{
+  "name": "agenda-pro-baileys-railway",
+  "private": true,
+  "type": "module",
+  "version": "1.1.0",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test test/*.test.mjs"
+  },
+  "dependencies": {
+    "@hapi/boom": "9.1.3",
+    "@whiskeysockets/baileys": "6.7.24",
+    "pino": "9.7.0",
+    "qrcode": "1.5.4"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
