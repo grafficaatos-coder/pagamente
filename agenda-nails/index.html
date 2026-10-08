@@ -2040,7 +2040,9 @@
     function companyAccessBlocked(){
   if(!companyCtx)return true;
   if(companyCtx.business?.manual_blocked)return true;
+  const isFreePlan=Number(companyCtx.plan?.monthly_price_cents||0)===0;
   const st=companyCtx.subscription?.status;
+  if(isFreePlan)return st==='cancelled';
   if(st==='suspended'||st==='cancelled')return true;
   const now=new Date();
   if(st==='trialing'){
@@ -2060,6 +2062,7 @@
     function subscriptionLabel(){
   if(!companyCtx)return'—';
   if(companyAccessBlocked())return'Bloqueado';
+  if(Number(companyCtx.plan?.monthly_price_cents||0)===0)return'Em dia';
   const s=companyCtx.subscription?.status;
   if(s==='trialing')return'Teste grátis';
   if(s==='past_due')return'Pagamento pendente';
@@ -3295,7 +3298,7 @@ async function installAgendaApp(){
     function addMonthBR(v){const d=parseBRDate(v)||new Date();d.setMonth(d.getMonth()+1);return formatBRDate(d)}
     function daysPast(v){const d=parseBRDate(v);if(!d)return 0;const a=new Date();a.setHours(0,0,0,0);d.setHours(0,0,0,0);return Math.floor((a-d)/86400000)}
     function getPlan(c){return ADMIN.plans.find(p=>p.id===c.plan)||ADMIN.plans[0]}
-    function effectiveClientStatus(c){if(c.manualBlocked)return'blocked';if(c.trialUntil){const t=parseBRDate(c.trialUntil),n=new Date();n.setHours(0,0,0,0);if(t&&n<=t)return'trial'}const overdue=daysPast(c.due);if(overdue>0){if(ADMIN.settings.autoBlock&&overdue>Number(ADMIN.settings.graceDays||0))return'blocked';return'late'}return'active'}
+    function effectiveClientStatus(c){if(c.manualBlocked)return'blocked';if(Number(c.monthly)===0)return'active';if(c.trialUntil){const t=parseBRDate(c.trialUntil),n=new Date();n.setHours(0,0,0,0);if(t&&n<=t)return'trial'}const overdue=daysPast(c.due);if(overdue>0){if(ADMIN.settings.autoBlock&&overdue>Number(ADMIN.settings.graceDays||0))return'blocked';return'late'}return'active'}
     function statusLabel(s){return s==='active'?'Ativo':s==='trial'?'Teste grátis':s==='late'?'Atrasado':'Bloqueado'}
     function statusClass(s){return s==='active'?'status-active':s==='trial'?'status-trial':s==='late'?'status-late':'status-blocked'}
     function planUserLimit(pl){return pl.maxUsers>=999?'Ilimitados':String(pl.maxUsers)}
@@ -3309,7 +3312,7 @@ async function installAgendaApp(){
     function adminClients(){
   return `<section class="panel"><div class="head"><div><span class="eyebrow">Clientes da plataforma</span><h3>Assinantes</h3></div><button class="btn primary" onclick="addDemoClient()">+ Novo assinante</button></div><div style="overflow-x:auto"><table class="client-table subscriber-table"><thead><tr><th>Empresa</th><th>Plano</th><th>Usuários</th><th>Telefone</th><th>Mensalidade</th><th>Vencimento</th><th>Status</th><th>Ações</th></tr></thead><tbody>${ADMIN.clients.map(x=>{
     const pl=ADMIN.plans.find(p=>p.code===x.plan)||ADMIN.plans[0],s=effectiveClientStatus(x);
-    const overdue=daysPast(x.due)>0;
+    const overdue=Number(x.monthly)>0&&daysPast(x.due)>0;
     const phoneText=x.phone?formatBusinessPhone(x.phone):'Não cadastrado';
     return `<tr class="${overdue?'subscriber-overdue':''}">
       <td data-label="Empresa"><b>${x.name}</b><small>${x.segment} · ${String(x.id).slice(0,8)}</small></td>
@@ -4210,12 +4213,19 @@ async function installAgendaApp(){
       const planId=document.getElementById('clientNewPlan')?.value;
       const pl=ADMIN.plans.find(p=>p.id===planId);
       if(!pl)return toast('Selecione um plano');
-      const {data,error}=await sb.from('agenda_subscriptions').update({plan_id:pl.id,updated_at:new Date().toISOString()}).eq('business_id',id).select('business_id,plan_id').maybeSingle();
+      const isFree=Number(pl.price)===0;
+      const update={plan_id:pl.id,updated_at:new Date().toISOString()};
+      if(isFree){update.status='active';update.trial_ends_at=null;}
+      const {data,error}=await sb.from('agenda_subscriptions').update(update).eq('business_id',id).select('business_id,plan_id').maybeSingle();
       if(error||!data||data.plan_id!==pl.id){console.error(error||'Assinatura não encontrada');return toast('Não foi possível salvar o novo plano. Confira a assinatura da empresa.')}
+      if(isFree){
+        const {error:accessError}=await sb.from('agenda_businesses').update({manual_blocked:false,status:'active',updated_at:new Date().toISOString()}).eq('id',id);
+        if(accessError){console.error(accessError);return toast('Plano Free salvo, mas não foi possível liberar a conta');}
+      }
       closeAppModal();
       await loadOwnerData();
       render();
-      toast('Plano da empresa atualizado');
+      toast(isFree?'Plano Free ativado e acesso liberado':'Plano da empresa atualizado');
     }
   });
 }
