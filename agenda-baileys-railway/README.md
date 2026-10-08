@@ -41,7 +41,7 @@ O código por número só é solicitado depois do evento QR que indica socket pr
 1. Inserir a chave privada e publicar. Conferir `/ready`.
 2. Manter `DISPATCH_ENABLED=false` e liberar apenas a empresa piloto em `ALLOWED_BUSINESS_IDS`.
 3. Pausar/desconectar o runtime da empresa piloto no Oracle antes de conectar no Railway. Não forçar/liberar leases de um runtime ainda ativo.
-4. Roteamento por empresa: preparar um override de URL para a piloto no proxy `agenda-baileys-proxy`. A configuração atual `agenda_platform_settings.baileys_service_url` é global; NÃO alterá-la durante teste isolado, pois afetaria as outras empresas.
+4. Roteamento por empresa: `agenda_whatsapp_runtime_routes` define a URL e o prefixo de lease autorizados para a piloto. O proxy consulta essa tabela, acessível somente pelo servidor. Após cadastrar a rota Railway, o Oracle perde a renovação do lease, fecha seu socket e o Railway aguarda a expiração normal antes de assumir. A configuração global `agenda_platform_settings.baileys_service_url` permanece no Oracle para as demais empresas.
 5. Conectar o WhatsApp da piloto, conferir heartbeat e reiniciar o serviço para comprovar restauração sem novo pareamento.
 6. Revisar pendências antigas da fila. Ativar envios e realizar uma confirmação de teste para destinatário autorizado, verificando `done` e ausência de duplicidade.
 7. Somente após aceite do teste, migrar as demais empresas, parar seus runtimes antigos, definir `ALLOW_ALL_BUSINESSES=true` e trocar a URL global do Agenda Pro pela URL Railway. Remover o override da piloto após a troca.

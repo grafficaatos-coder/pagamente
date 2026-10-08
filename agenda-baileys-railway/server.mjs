@@ -234,7 +234,7 @@ export class WhatsSession{
   constructor(businessId){
     this.businessId=businessId;
     this.authDir=path.join(DATA_DIR,"sessions",businessId);
-    this.leaseId=process.pid+"-"+Date.now()+"-"+businessId.slice(0,8)+"-"+Math.random().toString(36).slice(2,8);
+    this.leaseId="railway:"+process.pid+"-"+Date.now()+"-"+businessId.slice(0,8)+"-"+Math.random().toString(36).slice(2,8);
     this.sock=null;this.state="offline";this.error="";this.phone=null;this.qrSvg=null;
     this.leaseOwned=false;this.connectBusy=false;this.dispatchBusy=false;this.broadcastBusy=false;this.stopped=false;
     this.catalogBroadcast={running:false,total:0,sent:0,failed:0,started_at:null,finished_at:null};
