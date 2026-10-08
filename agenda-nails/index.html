@@ -3319,7 +3319,7 @@ async function installAgendaApp(){
       <td data-label="Mensalidade">${moneyBR(x.monthly)}</td>
       <td data-label="Vencimento"><b>${x.due}</b>${x.trialUntil&&s==='trial'?`<small>Teste até ${x.trialUntil}</small>`:''}${overdue?`<small class="overdue-text">${daysPast(x.due)} dia(s) em atraso</small>`:''}</td>
       <td data-label="Status"><span class="status-badge ${statusClass(s)}">${statusLabel(s)}</span></td>
-      <td data-label="Ações"><div class="table-actions">${overdue?`<button class="mini-btn billing-whats-btn" onclick="sendSubscriberCharge('${x.id}')">WhatsApp · Cobrar</button>`:''}<button class="mini-btn plan-change-action" onclick="changeClientPlan('${x.id}')">Mudar plano</button><button class="mini-btn" onclick="viewClientAccess('${x.id}')">Ver acesso</button><button class="mini-btn" onclick="markPaid('${x.id}')">Marcar pago</button><button class="mini-btn ${s==='blocked'?'':'danger'}" onclick="toggleClient('${x.id}')">${x.manualBlocked?'Desbloquear':'Bloquear'}</button></div></td>
+      <td data-label="Ações"><div class="table-actions">${overdue?`<button class="mini-btn billing-whats-btn" onclick="sendSubscriberCharge('${x.id}')">WhatsApp · Cobrar</button>`:''}<button class="mini-btn plan-change-action" onclick="changeClientPlan('${x.id}')">Mudar plano</button><button class="mini-btn" onclick="viewClientAccess('${x.id}')">Ver acesso</button><button class="mini-btn" onclick="markPaid('${x.id}')">Marcar pago</button><button class="mini-btn ${s==='blocked'?'':'danger'}" onclick="toggleClient('${x.id}')">${s==='blocked'?'Desbloquear':'Bloquear'}</button></div></td>
     </tr>`;
   }).join('')||'<tr><td colspan="8">Nenhum assinante cadastrado.</td></tr>'}</tbody></table></div></section>`;
 }
@@ -4210,8 +4210,8 @@ async function installAgendaApp(){
       const planId=document.getElementById('clientNewPlan')?.value;
       const pl=ADMIN.plans.find(p=>p.id===planId);
       if(!pl)return toast('Selecione um plano');
-      const {error}=await sb.from('agenda_subscriptions').update({plan_id:pl.id,updated_at:new Date().toISOString()}).eq('business_id',id);
-      if(error){console.error(error);return toast('Não foi possível trocar o plano')}
+      const {data,error}=await sb.from('agenda_subscriptions').update({plan_id:pl.id,updated_at:new Date().toISOString()}).eq('business_id',id).select('business_id,plan_id').maybeSingle();
+      if(error||!data||data.plan_id!==pl.id){console.error(error||'Assinatura não encontrada');return toast('Não foi possível salvar o novo plano. Confira a assinatura da empresa.')}
       closeAppModal();
       await loadOwnerData();
       render();
@@ -4230,10 +4230,19 @@ async function installAgendaApp(){
 }
     async function toggleClient(id){
   const x=ADMIN.clients.find(y=>y.id===id);if(!x)return;
-  const blocking=!x.manualBlocked;
-  const a=await sb.from('agenda_businesses').update({manual_blocked:blocking,status:blocking?'suspended':'active',updated_at:new Date().toISOString()}).eq('id',id);
-  const b=await sb.from('agenda_subscriptions').update({status:blocking?'suspended':'active',updated_at:new Date().toISOString()}).eq('business_id',id);
-  if(a.error||b.error)return toast('Não foi possível alterar o acesso');
+  const blocking=!(x.manualBlocked||x.status==='blocked');
+  const {data:business,error:businessError}=await sb.from('agenda_businesses')
+    .update({manual_blocked:blocking,status:blocking?'suspended':'active',updated_at:new Date().toISOString()})
+    .eq('id',id).select('id').maybeSingle();
+  if(businessError||!business){console.error(businessError||'Empresa não encontrada');return toast('Não foi possível alterar o acesso');}
+  // Não converter uma assinatura vencida em paga ao desbloquear manualmente.
+  const previousStatus=x.subscription?.status;
+  if(blocking||previousStatus==='suspended'){
+    const {error:subscriptionError}=await sb.from('agenda_subscriptions')
+      .update({status:blocking?'suspended':'active',updated_at:new Date().toISOString()})
+      .eq('business_id',id);
+    if(subscriptionError){console.error(subscriptionError);return toast('A empresa foi alterada, mas não foi possível atualizar a assinatura. Atualize e verifique o status.');}
+  }
   await loadOwnerData();render();toast(blocking?'Empresa bloqueada':'Empresa desbloqueada');
 }
     function addDemoClient(){
