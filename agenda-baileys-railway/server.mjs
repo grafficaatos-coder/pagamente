@@ -240,7 +240,7 @@ export class WhatsSession{
     this.catalogBroadcast={running:false,total:0,sent:0,failed:0,started_at:null,finished_at:null};
     this.timers=[];
     this.leaseBusy=false;this.leaseExpires=0;this.socketStarted=0;
-    this.pairBusy=false;this.pairCode=null;this.pairExpires=0;this.qrReady=false;
+    this.pairBusy=false;this.pairCode=null;this.pairExpires=0;this.pairPhone=null;this.qrReady=false;
     this.savePending=Promise.resolve();this.lastCheckpoint=null;
   }
   async start(){
@@ -261,7 +261,7 @@ export class WhatsSession{
   }
   hasLease(){return this.leaseOwned&&performance.now()<this.leaseExpires&&!this.stopped}
   closeSocket(){
-    const sock=this.sock;this.sock=null;this.qrReady=false;this.qrSvg=null;this.pairCode=null;
+    const sock=this.sock;this.sock=null;this.qrReady=false;this.qrSvg=null;this.pairCode=null;this.pairPhone=null;this.pairExpires=0;
     try{sock?.end(new Error("Runtime pausado"))}catch{}
   }
   async leaseCycle(){
@@ -307,13 +307,15 @@ export class WhatsSession{
         if(this.sock!==sock)return;
         try{
           if(update.qr){
+            // Novo desafio invalida o código de pareamento anterior.
+            this.pairCode=null;this.pairPhone=null;this.pairExpires=0;
             this.qrReady=true;
             this.qrSvg=await QRCode.toString(update.qr,{type:"svg",width:320,margin:1});
             this.state="waiting_qr";this.error="";
             await upsertSession(this.businessId,{status:"qr",last_error:null});
           }
           if(update.connection==="open"){
-            this.state="online";this.error="";this.qrSvg=null;this.pairCode=null;this.qrReady=false;
+            this.state="online";this.error="";this.qrSvg=null;this.pairCode=null;this.pairPhone=null;this.pairExpires=0;this.qrReady=false;
             const normalized=jidNormalizedUser(String(sock.user?.id||""));
             this.phone=normalized?normalized.split("@")[0].split(":")[0]:null;
             await upsertSession(this.businessId,{
@@ -323,7 +325,7 @@ export class WhatsSession{
           }
           if(update.connection==="close"){
             const code=Number(new Boom(update.lastDisconnect?.error).output?.statusCode||0);
-            this.sock=null;this.qrReady=false;this.pairCode=null;
+            this.sock=null;this.qrReady=false;this.pairCode=null;this.pairPhone=null;this.pairExpires=0;
             if(this.stopped||!this.hasLease())return;
             if(code===DisconnectReason.loggedOut){
               this.state="offline";this.phone=null;this.stopped=true;
@@ -453,12 +455,12 @@ export class WhatsSession{
     if(normalized.length<12||normalized.length>13){
       throw Object.assign(new Error("Informe o número com DDD, por exemplo 41999999999."),{status:400});
     }
-    if(!this.leaseOwned)await this.acquireLease();
-    if(!this.leaseOwned){
+    if(!this.hasLease())await this.acquireLease();
+    if(!this.hasLease()){
       throw Object.assign(new Error("A conexão está sendo usada por outro processo. Tente novamente em alguns segundos."),{status:409});
     }
     if(this.pairBusy)throw Object.assign(new Error("Já existe uma tentativa em andamento."),{status:409});
-    if(this.pairCode&&Date.now()<this.pairExpires)return this.pairCode;
+    if(this.pairCode&&this.pairPhone===normalized&&Date.now()<this.pairExpires)return this.pairCode;
     this.pairBusy=true;
     try{
       if(!this.sock&&!this.connectBusy)await this.connectSocket();
@@ -473,7 +475,7 @@ export class WhatsSession{
       if(this.sock!==sock||!this.hasLease())throw new Error("WhatsApp interrompeu o pareamento. Tente novamente.");
       const clean=String(code||"").replace(/\s+/g,"").trim();
       if(!clean)throw new Error("O WhatsApp não gerou o código.");
-      this.pairCode=clean;this.pairExpires=Date.now()+60000;
+      this.pairCode=clean;this.pairPhone=normalized;this.pairExpires=Date.now()+60000;
       await upsertSession(this.businessId,{status:"qr",pairing_code:clean,last_error:null});
       return clean;
     }finally{this.pairBusy=false}
