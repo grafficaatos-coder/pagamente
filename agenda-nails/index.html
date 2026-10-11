@@ -1822,6 +1822,75 @@
       .appt,.receivable-row,.finance-item{max-width:100%;overflow-wrap:anywhere}
     }
     @media(max-width:370px){.content{padding-inline:9px}.hero-shortcuts{grid-template-columns:minmax(0,1fr)}.hero-shortcuts .btn:first-child{grid-column:auto}.metric{padding:11px}}
+
+    /* Refinamento geral v2 — acessibilidade, agenda, financeiro e navegação mobile */
+    :root{--focus-ring:#b98ea7}
+    button,select,input,textarea{touch-action:manipulation}
+    button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[role="button"]:focus-visible{
+      outline:3px solid var(--focus-ring);outline-offset:2px
+    }
+    button:disabled{cursor:not-allowed;opacity:.55}
+    .panel,.card,.metric{min-width:0}
+    .panel .head{gap:10px;flex-wrap:wrap}
+    .panel .head h3{line-height:1.25}
+    .finance-row,.finance-summary,.finance-item,.receivable-row{min-width:0}
+    .finance-amount,.receivable-value{font-variant-numeric:tabular-nums}
+    .agenda-actions{flex-wrap:wrap;row-gap:7px}
+    .agenda-actions select,.agenda-actions button{min-height:36px}
+    .side .nav button{border-radius:12px}
+    .side .nav button.on{box-shadow:0 5px 15px rgba(42,25,33,.09)}
+    .top .btn,.hero-shortcuts .btn{white-space:normal;text-align:center}
+    .client-real-card,.service,.panel{overflow-wrap:anywhere}
+    @media(max-width:900px){
+      .finance-grid,.section-grid{grid-template-columns:minmax(0,1fr)}
+      .finance-entry-form-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
+    @media(max-width:720px){
+      html,body{max-width:100%;overflow-x:clip}
+      .app,.main,.content,.dashboard-grid,.section-grid,.metrics,.finance-grid{min-width:0}
+      .top{height:auto;min-height:62px;padding:10px 12px;gap:8px}
+      .top-left{gap:8px;flex:1;min-width:0}
+      .top-actions{gap:5px;flex-shrink:0}
+      .top .btn{padding:8px 10px;font-size:11px;min-height:36px}
+      .top h1{font-size:16px}.top small{font-size:10px}
+      .mobile-menu-toggle{height:40px;padding:0 11px;font-size:11px}
+      .hero{margin-bottom:12px}
+      .next-card{min-height:0}
+      .next-card h3{font-size:20px;margin:6px 0 9px}
+      .next-time{font-size:32px}
+      .next-person{margin-top:9px}
+      .next-actions{margin-top:11px}
+      .metric{box-shadow:0 3px 12px rgba(75,40,57,.035)}
+      .section-grid .panel,.finance-history{min-width:0}
+      .appt{gap:7px;min-width:0}
+      .appt-time{font-variant-numeric:tabular-nums}
+      .agenda-actions{width:100%}
+      .agenda-actions button,.agenda-actions select{max-width:100%}
+      .finance-entry-form-grid{grid-template-columns:minmax(0,1fr)}
+      .finance-tabs{display:flex;flex-wrap:wrap}
+      .finance-filters{flex-wrap:wrap}
+      .receivable-row{grid-template-columns:48px minmax(0,1fr);gap:9px}
+      .receivable-value,.receivable-actions{grid-column:2}
+      .receivable-actions{display:flex;flex-wrap:wrap}
+      .receivable-actions button{flex:1;min-width:0}
+      .side{width:min(88vw,312px)}
+      .side .nav button{min-height:46px}
+      .side .side-foot{position:relative;left:auto;right:auto;bottom:auto;margin-top:12px}
+      .side .nav{padding-bottom:12px}
+      .fab{right:calc(15px + env(safe-area-inset-right));bottom:calc(78px + env(safe-area-inset-bottom))}
+    }
+    @media(max-width:380px){
+      .top{padding:9px 8px}
+      .mobile-menu-toggle{min-width:74px;padding-inline:9px}
+      .top h1{font-size:14px}
+      .hero{padding:15px 13px}
+      .hero h2{font-size:24px}
+      .appt{font-size:11px}
+    }
+    @media(prefers-reduced-motion:reduce){
+      .side,.mobile-menu-overlay,.btn,.metric,.panel,.next-card{transition:none!important}
+      html{scroll-behavior:auto}
+    }
 </style>
 </head>
 <body>
