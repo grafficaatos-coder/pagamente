@@ -1793,7 +1793,31 @@
     .meta-setup-steps span{font-size:9px;line-height:1.45;color:#675c61}
     .meta-config-status-line{margin-top:10px;padding:9px 11px;border-radius:10px;background:#f7f3f5;color:#6f5964;font-size:9px;font-weight:850}
     @media(max-width:720px){.wa-platform-pending{grid-template-columns:46px minmax(0,1fr);padding:16px}.wa-platform-pending-icon{width:46px;height:46px;border-radius:14px}}
-  </style>
+  
+    /* Refinamento visual responsivo: sem alterar regras de negócio */
+    .hero{padding:23px 25px;border:1px solid #eee0e5;border-radius:22px;background:linear-gradient(125deg,#fff 0%,#fff9fb 100%);box-shadow:0 12px 30px rgba(75,40,57,.045)}
+    .hero h2{font-size:clamp(25px,3vw,34px);line-height:1.17}.hero p{line-height:1.5}
+    .hero-shortcuts{display:flex;gap:9px;flex-wrap:wrap;margin-top:18px}.hero-shortcuts .btn{min-height:43px}
+    .metric,.panel,.next-card{transition:box-shadow .2s ease,transform .2s ease}
+    .metric:focus-within,.panel:focus-within{box-shadow:0 8px 28px rgba(81,41,60,.09)}
+    .metric-link:focus-visible,.btn:focus-visible,.nav button:focus-visible,.mobile-menu-toggle:focus-visible{outline:3px solid #c78ba6;outline-offset:3px}
+    .appt{min-width:0}.appt>div{min-width:0}.appt strong,.appt small{overflow-wrap:anywhere}
+    @media(max-width:720px){
+      .content{padding:14px 12px calc(88px + env(safe-area-inset-bottom));max-width:100%;overflow-x:clip}
+      .hero{padding:19px 16px;border-radius:18px;align-items:flex-start;flex-direction:column;gap:12px}
+      .hero h2{font-size:27px}.hero-shortcuts{width:100%;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+      .hero-shortcuts .btn{min-width:0;padding:10px 8px;font-size:12px}.hero-shortcuts .btn:first-child{grid-column:1/-1}
+      .dashboard-grid,.section-grid{grid-template-columns:minmax(0,1fr);gap:12px}
+      .metrics{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+      .metric{min-width:0;padding:13px;border-radius:15px}.metric b{font-size:clamp(17px,5vw,22px);overflow-wrap:anywhere}
+      .next-card{padding:20px 17px;border-radius:19px}.section-grid{margin-top:12px}
+      .mobile-menu-toggle{min-width:82px;flex-shrink:0}.top-left{min-width:0}.top-left>div:last-child{min-width:0}
+      .top h1{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+      .side .nav button{min-height:44px}.side .nav button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+      .appt,.receivable-row,.finance-item{max-width:100%;overflow-wrap:anywhere}
+    }
+    @media(max-width:370px){.content{padding-inline:9px}.hero-shortcuts{grid-template-columns:minmax(0,1fr)}.hero-shortcuts .btn:first-child{grid-column:auto}.metric{padding:11px}}
+</style>
 </head>
 <body>
   <div id="root"></div>
@@ -2189,7 +2213,7 @@ async function installAgendaApp(){
     const d=new Date(a.starts_at),cu=companyData.customers.find(x=>x.id===a.customer_id),se=companyData.services.find(x=>x.id===a.service_id);
     return `<div class="appt"><div class="appt-time">${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div><span class="status-line ${a.status==='pending'?'p':''}"></span><div><strong>${cu?.name||'Cliente'}</strong><small>${d.toLocaleDateString('pt-BR')} · ${se?.name||'Serviço'}</small></div><span class="tag ${a.status==='pending'?'p':''}">${a.status==='pending'?'Pendente':'Confirmado'}</span></div>`;
   }).join('');
-  return shell(`<section class="hero"><div><span class="eyebrow">${displayBusinessName(companyCtx.business.name)} · ${companyCtx.plan.name}</span><h2>${greeting()} 👋</h2><p>Gerencie sua empresa com os recursos liberados no seu plano.</p></div><span class="date-chip">${I.calendar}${todayText()}</span></section><section class="dashboard-grid">${nextCard}<section class="metrics">${p.metrics.map(m=>metric(...m)).join('')}</section></section><section class="section-grid"><section class="panel"><div class="head"><div><span class="eyebrow">Próximos horários</span><h3>Agenda</h3></div>${openAgendaButton}</div>${rows||'<div class="empty-state">Nenhum horário futuro.</div>'}</section><aside class="panel"><div class="head"><div><span class="eyebrow">Seu plano</span><h3>${companyCtx.plan.name}</h3></div></div><div class="feature-list">${Object.entries(CAPABILITIES).filter(([k])=>companyCtx.plan.permissions?.[k]).slice(0,7).map(([,label])=>`<div class="feature"><i>✓</i><span>${label}</span></div>`).join('')}</div></aside></section>`);
+  return shell(`<section class="hero"><div><span class="eyebrow">${displayBusinessName(companyCtx.business.name)} · ${companyCtx.plan.name}</span><h2>${greeting()} 👋</h2><p>Seus horários, clientes e financeiro em um só lugar.</p><div class="hero-shortcuts">${hasFeature('agenda')?'<button class="btn primary" onclick="book()">+ Novo agendamento</button><button class="btn secondary" onclick="go(\'agenda\')">Ver agenda</button>':''}${hasFeature('finance')?'<button class="btn secondary" onclick="go(\'cash\')">Financeiro</button>':''}</div></div><span class="date-chip">${I.calendar}${todayText()}</span></section><section class="dashboard-grid">${nextCard}<section class="metrics">${p.metrics.map(m=>metric(...m)).join('')}</section></section><section class="section-grid"><section class="panel"><div class="head"><div><span class="eyebrow">Próximos horários</span><h3>Agenda</h3></div>${openAgendaButton}</div>${rows||'<div class="empty-state">Nenhum horário futuro.</div>'}</section><aside class="panel"><div class="head"><div><span class="eyebrow">Seu plano</span><h3>${companyCtx.plan.name}</h3></div></div><div class="feature-list">${Object.entries(CAPABILITIES).filter(([k])=>companyCtx.plan.permissions?.[k]).slice(0,7).map(([,label])=>`<div class="feature"><i>✓</i><span>${label}</span></div>`).join('')}</div></aside></section>`);
 }
     function agendaDateKey(value){
   const d=value instanceof Date?value:new Date(value);
