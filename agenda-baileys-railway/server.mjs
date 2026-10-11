@@ -128,11 +128,14 @@ function serviceTerms(segment){
   if(key==="personal_trainer")return {one:"Aula",many:"aulas"};
   return {one:"Serviço",many:"serviços"};
 }
+function publicBusinessName(name){
+  return String(name||"Agenda Pro").replace(/^\s*by\s+/i,"").trim()||"Agenda Pro";
+}
 function catalogText(business,customer,services){
   const first=String(customer?.name||"").trim().split(/\s+/)[0]||"Cliente";
   const terms=serviceTerms(business?.segment);
   const items=services.map(s=>"• *"+s.name+"*"+(s.show_price_to_client===false?"":" — "+moneyBRFromCents(s.price_cents))).join("\n");
-  return "Olá, "+first+"! ✨\n\nSegue nosso catálogo de "+terms.many+" da *"+business.name+"*:\n\n"+items+
+  return "Olá, "+first+"! ✨\n\nSegue nosso catálogo de "+terms.many+" da *"+publicBusinessName(business.name)+"*:\n\n"+items+
     "\n\nSe quiser agendar, é só entrar em contato por aqui. 💖";
 }
 function messageText(kind,business,customer,service,appointment){
@@ -150,16 +153,16 @@ function messageText(kind,business,customer,service,appointment){
     : "";
   if(kind==="reminder"){
     const pendingConfirmation=!appointment.confirmed_by_customer_at&&appointment.status!=="cancelled";
-    return "Olá, "+first+"! 😊\n\nLembrando que seu horário na *"+business.name+"* é amanhã."+
+    return "Olá, "+first+"! 😊\n\nLembrando que seu horário na *"+publicBusinessName(business.name)+"* é amanhã."+
       "\n\n📅 Data: *"+when.date+"*\n🕐 Horário: *"+when.time+"*\n✨ "+terms.one+": *"+service.name+"*"+proLine+
       (pendingConfirmation?confirmationBlock:"");
   }
   if(kind==="followup"){
-    return "Olá, "+first+"! 😊\n\nObrigado pelo seu atendimento na *"+business.name+"*."+
+    return "Olá, "+first+"! 😊\n\nObrigado pelo seu atendimento na *"+publicBusinessName(business.name)+"*."+
       "\n\nEsperamos que tenha gostado. Quando quiser agendar novamente, é só chamar a gente por aqui. 💛";
   }
   return "Olá, "+first+"! ✨"+
-    "\nSeu horário na *"+business.name+"* foi agendado."+
+    "\nSeu horário na *"+publicBusinessName(business.name)+"* foi agendado."+
     "\n\n📅 *Data:* "+when.date+
     "\n🕐 *Horário:* "+when.time+
     "\n✨ *"+terms.one+":* "+service.name+
