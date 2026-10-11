@@ -3308,13 +3308,13 @@ async function installAgendaApp(){
   const baileysWaiting=baileysSession.status==='qr'||baileysSession.status==='connecting';
   const baileysCard=baileysEnabled?`<section class="panel baileys-card wa-easy-connect ${baileysSession.status==='connected'?'connected':''}">
     <div class="head">
-      <div><span class="eyebrow">Oracle Cloud</span><h3>${baileysSession.status==='connected'?'WhatsApp conectado':'Conectar pelo celular'}</h3></div>
+      <div><span class="eyebrow">Servidor WhatsApp</span><h3>${baileysSession.status==='connected'?'WhatsApp conectado':'Conectar pelo celular'}</h3></div>
       <span class="status-badge ${baileysSession.status==='connected'?'status-active':baileysWaiting?'status-late':'status-neutral'}">${baileysSession.status==='connected'?'Conectado':baileysWaiting?'Aguardando':'Desconectado'}</span>
     </div>
     ${baileysSession.status==='connected'
       ? `<div class="wa-easy-success">
           <div class="wa-easy-success-icon">✓</div>
-          <div><b>Pronto! Seu WhatsApp está conectado.</b><p>A sessão fica salva no servidor Oracle e as mensagens automáticas podem ser enviadas sem deixar computador ligado.</p><small>${baileysSession.phone?'Número conectado: +'+baileysSession.phone:''}</small></div>
+          <div><b>Pronto! Seu WhatsApp está conectado.</b><p>A sessão fica salva no servidor WhatsApp e as mensagens automáticas podem ser enviadas sem deixar computador ligado.</p><small>${baileysSession.phone?'Número conectado: +'+baileysSession.phone:''}</small></div>
           ${admin?`<button class="btn wa-disconnect" onclick="disconnectBaileys()">Desconectar</button>`:''}
         </div>`
       : baileysSession.pairing_code
@@ -3332,7 +3332,7 @@ async function installAgendaApp(){
               <div><b>2</b><span>Toque em <strong>Conectar um aparelho</strong>.</span></div>
               <div><b>3</b><span>Escolha <strong>Conectar com número de telefone</strong> e digite o código acima.</span></div>
             </div>
-            <div class="wa-code-warning">Não precisa de outro aparelho nem de QR Code. Depois que o código for aceito, o Oracle trata o reinício do WhatsApp automaticamente e mantém a sessão salva para os próximos acessos.</div>
+            <div class="wa-code-warning">Não precisa de outro aparelho nem de QR Code. Depois que o código for aceito, o servidor mantém o WhatsApp conectado e preserva a sessão para os próximos acessos.</div>
             <div class="wa-waiting-line"><span></span>Aguardando o WhatsApp concluir o vínculo...</div>
             <button class="btn primary wa-verify-btn" onclick="verifyBaileysNow()">Já digitei o código · verificar</button>
           </div>`
@@ -3340,7 +3340,7 @@ async function installAgendaApp(){
             <div class="wa-connect-progress"><span class="active">1</span><i></i><span>2</span><i></i><span>3</span></div>
             <span class="wa-step-label">PASSO 1 DE 3</span>
             <h4>Conectar usando este celular</h4>
-            <p>Informe o número do WhatsApp que ficará vinculado ao Agenda Pro. O servidor Oracle espera a conexão ficar pronta e só então gera o código para você digitar no próprio WhatsApp, sem escanear QR.</p>
+            <p>Informe o número do WhatsApp que ficará vinculado ao Agenda Pro. O servidor do WhatsApp prepara a conexão e só então gera o código para você digitar no próprio WhatsApp, sem escanear QR.</p>
             ${admin?`<div class="wa-phone-box"><label>Número com DDD</label><div class="wa-phone-input"><span>🇧🇷 +55</span><input id="baileysPhone" inputmode="tel" autocomplete="tel" value="${appModalEscape(preferredPhone)}" placeholder="41 99999-9999"></div></div>
             <button id="baileysPhoneBtn" class="btn primary wa-main-connect" onclick="connectBaileysByPhone()">Gerar código no celular</button>
             <details class="wa-qr-alternative"><summary>Usar QR Code como alternativa</summary><div><button id="baileysConnectBtn" class="btn secondary" onclick="connectBaileys()">Gerar QR Code</button></div></details>`:''}
@@ -3348,7 +3348,7 @@ async function installAgendaApp(){
           </div>`
     }
     <div id="baileysConnectError" class="login-error wa-easy-error">${friendlyBaileysError(baileysSession.last_error)}</div>
-    <details class="wa-security-note"><summary>Sobre esta conexão</summary><p>O WhatsApp fica conectado em um processo persistente no Oracle Cloud. A sessão é separada por empresa e continua ativa após reinícios normais do sistema.</p></details>
+    <details class="wa-security-note"><summary>Sobre esta conexão</summary><p>O WhatsApp fica conectado em um processo persistente em um servidor persistente. A sessão é separada por empresa e continua ativa após reinícios normais do sistema.</p></details>
   </section>`:'';
 
 
@@ -3383,9 +3383,9 @@ async function installAgendaApp(){
 
   const recent=(whatsappState?.messages||[]).map(m=>`<div class="wa-log-row"><span class="wa-log-dot ${m.status==='sent'?'ok':'bad'}"></span><div><b>${m.status==='sent'?'Enviado':'Falhou'}</b><small>${m.to_phone} · ${new Date(m.created_at).toLocaleString('pt-BR')}</small>${m.error_message?`<small class="wa-log-error">${m.error_message}</small>`:''}</div></div>`).join('');
 
-  return shell(`<div class="section-title"><span class="eyebrow">WhatsApp</span><h2>Conexão do WhatsApp</h2><p>Conecte o número pelo próprio celular usando o servidor Oracle Cloud, sem depender de QR Code.</p></div>
+  return shell(`<div class="section-title"><span class="eyebrow">WhatsApp</span><h2>Conexão do WhatsApp</h2><p>Conecte o número pelo próprio celular usando o servidor Servidor WhatsApp, sem depender de QR Code.</p></div>
 
-  ${baileysCard||'<section class="panel"><div class="empty-state">A conexão pelo Oracle Cloud ainda não está habilitada para esta empresa.</div></section>'}`);
+  ${baileysCard||'<section class="panel"><div class="empty-state">A conexão pelo servidor WhatsApp ainda não está habilitada para esta empresa.</div></section>'}`);
 }
     function setup(){const p=P();return shell(`<div class="section-title"><span class="eyebrow">Personalização</span><h2>Profissão / área</h2><p>O sistema adapta automaticamente clientes ou pacientes, serviços ou sessões e o fluxo de agendamento.</p></div><div class="setup-grid">${Object.values(PROFILES).map(x=>`<button class="setup-card ${x.key===segment?'on':''}" onclick="setSegment('${x.key}')"><span class="big-emoji">${x.emoji}</span><b>${x.segment}</b><small>${x.key==='salon'?'Clientes, serviços, profissionais, agenda e caixa.':x.key==='esthetic'?'Clientes, procedimentos, sessões, profissionais e pacotes.':'Pacientes, consultas, médicos, convênio e teleconsulta.'}</small></button>`).join('')}</div><div class="profile-row"><div class="profile-box"><span>Empresa demonstrada</span><b>${p.business}</b></div><div class="profile-box"><span>Terminologia ativa</span><b>${p.people} · ${p.serviceLabel} · ${p.professionals}</b></div></div><div class="context-note"><b>Multiempresa:</b> na versão comercial, cada assinante terá seu próprio cadastro, logo, equipe, horários, serviços e dados isolados. Esta tela demonstra como um único produto pode atender segmentos diferentes.</div>`)}
     function more(){const p=P();return shell(`<div class="section-title"><span class="eyebrow">Configurações</span><h2>Mais opções</h2><p>Personalize o sistema para ${p.business}.</p></div><div class="more-list"><button class="more-btn" onclick="go('admin')"><div class="quick-ico">${I.wallet}</div><b>Administração da plataforma</b><small>Planos, mensalidades, assinantes e bloqueios</small></button><button class="more-btn" onclick="go('setup')"><div class="quick-ico"><span style="font-size:18px">${p.emoji}</span></div><b>Tipo de negócio</b><small>${p.segment} · alterar modo</small></button><button class="more-btn" onclick="go('services')"><div class="quick-ico">${I.sparkle}</div><b>${p.serviceLabel}</b><small>Duração, valores e catálogo</small></button><button class="more-btn" onclick="go('wa')"><div class="quick-ico">${I.message}</div><b>WhatsApp</b><small>Confirmações e lembretes</small></button><button class="more-btn" onclick="book()"><div class="quick-ico">${I.calendar}</div><b>Novo horário</b><small>Cadastre ${p.appointment.toLowerCase()}</small></button><button class="more-btn" onclick="toast('Relatórios em breve')"><div class="quick-ico">${I.chart}</div><b>Relatórios</b><small>Indicadores de ${p.business}</small></button></div>`)}
@@ -3944,7 +3944,7 @@ async function installAgendaApp(){
   const enabled=!!document.getElementById('baileysEnabled')?.checked;
   const e=document.getElementById('baileysConfigError');
   if(enabled&&!url.toLowerCase().startsWith('https://')){
-    if(e)e.textContent='Informe a URL HTTPS publicada pela Oracle antes de ativar.';
+    if(e)e.textContent='Informe a URL HTTPS do servidor WhatsApp antes de ativar.';
     return;
   }
   const {error}=await sb.from('agenda_platform_settings').update({
@@ -4058,7 +4058,7 @@ async function installAgendaApp(){
 
     const out=await callBaileys('pair-code','POST',{phone});
     const code=String(out?.pairing_code||'').replace(/\s/g,'').toUpperCase();
-    if(!code)throw new Error('O Oracle não gerou o código. Aguarde alguns segundos e tente novamente.');
+    if(!code)throw new Error('O servidor do WhatsApp não gerou o código. Aguarde alguns segundos e tente novamente.');
 
     baileysSession={
       status:out?.status||'qr',
@@ -4103,10 +4103,10 @@ async function installAgendaApp(){
     <section class="panel"><div class="head"><div><span class="eyebrow">Inadimplência</span><h3>Controle automático</h3></div></div><div class="setting-row"><span><b>Bloqueio automático</b><small>Suspender após o período de tolerância</small></span><span class="toggle ${s.autoBlock?'on':''}" onclick="toggleAdminSetting('autoBlock')"></span></div><div class="setting-row"><span><b>Dias de tolerância</b><small>Depois do vencimento</small></span><button class="setting-edit" onclick="editAdminNumber('graceDays','Dias de tolerância')">${s.graceDays} dias</button></div><div class="setting-row"><span><b>Segmentos</b><small>Tipos de empresa disponíveis no cadastro</small></span><strong>Salão · Estética · Médico · Outro</strong></div></section>
   </div>
   <section class="panel baileys-platform-panel">
-    <div class="head"><div><span class="eyebrow">WhatsApp dos assinantes</span><h3>Baileys + Oracle Cloud</h3></div>${baileysStatus}</div>
+    <div class="head"><div><span class="eyebrow">WhatsApp dos assinantes</span><h3>Baileys + Servidor persistente</h3></div>${baileysStatus}</div>
     <div class="meta-platform-note"><b>Conexão pelo próprio celular.</b> O assinante informa o número e recebe um código para digitar no WhatsApp em “Aparelhos conectados → Conectar com número de telefone”. O QR Code fica somente como alternativa.</div>
-    <div class="wa-form-grid"><div class="field wa-full"><b>URL do servidor Oracle</b><input id="baileysServiceUrl" value="${s.baileysServiceUrl||''}" placeholder="https://seu-ip.sslip.io"></div></div>
-    <label class="wa-check"><input id="baileysEnabled" type="checkbox" ${s.baileysEnabled?'checked':''}><span><b>Ativar WhatsApp pelo Oracle Cloud</b><small>Quando ativo, cada empresa pode vincular o próprio número pelo celular e a sessão fica persistida no servidor.</small></span></label>
+    <div class="wa-form-grid"><div class="field wa-full"><b>URL do servidor WhatsApp</b><input id="baileysServiceUrl" value="${s.baileysServiceUrl||''}" placeholder="https://pagamente-production.up.railway.app"></div></div>
+    <label class="wa-check"><input id="baileysEnabled" type="checkbox" ${s.baileysEnabled?'checked':''}><span><b>Ativar WhatsApp pelo servidor WhatsApp</b><small>Quando ativo, cada empresa pode vincular o próprio número pelo celular e a sessão fica persistida no servidor.</small></span></label>
     <div id="baileysConfigError" class="login-error"></div>
     <button class="btn primary" onclick="saveBaileysPlatformConfig()">Salvar Baileys</button>
   </section>
