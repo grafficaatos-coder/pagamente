@@ -31,12 +31,29 @@ export default async function handler(req, res) {
   if (expected.length !== received.length || !timingSafeEqual(expected, received)) {
     return res.status(401).json({ error: 'invalid_signature' });
   }
-  // An authenticated notification is NOT proof that a payment was approved.
-  // Before any subscription write, fetch the payment/preapproval from MP's API,
-  // verify ownership/external_reference and de-duplicate the event.
-  // Until that step is implemented, we acknowledge verified events only.
+  // The callback is not evidence of paid service. Verify against Mercado Pago.
+  // This first stage is intentionally read-only: never grant, cancel or renew.
   const topic = String(req.query?.type || req.body?.type || '');
-  const supported = ['subscription_preapproval','subscription_preapproval_plan','subscription_authorized_payment'];
-  if (!supported.includes(topic)) return res.status(200).json({ ok: true, processed: false });
-  return res.status(200).json({ ok: true, verified: true, processed: false });
+  if (topic !== 'subscription_preapproval') return res.status(200).json({ ok: true, verified: true, processed: false });
+  const token = process.env.AGENDA_MP_ACCESS_TOKEN;
+  if (!token) return res.status(503).json({ error: 'mercadopago_api_not_configured' });
+  if (!/^[a-zA-Z0-9_-]{1,120}$/.test(dataId)) return res.status(400).json({ error: 'invalid_subscription_id' });
+  let subscription;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    let response;
+    try {
+      response = await fetch('https://api.mercadopago.com/preapproval/' + encodeURIComponent(dataId), {
+        headers: { Authorization: 'Bearer ' + token, Accept: 'application/json' },
+        signal: controller.signal
+      });
+    } finally { clearTimeout(timeout); }
+    if (!response.ok) return res.status(response.status === 404 ? 200 : 502).json({ ok: response.status === 404, verified: true, processed: false });
+    subscription = await response.json();
+  } catch (_) { return res.status(502).json({ error: 'provider_unavailable' }); }
+  if (String(subscription.id) !== dataId) return res.status(502).json({ error: 'provider_mismatch' });
+  // Next phase requires ownership validation against agenda_subscriptions.mp_preapproval_id,
+  // idempotent event log and atomic persistence. Do not trust external_reference alone.
+  return res.status(200).json({ ok: true, verified: true, provider_checked: true, processed: false });
 }
