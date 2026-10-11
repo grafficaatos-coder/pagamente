@@ -4526,6 +4526,17 @@ async function installAgendaApp(){
   const status='pending';
   const notes=document.getElementById('fnote')?.value||'';
   if(!customer_id||!service_id||!date||!time)return toast('Preencha cliente, serviço, data e horário');
+  const appointmentDate=new Date(`${date}T${time}:00`);
+  if(Number.isNaN(appointmentDate.getTime()))return toast('Data ou horário inválido.');
+  if(appointmentDate.getTime()<=Date.now()){
+    alert('Este horário já passou. Escolha uma data e hora futuras para que o agendamento e a mensagem automática sejam enviados corretamente.');
+    return;
+  }
+  // A sessão pode ter sido conectada em outra tela ou em outro aparelho.
+  // Revalide antes de escolher entre fila automática e envio manual.
+  if(companyCtx?.settings?.baileys_enabled&&companyCtx?.settings?.baileys_service_url){
+    await loadBaileysStatus(false);
+  }
 
   const customer=companyData.customers.find(x=>x.id===customer_id);
   const service=companyData.services.find(x=>x.id===service_id);
@@ -4538,7 +4549,7 @@ async function installAgendaApp(){
     try{whatsWindow=window.open('about:blank','_blank')}catch(e){}
   }
 
-  const starts_at=new Date(`${date}T${time}:00`).toISOString();
+  const starts_at=appointmentDate.toISOString();
   const {data:created,error}=await sb.from('agenda_appointments').insert({
     business_id:companyCtx.business.id,
     customer_id,
@@ -4579,7 +4590,7 @@ async function installAgendaApp(){
   render();
   if(!phone)toast('Horário salvo. Cliente sem WhatsApp cadastrado.');
   else if(automaticSent)toast('Horário salvo e mensagem de agendamento enviada automaticamente');
-  else if(baileysConnected)toast('Horário salvo. Mensagem enviada agora e confirmação programada para 24h antes.');
+  else if(baileysConnected)toast('Horário salvo. Mensagem colocada na fila automática; confira o status em WhatsApp.');
   else if(!autoConnected)toast('Horário salvo. WhatsApp aberto com a mensagem pronta para enviar.');
 }
     function confirmationLink(key){
