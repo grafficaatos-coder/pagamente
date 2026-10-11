@@ -1,7 +1,7 @@
 import http from "node:http";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import { mkdir, rm } from "node:fs/promises";
+import { mkdir, rm, access } from "node:fs/promises";
 import P from "pino";
 import QRCode from "qrcode";
 import { Boom } from "@hapi/boom";
@@ -524,6 +524,10 @@ async function restoreDesiredSessions(){
   const rows=await r.json();databaseReady=true;
   for(const row of rows){
     if(!allowed(row.business_id))continue;
+    // Nunca recuperar no Railway uma sessão antiga criada em outro servidor.
+    // Novas empresas iniciam sua sessão apenas após solicitarem a conexão.
+    const localAuthFile=path.join(DATA_DIR,"sessions",row.business_id,"auth.json");
+    try { await access(localAuthFile); } catch { continue; }
     if(!sessions.has(row.business_id)){
       ensureSession(row.business_id).catch(e=>logger.error({business:row.business_id,error:String(e)}));
       await sleep(100);
