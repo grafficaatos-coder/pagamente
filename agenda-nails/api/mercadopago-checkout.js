@@ -1,5 +1,6 @@
 // Agenda Pro: create a pending Mercado Pago subscription for a paid plan.
 // The plan does NOT change until an independently verified payment arrives.
+import { createHash } from 'node:crypto';
 const UUID=/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i;
 const mpCheckoutUrl=url=>{
   try {
@@ -49,7 +50,7 @@ export default async function handler(req,res) {
     if(!UUID.test(String(user.id||'')))return res.status(401).json({error:'unauthorized'});
     // The Agenda Pro login address is not necessarily the buyer's Mercado Pago
     // address; the owner explicitly supplies the buyer's REAL MP account email.
-    const payerEmail=String(req.body?.payer_email||user.email||'').trim().toLowerCase();
+    const payerEmail=String(req.body?.payer_email||'').trim().toLowerCase();
     if(payerEmail.length>160||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payerEmail))
       return res.status(400).json({error:'invalid_payer_email'});
     if(/(?:^|\.)testuser\.(?:com|com\.br)$/i.test(payerEmail.split('@')[1]||''))
@@ -96,7 +97,7 @@ export default async function handler(req,res) {
     const reference='agenda:'+businessId+':'+planId;
     const response=await fetch('https://api.mercadopago.com/preapproval',{
       method:'POST',
-      headers:{Authorization:'Bearer '+mpKey,'Content-Type':'application/json','X-Idempotency-Key':'agenda-'+businessId+'-'+planId,Accept:'application/json'},
+      headers:{Authorization:'Bearer '+mpKey,'Content-Type':'application/json','X-Idempotency-Key':'agenda-pilot-v2-'+businessId+'-'+createHash('sha256').update(payerEmail+':'+planId).digest('hex').slice(0,24),Accept:'application/json'},
       body:JSON.stringify({
         reason:'Agenda Pro - '+String(plans[0].name).slice(0,80),
         external_reference:reference,
