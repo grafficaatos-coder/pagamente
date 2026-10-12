@@ -995,6 +995,11 @@
     .app-switch span:after{content:"";position:absolute;width:19px;height:19px;left:3px;top:3px;border-radius:50%;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,.18);transition:.18s}
     .app-switch input:checked+span{background:var(--wine)}
     .app-switch input:checked+span:after{transform:translateX(19px)}
+    .appointment-delete-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:11px 12px;margin-bottom:16px;border:1px solid #f0d4d8;background:#fff8f9;border-radius:12px}
+    .appointment-delete-toolbar span{min-width:0;color:#75565e;font-size:11px;line-height:1.4}
+    .appointment-delete-button{flex:0 0 auto;min-height:40px;padding:9px 13px;border:1px solid #e4aeb8;border-radius:10px;background:#fff;color:#a1374a;font-size:11px;font-weight:800;cursor:pointer}
+    .appointment-delete-button:hover{background:#fde9ed}
+    @media(max-width:640px){.appointment-delete-toolbar{flex-direction:column;align-items:stretch}.appointment-delete-button{width:100%;min-height:44px}}
     .app-modal-actions{display:flex;justify-content:flex-end;gap:9px;padding:15px 24px 20px;border-top:1px solid var(--line)}
     .app-modal-actions .btn{min-width:112px}
     .app-modal-actions .btn[disabled]{opacity:.62;cursor:wait}
@@ -2326,7 +2331,7 @@ async function installAgendaApp(){
   return status==='pending'?'Pendente':status==='cancelled'?'Cancelado':status==='completed'?'Concluído':status==='no_show'?'Faltou':'Confirmado';
 }
     function agendaActions(a){
-  return canOperateCompany()?`<div class="agenda-actions"><select onchange="updateAppointmentStatus('${a.id}',this.value)"><option value="pending" ${a.status==='pending'?'selected':''}>Pendente</option><option value="confirmed" ${a.status==='confirmed'?'selected':''}>Confirmado</option><option value="completed" ${a.status==='completed'?'selected':''}>Concluído</option><option value="no_show" ${a.status==='no_show'?'selected':''}>Faltou</option><option value="cancelled" ${a.status==='cancelled'?'selected':''}>Cancelado</option></select><button class="mini-btn whats-mini" onclick="sendAppointmentConfirmationLink('${a.id}')">Enviar confirmação</button><button class="mini-btn" onclick="editAppointment('${a.id}')">Editar</button>${canAdminCompany()?`<button class="mini-btn danger" onclick="deleteAppointment('${a.id}')">Excluir</button>`:''}</div>`:'';
+  return canOperateCompany()?`<div class="agenda-actions"><select onchange="updateAppointmentStatus('${a.id}',this.value)"><option value="pending" ${a.status==='pending'?'selected':''}>Pendente</option><option value="confirmed" ${a.status==='confirmed'?'selected':''}>Confirmado</option><option value="completed" ${a.status==='completed'?'selected':''}>Concluído</option><option value="no_show" ${a.status==='no_show'?'selected':''}>Faltou</option><option value="cancelled" ${a.status==='cancelled'?'selected':''}>Cancelado</option></select><button class="mini-btn whats-mini" onclick="sendAppointmentConfirmationLink('${a.id}')">Enviar confirmação</button><button class="mini-btn" onclick="editAppointment('${a.id}')">Editar</button>${canAdminCompany()?`<button class="mini-btn danger" type="button" onclick="deleteAppointment('${a.id}')">Excluir horário</button>`:''}</div>`:'';
 }
     function agendaRow(a,showDate=false){
   const d=new Date(a.starts_at),cu=companyData.customers.find(x=>x.id===a.customer_id),se=companyData.services.find(x=>x.id===a.service_id);
@@ -3738,7 +3743,7 @@ async function installAgendaApp(){
     subtitle:'Atualize horário, cliente, serviço, profissional e status.',
     submitLabel:'Salvar alterações',
     size:'wide',
-    content:`<div class="app-modal-grid">
+    content:`${canAdminCompany()?`<div class="appointment-delete-toolbar"><span>Precisa remover este horário? A exclusão também cancela os envios automáticos pendentes.</span><button type="button" class="appointment-delete-button" onclick="deleteAppointment('${a.id}')">Excluir horário</button></div>`:''}<div class="app-modal-grid">
       <div class="app-modal-field"><label>${appModalEscape(p.person)} *</label><select id="modalAppointmentCustomer">${companyData.customers.map(x=>`<option value="${x.id}" ${x.id===a.customer_id?'selected':''}>${appModalEscape(x.name)}</option>`).join('')}</select></div>
       <div class="app-modal-field"><label>${appModalEscape(p.service)} *</label><select id="modalAppointmentService">${companyData.services.filter(x=>x.active||x.id===a.service_id).map(x=>`<option value="${x.id}" ${x.id===a.service_id?'selected':''}>${appModalEscape(x.name)}</option>`).join('')}</select></div>
       <div class="app-modal-field"><label>Data *</label><input id="modalAppointmentDate" type="date" value="${localDate}"></div>
@@ -3837,12 +3842,24 @@ async function installAgendaApp(){
 }
 
     async function deleteAppointment(id){
-  if(!canAdminCompany())return toast('Somente administrador pode excluir');
-  const ok=await askAppConfirm({title:'Excluir agendamento?',message:'O horário será removido definitivamente da agenda.',confirmLabel:'Excluir agendamento'});
+  if(!canAdminCompany())return toast('Somente o administrador da empresa pode excluir horários');
+  const a=companyData.appointments.find(x=>x.id===id);
+  if(!a)return toast('Horário não encontrado. Atualize a agenda.');
+  const customer=companyData.customers.find(x=>x.id===a.customer_id);
+  const when=new Date(a.starts_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  const ok=await askAppConfirm({
+    title:'Excluir este horário?',
+    message:(customer?.name||'Cliente')+' · '+when+'. O agendamento será excluído definitivamente e os lembretes ainda pendentes serão cancelados. Mensagens já enviadas não podem ser desfeitas.',
+    confirmLabel:'Sim, excluir horário'
+  });
   if(!ok)return;
-  const {error}=await sb.from('agenda_appointments').delete().eq('id',id).eq('business_id',companyCtx.business.id);
-  if(error){console.error(error);return toast('Não foi possível excluir')}
-  await loadCompanyData();render();toast('Agendamento excluído');
+  const {data,error}=await sb.from('agenda_appointments').delete()
+    .eq('id',id).eq('business_id',companyCtx.business.id).select('id');
+  if(error){console.error(error);return toast('Não foi possível excluir o horário')}
+  if(!data?.length)return toast('Horário não excluído. Confira suas permissões e atualize a agenda.');
+  await Promise.all([loadCompanyData(),loadWhatsappQueue(false)]);
+  render();
+  toast('Horário excluído e lembretes pendentes cancelados');
 }
 
     async function addCompanyCustomer(){
