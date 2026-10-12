@@ -2594,11 +2594,17 @@ async function installAgendaApp(){
       headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},
       body:JSON.stringify({business_id:companyCtx.business.id,plan_id:plan.id})
     });
-    const data=await response.json().catch(()=>({}));
+    const contentType=String(response.headers.get('content-type')||'');
+    const data=contentType.includes('application/json')?await response.json().catch(()=>({})):{};
     if(!response.ok){
-      if(data.error==='checkout_not_enabled')return toast('Pagamento online em fase de testes. Aguarde a liberação.');
-      if(data.error==='subscription_already_linked')return toast('Assinatura existente. Entre em contato com o suporte para alterar o plano.');
-      return toast('Não foi possível iniciar o pagamento: '+(data.error||'tente novamente'));
+      const reason=String(data.error||'').slice(0,90);
+      console.warn('Checkout não iniciado',{http:response.status,reason:reason||'non_json_response'});
+      if(reason==='checkout_not_enabled')return toast('Pagamento online ainda não liberado.');
+      if(reason==='checkout_limited_to_pilot')return toast('Teste autorizado somente para a Julli no plano Essencial.');
+      if(reason==='subscription_already_linked')return toast('Assinatura já vinculada. Contate o suporte.');
+      if(reason==='checkout_provider_rejected')return toast('Mercado Pago recusou a criação da assinatura (HTTP '+(data.provider_status||response.status)+'). Informe esse código ao suporte.');
+      if(!reason)return toast('Servidor não respondeu corretamente ao pagamento (HTTP '+response.status+'). Envie este código para suporte.');
+      return toast('Falha ao iniciar pagamento: '+reason+' (HTTP '+response.status+')');
     }
     const target=new URL(String(data.checkout_url||''));
     if(target.protocol!=='https:'||!['mercadopago.com','mercadopago.com.br','mercadopago.com.ar']
