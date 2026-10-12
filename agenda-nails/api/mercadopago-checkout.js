@@ -85,9 +85,26 @@ export default async function handler(req,res) {
     });
     if(!response.ok){
       const rejected=await response.json().catch(()=>({}));
-      const providerCode=String(rejected?.cause?.[0]?.code||rejected?.code||'').slice(0,80);
-      console.warn('Mercado Pago não criou a assinatura',{status:response.status,code:providerCode});
-      return res.status(502).json({error:'checkout_provider_rejected',provider_status:response.status});
+      // The authenticated pilot subscriber needs a bounded, redacted reason.
+      // Never return an MP token, full provider payload or payer details.
+      const cause=Array.isArray(rejected.cause)?rejected.cause[0]||{}:{};
+      const sanitize=value=>String(value??'')
+        .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,'[email]')
+        .replace(/\b\d{12,}\b/g,'[id]')
+        .replace(/[^a-zA-ZÀ-ÿ0-9 _.,:;/'()-]/g,' ')
+        .slice(0,145).trim();
+      const providerCode=sanitize(cause.code||rejected.code||rejected.error||'');
+      const providerHint=sanitize(cause.description||rejected.message||'');
+      console.warn('Mercado Pago recusou assinatura',{
+        status:response.status,code:providerCode||'unknown',
+        hint:providerHint||'unspecified'
+      });
+      return res.status(502).json({
+        error:'checkout_provider_rejected',
+        provider_status:response.status,
+        provider_code:providerCode,
+        provider_hint:providerHint
+      });
     }
     const result=await response.json();
     if(!result.id||!mpCheckoutUrl(result.init_point)||result.status!=='pending'||
