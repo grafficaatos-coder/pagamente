@@ -2606,6 +2606,27 @@ async function installAgendaApp(){
     window.location.assign(target.href);
   }catch(e){toast(e.message||'Falha ao iniciar o pagamento');}
 }
+async function cancelAgendaSubscription(){
+  if(!sb||!companyCtx?.subscription?.mp_preapproval_id||!['owner','admin'].includes(companyRole()))return;
+  if(!window.confirm('Cancelar as próximas cobranças do Mercado Pago? O período que já foi pago será mantido até o vencimento.'))return;
+  const session=await sb.auth.getSession();
+  const token=session?.data?.session?.access_token;
+  if(!token)return toast('Sua sessão expirou. Entre novamente.');
+  try{
+    const response=await fetch('/api/mercadopago-cancel',{
+      method:'POST',
+      headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},
+      body:JSON.stringify({business_id:companyCtx.business.id})
+    });
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)return toast('Não foi possível cancelar: '+(data.error||'tente novamente'));
+    Object.assign(companyCtx.subscription,{
+      mp_preapproval_id:null,mp_pending_plan_id:null,mp_checkout_url:null,mp_status:'canceled'
+    });
+    render();
+    toast('Cobranças futuras canceladas no Mercado Pago.');
+  }catch(e){toast('Não foi possível confirmar o cancelamento.');}
+}
     let subscriptionCatalog=[],subscriptionCatalogLoading=false,subscriptionCatalogLoaded=false;
     async function loadSubscriptionCatalog(){
       if(subscriptionCatalogLoaded||subscriptionCatalogLoading||!sb)return;
@@ -2649,12 +2670,13 @@ async function installAgendaApp(){
           action+'</article>';
       }).join('');
       const end=sub?.current_period_end?new Date(sub.current_period_end).toLocaleDateString('pt-BR'):'Não definido';
+      const cancelAction=owner&&linked?'<p style="margin-top:12px"><button class="btn" onclick="cancelAgendaSubscription()">Cancelar cobrança recorrente</button></p>':'';
       const alert=linked&&pendingId?'<p style="margin-top:12px">Existe uma contratação aguardando confirmação. Seu plano atual será mantido até o pagamento aprovado.</p>':'';
       return shell('<div class="section-title"><span class="eyebrow">Minha empresa</span>'+
         '<h2>Planos e assinatura</h2><p>Escolha um plano e acompanhe sua mensalidade.</p></div>'+
         '<section class="card" style="padding:20px"><h3>Assinatura atual</h3>'+
         '<p><b>'+appModalEscape(current?.name||'Plano')+'</b> · '+appModalEscape(subscriptionLabel())+'</p>'+
-        '<p>Próximo vencimento: '+end+'</p>'+alert+'</section>'+
+        '<p>Próximo vencimento: '+end+'</p>'+alert+cancelAction+'</section>'+
         '<div class="section-title" style="margin-top:24px"><h2>Conheça os planos</h2></div>'+
         '<div class="plans-grid">'+(cards||'<p>Carregando planos disponíveis...</p>')+'</div>'+
         '<p style="margin-top:18px">Planos pagos são liberados somente após a confirmação de pagamento pelo Mercado Pago. A contratação será habilitada após a validação da integração.</p>');
