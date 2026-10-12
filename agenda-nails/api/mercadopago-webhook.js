@@ -78,7 +78,7 @@ export default async function handler(req, res) {
     const base = new URL(supabaseUrl);
     if (base.protocol !== 'https:') throw new Error('invalid_database_url');
     const url = new URL('/rest/v1/agenda_subscriptions', base);
-    url.searchParams.set('select', 'business_id,mp_preapproval_id');
+    url.searchParams.set('select', 'business_id,plan_id,mp_preapproval_id');
     url.searchParams.set('mp_preapproval_id', 'eq.' + linkedPreapprovalId);
     url.searchParams.set('limit', '2');
     const controller = new AbortController();
@@ -115,6 +115,41 @@ export default async function handler(req, res) {
     });
     if (!response.ok) return res.status(502).json({ error: 'audit_unavailable' });
   } catch (_) { return res.status(502).json({ error: 'audit_unavailable' }); }
-  // Future phase: verify paid installments and atomically renew the subscription.
+  // Record paid invoices separately, only after verifying the plan price.
+  // Renewal remains disabled until a controlled end-to-end subscription test.
+  if (invoicePaid) {
+    const amount = Number(invoice.transaction_amount);
+    const currency = String(invoice.currency_id || '');
+    const amountCents = Math.round(amount * 100);
+    if (!Number.isFinite(amount) || amount <= 0 || !Number.isSafeInteger(amountCents) || currency !== 'BRL') {
+      return res.status(200).json({ ok: true, verified: true, audited: true, processed: false, reason: 'invalid_amount' });
+    }
+    try {
+      const planUrl = new URL('/rest/v1/agenda_plans', supabaseUrl);
+      planUrl.searchParams.set('select', 'monthly_price_cents');
+      planUrl.searchParams.set('id', 'eq.' + matches[0].plan_id);
+      const headers = { apikey: supabaseKey, Authorization: 'Bearer ' + supabaseKey, Accept: 'application/json' };
+      const planResponse = await fetch(planUrl, { headers });
+      if (!planResponse.ok) return res.status(502).json({ error: 'plan_lookup_failed' });
+      const plans = await planResponse.json();
+      if (plans.length !== 1 || Number(plans[0].monthly_price_cents) !== amountCents) {
+        return res.status(200).json({ ok: true, verified: true, audited: true, processed: false, reason: 'plan_amount_mismatch' });
+      }
+      const ledgerUrl = new URL('/rest/v1/agenda_mp_verified_invoices', supabaseUrl);
+      const saved = await fetch(ledgerUrl, {
+        method: 'POST',
+        headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'resolution=ignore-duplicates,return=minimal' },
+        body: JSON.stringify({
+          authorized_payment_id: dataId,
+          preapproval_id: linkedPreapprovalId,
+          business_id: matches[0].business_id,
+          amount_cents: amountCents,
+          currency,
+          payment_status: 'approved'
+        })
+      });
+      if (!saved.ok) return res.status(502).json({ error: 'invoice_ledger_failed' });
+    } catch (_) { return res.status(502).json({ error: 'invoice_ledger_failed' }); }
+  }
   return res.status(200).json({ ok: true, verified: true, provider_checked: true, linked: true, audited: true, invoice_paid: Boolean(invoicePaid), processed: false });
 }
