@@ -4,6 +4,10 @@
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') { res.setHeader('Allow','POST'); return res.status(405).json({error:'method_not_allowed'}); }
+  // Default off: credentials being present do not authorize live charges.
+  if (process.env.AGENDA_MP_CHECKOUT_ENABLED !== 'true') {
+    return res.status(503).json({error:'checkout_not_enabled'});
+  }
   const root = process.env.AGENDA_SUPABASE_URL;
   const key = process.env.AGENDA_SUPABASE_SECRET_KEY;
   const mpKey = process.env.AGENDA_MP_ACCESS_TOKEN;
