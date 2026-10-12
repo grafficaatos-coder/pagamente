@@ -121,6 +121,12 @@ export default async function handler(req, res) {
   if (invoicePaid && process.env.AGENDA_MP_RENEWAL_ENABLED === 'true') {
     const match=matches[0];
     const targetPlan=String(match.mp_pending_plan_id||match.plan_id);
+    // Fail closed for the single authorized R$49.90 pilot; even if the
+    // renewal feature flag is accidentally enabled, other tenants are safe.
+    if(String(process.env.AGENDA_MP_TEST_BUSINESS_ID||'')!==String(match.business_id) ||
+       String(process.env.AGENDA_MP_TEST_PLAN_ID||'')!==targetPlan ||
+       Math.round(Number(invoice.transaction_amount)*100)!==4990)
+      return res.status(200).json({ok:true,processed:false,reason:'pilot_not_authorized'});
     const reference='agenda:'+match.business_id+':'+targetPlan;
     const invoiceId=String(invoice.id||'');
     const paymentId=String(invoice.payment.id||'');
@@ -128,7 +134,7 @@ export default async function handler(req, res) {
     if(subscription.status!=='authorized' ||
        String(subscription.external_reference||'')!==reference ||
        String(invoice.external_reference||'')!==reference ||
-       !/^\\d{1,24}$/.test(invoiceId) || !/^\\d{1,24}$/.test(paymentId) ||
+       !/^\d{1,24}$/.test(invoiceId) || !/^\d{1,24}$/.test(paymentId) ||
        String(invoice.preapproval_id||'')!==linkedPreapprovalId ||
        invoice.currency_id!=='BRL' ||
        subscription.auto_recurring?.currency_id!=='BRL' ||

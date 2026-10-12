@@ -18,6 +18,13 @@ export default async function handler(req,res) {
   if(!token||token.length>4096)return res.status(401).json({error:'unauthorized'});
   const businessId=String(req.body?.business_id||''),planId=String(req.body?.plan_id||'');
   if(!UUID.test(businessId)||!UUID.test(planId))return res.status(400).json({error:'invalid_input'});
+  // Fail closed: even with the production flag enabled, checkout is restricted
+  // to the single authorized company/plan. Other tenants cannot be charged.
+  const testBusiness=String(process.env.AGENDA_MP_TEST_BUSINESS_ID||'');
+  const testPlan=String(process.env.AGENDA_MP_TEST_PLAN_ID||'');
+  if(!UUID.test(testBusiness)||!UUID.test(testPlan)||
+     businessId!==testBusiness||planId!==testPlan)
+    return res.status(403).json({error:'checkout_limited_to_pilot'});
   const base=new URL(root);
   if(base.protocol!=='https:')return res.status(503).json({error:'invalid_configuration'});
   const serverHeaders={apikey:key,Authorization:'Bearer '+key,Accept:'application/json'};
@@ -35,7 +42,7 @@ export default async function handler(req,res) {
     if(!UUID.test(String(user.id||''))||!user.email)return res.status(403).json({error:'payer_email_required'});
     const [members,plans,subs,companies]=await Promise.all([
       select('agenda_members',{select:'role',business_id:'eq.'+businessId,user_id:'eq.'+user.id,limit:'2'}),
-      select('agenda_plans',{select:'id,name,monthly_price_cents,active,visible',id:'eq.'+planId,limit:'2'}),
+      select('agenda_plans',{select:'id,code,name,monthly_price_cents,active,visible',id:'eq.'+planId,limit:'2'}),
       select('agenda_subscriptions',{select:'business_id,plan_id,status,mp_preapproval_id,mp_checkout_url,mp_pending_plan_id',business_id:'eq.'+businessId,limit:'2'}),
       select('agenda_businesses',{select:'id,manual_blocked',id:'eq.'+businessId,limit:'2'})
     ]);
@@ -43,7 +50,8 @@ export default async function handler(req,res) {
     if(companies.length!==1||companies[0].manual_blocked)return res.status(403).json({error:'business_blocked'});
     if(plans.length!==1||!plans[0].active||!plans[0].visible)return res.status(400).json({error:'plan_not_available'});
     const cents=Number(plans[0].monthly_price_cents);
-    if(!Number.isSafeInteger(cents)||cents<1||cents>100000000)return res.status(400).json({error:'invalid_paid_plan'});
+    if(!Number.isSafeInteger(cents)||cents!==4990||plans[0].code!=='essencial')
+      return res.status(409).json({error:'pilot_amount_mismatch'});
     if(subs.length!==1)return res.status(404).json({error:'subscription_not_found'});
     const sub=subs[0];
     if(['suspended','cancelled'].includes(sub.status))return res.status(403).json({error:'subscription_blocked'});
