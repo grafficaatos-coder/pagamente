@@ -1,5 +1,6 @@
 // Agenda Pro: create a pending Mercado Pago subscription for a paid plan.
 // The plan does NOT change until an independently verified payment arrives.
+import { createHash } from 'node:crypto';
 const UUID=/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i;
 const mpCheckoutUrl=url=>{
   try {
@@ -46,7 +47,14 @@ export default async function handler(req,res) {
     const auth=await fetch(new URL('/auth/v1/user',base),{headers:{apikey:key,Authorization:'Bearer '+token},signal:AbortSignal.timeout(10000)});
     if(!auth.ok)return res.status(401).json({error:'unauthorized'});
     const user=await auth.json();
-    if(!UUID.test(String(user.id||''))||!user.email)return res.status(403).json({error:'payer_email_required'});
+    if(!UUID.test(String(user.id||'')))return res.status(401).json({error:'unauthorized'});
+    // The Agenda Pro login address is not necessarily the buyer's Mercado Pago
+    // address; the owner explicitly supplies the buyer's REAL MP account email.
+    const payerEmail=String(req.body?.payer_email||'').trim().toLowerCase();
+    if(payerEmail.length>160||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payerEmail))
+      return res.status(400).json({error:'invalid_payer_email'});
+    if(/(?:^|\.)testuser\.(?:com|com\.br)$/i.test(payerEmail.split('@')[1]||''))
+      return res.status(409).json({error:'payer_test_account_not_allowed'});
     const [members,plans,subs,companies]=await Promise.all([
       select('agenda_members',{select:'role',business_id:'eq.'+businessId,user_id:'eq.'+user.id,limit:'2'}),
       select('agenda_plans',{select:'id,code,name,monthly_price_cents,active,visible',id:'eq.'+planId,limit:'2'}),
@@ -68,15 +76,32 @@ export default async function handler(req,res) {
         return res.status(200).json({ok:true,checkout_url:sub.mp_checkout_url,payment_pending:true,reused:true});
       return res.status(409).json({error:'subscription_already_linked'});
     }
+    // Validate the actual collector account. APP_USR prefix alone does not
+    // prove a real seller: MP test sellers can also have APP_USR credentials.
+    let collector;
+    try {
+      const who=await fetch('https://api.mercadopago.com/users/me',{
+        headers:{Authorization:'Bearer '+mpKey,Accept:'application/json'},
+        signal:AbortSignal.timeout(9000)
+      });
+      if(!who.ok)return res.status(503).json({error:'collector_verification_unavailable',provider_status:who.status});
+      collector=await who.json();
+    }catch(_){return res.status(503).json({error:'collector_verification_unavailable'});}
+    if(!collector?.id)return res.status(503).json({error:'collector_verification_incomplete'});
+    if((Array.isArray(collector.tags)&&collector.tags.includes('test_user')) ||
+       /@(?:[a-z0-9-]+\.)?testuser\.com$/i.test(String(collector.email||'')))
+      return res.status(409).json({error:'collector_is_test_account'});
+    if(String(collector.email||'').trim().toLowerCase()===payerEmail)
+      return res.status(409).json({error:'payer_equals_collector'});
     // Also allow an existing manually activated paid plan to start its first recurring agreement.
     const reference='agenda:'+businessId+':'+planId;
     const response=await fetch('https://api.mercadopago.com/preapproval',{
       method:'POST',
-      headers:{Authorization:'Bearer '+mpKey,'Content-Type':'application/json','X-Idempotency-Key':'agenda-'+businessId+'-'+planId,Accept:'application/json'},
+      headers:{Authorization:'Bearer '+mpKey,'Content-Type':'application/json','X-Idempotency-Key':'agenda-pilot-v2-'+businessId+'-'+createHash('sha256').update(payerEmail+':'+planId).digest('hex').slice(0,24),Accept:'application/json'},
       body:JSON.stringify({
         reason:'Agenda Pro - '+String(plans[0].name).slice(0,80),
         external_reference:reference,
-        payer_email:user.email,
+        payer_email:payerEmail,
         auto_recurring:{frequency:1,frequency_type:'months',transaction_amount:cents/100,currency_id:'BRL'},
         back_url:'https://agenda-pro-iucw.vercel.app',
         status:'pending'
@@ -140,7 +165,7 @@ export default async function handler(req,res) {
       headers:{...serverHeaders,'Content-Type':'application/json',Prefer:'return=representation'},
       body:JSON.stringify({
         mp_preapproval_id:String(result.id),mp_pending_plan_id:planId,
-        mp_checkout_url:String(result.init_point),mp_status:'pending',mp_payer_email:user.email
+        mp_checkout_url:String(result.init_point),mp_status:'pending',mp_payer_email:payerEmail
       }),
       signal:AbortSignal.timeout(10000)
     });

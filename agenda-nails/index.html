@@ -2592,7 +2592,11 @@ async function installAgendaApp(){
     const response=await fetch('/api/mercadopago-checkout',{
       method:'POST',
       headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},
-      body:JSON.stringify({business_id:companyCtx.business.id,plan_id:plan.id})
+      body:JSON.stringify({
+        business_id:companyCtx.business.id,
+        plan_id:plan.id,
+        payer_email:String(document.getElementById('mpPayerEmail')?.value||'').trim()
+      })
     });
     const contentType=String(response.headers.get('content-type')||'');
     const data=contentType.includes('application/json')?await response.json().catch(()=>({})):{};
@@ -2602,6 +2606,15 @@ async function installAgendaApp(){
       if(reason==='checkout_not_enabled')return toast('Pagamento online ainda não liberado.');
       if(reason==='checkout_limited_to_pilot')return toast('Teste autorizado somente para a Julli no plano Essencial.');
       if(reason==='subscription_already_linked')return toast('Assinatura já vinculada. Contate o suporte.');
+      if(reason==='collector_is_test_account')
+        return window.alert('A conta RECEBEDORA configurada no Mercado Pago é de teste. É necessário conectar o token de produção de uma conta real. Nenhuma cobrança foi realizada.');
+      if(reason==='payer_test_account_not_allowed')
+        return window.alert('Digite o e-mail de uma conta REAL do Mercado Pago, não de uma conta de teste.');
+      if(reason==='payer_equals_collector')
+        return window.alert('O pagador e o recebedor devem ser contas diferentes do Mercado Pago. Informe outra conta real para o teste.');
+      if(reason==='collector_verification_unavailable'||reason==='collector_verification_incomplete')
+        return window.alert('Não foi possível confirmar a identidade da conta que recebe pelo Mercado Pago. Não foi criada cobrança.');
+      if(reason==='invalid_payer_email')return toast('Informe um e-mail válido de uma conta Mercado Pago real.');
       if(reason==='checkout_provider_rejected'){
         const safe=s=>String(s||'').replace(/[^a-zA-ZÀ-ÿ0-9 _.,:;/'()-]/g,' ').slice(0,145);
         const details=safe(data.provider_hint);
@@ -2693,13 +2706,17 @@ async function cancelAgendaSubscription(){
           action+'</article>';
       }).join('');
       const end=sub?.current_period_end?new Date(sub.current_period_end).toLocaleDateString('pt-BR'):'Não definido';
+      const pilotEmailField=owner&&companyCtx.business?.id==='7f00c45b-b228-4ee8-b795-aadbdcfb9d45'&&!linked?
+        '<div style="margin-top:14px;max-width:480px"><label for="mpPayerEmail"><b>E-mail da conta Mercado Pago que vai pagar</b></label>'+
+        '<input id="mpPayerEmail" type="email" inputmode="email" autocomplete="email" placeholder="email-da-conta-mercado-pago" value="'+appModalEscape(authUser?.email||'')+'" style="width:100%;margin-top:8px">'+
+        '<p style="font-size:13px;margin-top:8px">Utilize uma conta real do Mercado Pago, diferente da conta que recebe. O pagamento só acontece após sua autorização no Mercado Pago.</p></div>':'';
       const cancelAction=owner&&linked?'<p style="margin-top:12px"><button class="btn" onclick="cancelAgendaSubscription()">Cancelar cobrança recorrente</button></p>':'';
       const alert=linked&&pendingId?'<p style="margin-top:12px">Existe uma contratação aguardando confirmação. Seu plano atual será mantido até o pagamento aprovado.</p>':'';
       return shell('<div class="section-title"><span class="eyebrow">Minha empresa</span>'+
         '<h2>Planos e assinatura</h2><p>Escolha um plano e acompanhe sua mensalidade.</p></div>'+
         '<section class="card" style="padding:20px"><h3>Assinatura atual</h3>'+
         '<p><b>'+appModalEscape(current?.name||'Plano')+'</b> · '+appModalEscape(subscriptionLabel())+'</p>'+
-        '<p>Próximo vencimento: '+end+'</p>'+alert+cancelAction+'</section>'+
+        '<p>Próximo vencimento: '+end+'</p>'+pilotEmailField+alert+cancelAction+'</section>'+
         '<div class="section-title" style="margin-top:24px"><h2>Conheça os planos</h2></div>'+
         '<div class="plans-grid">'+(cards||'<p>Carregando planos disponíveis...</p>')+'</div>'+
         '<p style="margin-top:18px">Planos pagos são liberados somente após a confirmação de pagamento pelo Mercado Pago. A contratação será habilitada após a validação da integração.</p>');
