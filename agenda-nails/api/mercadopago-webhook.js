@@ -53,7 +53,34 @@ export default async function handler(req, res) {
     subscription = await response.json();
   } catch (_) { return res.status(502).json({ error: 'provider_unavailable' }); }
   if (String(subscription.id) !== dataId) return res.status(502).json({ error: 'provider_mismatch' });
-  // Next phase requires ownership validation against agenda_subscriptions.mp_preapproval_id,
-  // idempotent event log and atomic persistence. Do not trust external_reference alone.
-  return res.status(200).json({ ok: true, verified: true, provider_checked: true, processed: false });
+  // Only a subscription already linked in Agenda Pro may ever be processed.
+  // The lookup uses a server-side Supabase key; it is never sent to the browser.
+  const supabaseUrl = process.env.AGENDA_SUPABASE_URL;
+  const supabaseKey = process.env.AGENDA_SUPABASE_SECRET_KEY;
+  if (!supabaseUrl || !supabaseKey) return res.status(503).json({ error: 'agenda_database_not_configured' });
+  let matches;
+  try {
+    const base = new URL(supabaseUrl);
+    if (base.protocol !== 'https:') throw new Error('invalid_database_url');
+    const url = new URL('/rest/v1/agenda_subscriptions', base);
+    url.searchParams.set('select', 'business_id,mp_preapproval_id');
+    url.searchParams.set('mp_preapproval_id', 'eq.' + dataId);
+    url.searchParams.set('limit', '2');
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    let response;
+    try {
+      response = await fetch(url, {
+        headers: { apikey: supabaseKey, Authorization: 'Bearer ' + supabaseKey, Accept: 'application/json' },
+        signal: controller.signal
+      });
+    } finally { clearTimeout(timeout); }
+    if (!response.ok) return res.status(502).json({ error: 'database_unavailable' });
+    matches = await response.json();
+  } catch (_) { return res.status(502).json({ error: 'database_unavailable' }); }
+  if (!Array.isArray(matches)) return res.status(502).json({ error: 'database_invalid_response' });
+  if (matches.length !== 1) return res.status(200).json({ ok: true, verified: true, provider_checked: true, linked: false, processed: false });
+  // No plan updates here: final phase must verify authorized payments and
+  // perform idempotent, transactional writes, with no cross-business access.
+  return res.status(200).json({ ok: true, verified: true, provider_checked: true, linked: true, processed: false });
 }
