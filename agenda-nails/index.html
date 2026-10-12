@@ -2575,13 +2575,44 @@ async function installAgendaApp(){
   const parts=String(name).trim().split(/\s+/).filter(Boolean);
   return (parts.length>1?(parts[0][0]+parts[parts.length-1][0]):String(name).slice(0,2)).toUpperCase();
 }
+    async function startAgendaSubscriptionCheckout(){
+  if(!sb||!companyCtx||!['owner','admin'].includes(companyRole()))return toast('Apenas administradores podem contratar planos.');
+  const plan=companyCtx.plan,subscription=companyCtx.subscription;
+  if(Number(plan?.monthly_price_cents||0)<=0)return toast('O plano gratuito não exige pagamento.');
+  if(subscription?.mp_checkout_url){
+    const url=String(subscription.mp_checkout_url);
+    if(/^https:\/\/([a-z0-9-]+\.)*mercadopago\.com(\.br)?\//i.test(url)){window.open(url,'_blank','noopener,noreferrer');return;}
+  }
+  const session=await sb.auth.getSession();
+  const accessToken=session?.data?.session?.access_token;
+  if(!accessToken)return toast('Entre novamente na sua conta para contratar.');
+  try {
+    const response=await fetch('/api/mercadopago-checkout',{
+      method:'POST',
+      headers:{'Content-Type':'application/json',Authorization:'Bearer '+accessToken},
+      body:JSON.stringify({business_id:companyCtx.business.id,plan_id:plan.id})
+    });
+    const data=await response.json();
+    if(!response.ok){
+      if(data.error==='checkout_not_enabled')return toast('Contratação online em preparação. Tente novamente depois.');
+      return toast('Não foi possível iniciar a contratação: '+(data.error||'erro de conexão'));
+    }
+    const url=String(data.checkout_url||'');
+    if(!/^https:\/\/([a-z0-9-]+\.)*mercadopago\.com(\.br)?\//i.test(url))throw Error('Endereço de pagamento inválido');
+    window.location.assign(url);
+  }catch(e){toast(e.message||'Falha ao abrir pagamento');}
+}
+function agendaSubscriptionCheckoutCard(){
+  if(!companyCtx||!['owner','admin'].includes(companyRole())||Number(companyCtx.plan?.monthly_price_cents||0)<=0)return '';
+  return `<section class="panel" style="margin-top:16px;padding:18px"><span class="eyebrow">Assinatura</span><h3>Mensalidade do Agenda Pro</h3><p>Plano: ${appModalEscape(companyCtx.plan.name)} · Situação: ${appModalEscape(subscriptionLabel())}</p><p>Você será direcionado ao Mercado Pago. O plano será atualizado somente após confirmação do pagamento.</p><button class="btn primary" onclick="startAgendaSubscriptionCheckout()">${companyCtx.subscription?.mp_checkout_url?'Continuar pagamento':'Contratar pelo Mercado Pago'}</button></section>`;
+}
     function myProfile(){
   const profile=companyCtx?.profile||{};
   const name=profile.display_name||'Usuário';
   const phone=profile.phone?formatBusinessPhone(profile.phone):'';
   const email=authUser?.email||'';
   const role=teamRoleLabel(companyRole());
-  return shell(`<div class="profile-page">
+  return shell(`<div class="profile-page">${agendaSubscriptionCheckoutCard()}
     <div class="section-title profile-title"><span class="eyebrow">Sua conta</span><h2>Meu perfil</h2><p>Atualize seus dados pessoais usados para acessar o Agenda Pro.</p></div>
     <div class="profile-layout">
       <aside class="profile-summary-card">
