@@ -80,7 +80,26 @@ export default async function handler(req, res) {
   } catch (_) { return res.status(502).json({ error: 'database_unavailable' }); }
   if (!Array.isArray(matches)) return res.status(502).json({ error: 'database_invalid_response' });
   if (matches.length !== 1) return res.status(200).json({ ok: true, verified: true, provider_checked: true, linked: false, processed: false });
-  // No plan updates here: final phase must verify authorized payments and
-  // perform idempotent, transactional writes, with no cross-business access.
-  return res.status(200).json({ ok: true, verified: true, provider_checked: true, linked: true, processed: false });
+  // Record an audit trail with a unique request ID, without granting access or charging.
+  // Retry failures; duplicates are naturally ignored by the database unique constraint.
+  try {
+    const endpoint = new URL('/rest/v1/agenda_mp_webhook_events', supabaseUrl);
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        apikey: supabaseKey, Authorization: 'Bearer ' + supabaseKey,
+        'Content-Type': 'application/json', Prefer: 'resolution=ignore-duplicates,return=minimal'
+      },
+      body: JSON.stringify({
+        request_id: requestId.slice(0, 160),
+        business_id: matches[0].business_id,
+        preapproval_id: dataId,
+        event_type: topic,
+        provider_status: String(subscription.status || '').slice(0, 100)
+      })
+    });
+    if (!response.ok) return res.status(502).json({ error: 'audit_unavailable' });
+  } catch (_) { return res.status(502).json({ error: 'audit_unavailable' }); }
+  // Future phase: verify paid installments and atomically renew the subscription.
+  return res.status(200).json({ ok: true, verified: true, provider_checked: true, linked: true, audited: true, processed: false });
 }
