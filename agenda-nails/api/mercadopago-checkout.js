@@ -50,9 +50,9 @@ export default async function handler(req,res) {
     // The Agenda Pro login address is not necessarily the buyer's Mercado Pago
     // address; the owner explicitly supplies the buyer's REAL MP account email.
     const payerEmail=String(req.body?.payer_email||user.email||'').trim().toLowerCase();
-    if(payerEmail.length>160||!/^\\S+@\\S+\\.\\S+$/.test(payerEmail))
+    if(payerEmail.length>160||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payerEmail))
       return res.status(400).json({error:'invalid_payer_email'});
-    if(/(?:^|\\.)testuser\\.(?:com|com\\.br)$/i.test(payerEmail.split('@')[1]||''))
+    if(/(?:^|\.)testuser\.(?:com|com\.br)$/i.test(payerEmail.split('@')[1]||''))
       return res.status(409).json({error:'payer_test_account_not_allowed'});
     const [members,plans,subs,companies]=await Promise.all([
       select('agenda_members',{select:'role',business_id:'eq.'+businessId,user_id:'eq.'+user.id,limit:'2'}),
@@ -87,7 +87,8 @@ export default async function handler(req,res) {
       collector=await who.json();
     }catch(_){return res.status(503).json({error:'collector_verification_unavailable'});}
     if(!collector?.id)return res.status(503).json({error:'collector_verification_incomplete'});
-    if(Array.isArray(collector.tags)&&collector.tags.includes('test_user'))
+    if((Array.isArray(collector.tags)&&collector.tags.includes('test_user')) ||
+       /@(?:[a-z0-9-]+\.)?testuser\.com$/i.test(String(collector.email||'')))
       return res.status(409).json({error:'collector_is_test_account'});
     if(String(collector.email||'').trim().toLowerCase()===payerEmail)
       return res.status(409).json({error:'payer_equals_collector'});
