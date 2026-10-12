@@ -249,6 +249,7 @@ export class WhatsSession{
     this.leaseBusy=false;this.leaseExpires=0;this.socketStarted=0;
     this.pairBusy=false;this.pairCode=null;this.pairExpires=0;this.pairPhone=null;this.qrReady=false;
     this.savePending=Promise.resolve();this.lastCheckpoint=null;
+    this.reconnectFailures=0;this.nextConnectAt=0;this.connectedSince=0;
   }
   async start(){
     this.stopped=false;
@@ -277,16 +278,22 @@ export class WhatsSession{
     try{
       const owned=await this.acquireLease();
       if(!owned){this.state="standby_lease";this.closeSocket();return}
-      if(this.sock&&this.state==="connecting"&&Date.now()-this.socketStarted>90000)this.closeSocket();
-      if(!this.sock&&!this.connectBusy)await this.connectSocket();
+      if(this.sock&&this.state==="connecting"&&Date.now()-this.socketStarted>90000){this.delayReconnect();this.closeSocket()}
+      if(!this.sock&&!this.connectBusy&&Date.now()>=this.nextConnectAt)await this.connectSocket();
     }catch(e){
       this.leaseOwned=false;this.leaseExpires=0;this.state="standby_lease";this.closeSocket();
       this.error="Falha ao renovar a sessão no banco. Tentando novamente.";
       throw e;
     }finally{this.leaseBusy=false}
   }
+  delayReconnect(){
+    this.reconnectFailures=Math.min(this.reconnectFailures+1,7);
+    const delayMs=Math.min(300000,15000*Math.pow(2,Math.min(this.reconnectFailures-1,5)));
+    this.nextConnectAt=Date.now()+delayMs;
+    logger.warn({delay_seconds:delayMs/1000},"WhatsApp: aguardando antes de reconectar");
+  }
   async connectSocket(){
-    if(!this.hasLease()||this.connectBusy||this.sock)return;
+    if(!this.hasLease()||this.connectBusy||this.sock||Date.now()<this.nextConnectAt)return;
     this.connectBusy=true;this.state="connecting";this.error="";this.qrSvg=null;
     try{
       await this.savePending;
@@ -308,7 +315,7 @@ export class WhatsSession{
       });
       this.sock=sock;this.socketStarted=Date.now();this.qrReady=false;
       sock.ev.on("creds.update",()=>{
-        this.savePending=this.savePending.then(()=>auth.saveCreds()).then(()=>{this.lastCheckpoint=new Date().toISOString()}).catch(e=>{logger.error({error:String(e)},"Falha ao salvar sessão");this.closeSocket()});
+        this.savePending=this.savePending.then(()=>auth.saveCreds()).then(()=>{this.lastCheckpoint=new Date().toISOString()}).catch(e=>{logger.error({error:String(e)},"Falha ao salvar sessão");this.delayReconnect();this.closeSocket()});
       });
       sock.ev.on("connection.update",async update=>{
         if(this.sock!==sock)return;
@@ -322,6 +329,7 @@ export class WhatsSession{
             await upsertSession(this.businessId,{status:"qr",last_error:null});
           }
           if(update.connection==="open"){
+            this.connectedSince=Date.now();
             this.state="online";this.error="";this.qrSvg=null;this.pairCode=null;this.pairPhone=null;this.pairExpires=0;this.qrReady=false;
             const normalized=jidNormalizedUser(String(sock.user?.id||""));
             this.phone=normalized?normalized.split("@")[0].split(":")[0]:null;
@@ -332,6 +340,8 @@ export class WhatsSession{
           }
           if(update.connection==="close"){
             const code=Number(new Boom(update.lastDisconnect?.error).output?.statusCode||0);
+            if(this.connectedSince&&Date.now()-this.connectedSince>120000)this.reconnectFailures=0;
+            this.connectedSince=0;
             this.sock=null;this.qrReady=false;this.pairCode=null;this.pairPhone=null;this.pairExpires=0;
             if(this.stopped||!this.hasLease())return;
             if(code===DisconnectReason.loggedOut){
@@ -344,15 +354,16 @@ export class WhatsSession{
               await upsertSession(this.businessId,{status:"disconnected",desired_online:false,phone:null,pairing_code:null,last_error:this.error});
               await rpc("agenda_baileys_release_lease",{p_business_id:this.businessId,p_lease_id:this.leaseId});
             }else{
+              this.delayReconnect();
               this.state="connecting";
               this.error=String(update.lastDisconnect?.error?.message||"Conexão interrompida. Reconectando.").slice(0,1200);
               await upsertSession(this.businessId,{status:"connecting",last_error:this.error});
-              setTimeout(()=>this.connectSocket().catch(()=>{}),3000);
             }
           }
         }catch(e){logger.error(e)}
       });
     }catch(e){
+      this.delayReconnect();
       this.sock=null;this.state="error";this.error=String(e?.message||e).slice(0,1200);
       await upsertSession(this.businessId,{status:"error",last_error:this.error}).catch(()=>{});
     }finally{this.connectBusy=false}
