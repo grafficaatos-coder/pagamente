@@ -2134,6 +2134,7 @@
     wa:['WhatsApp','Lembretes e confirmações'],
     team:['Equipe','Usuários e permissões'],
     profile:['Meu perfil','Dados pessoais e acesso'],
+    subscription:['Planos e assinatura','Escolha e acompanhe sua assinatura'],
     book:['Novo horário','Cadastrar atendimento']
   };
 }
@@ -2231,6 +2232,7 @@ async function installAgendaApp(){
     if(hasFeature('finance'))n.push(['cash','wallet','Financeiro']);
     n.push(['wa','message','WhatsApp']);
     if(canAdminCompany())n.push(['team','userplus','Equipe']);
+    n.push(['subscription','wallet','Planos e assinatura']);
     n.push(['profile','users','Meu perfil']);
     return `<aside class="side"><div class="brand"><div class="logo">${p.initials}</div><div><b>${displayBusinessName(companyCtx?.business?.name||p.brand)}</b><small>${companyCtx?.plan?.name||'PLANO'}</small></div></div><nav class="nav">${n.map(x=>`<button class="${page===x[0]?'on':''}" onclick="go('${x[0]}')">${I[x[1]]}<span class="label">${x[2]}</span></button>`).join('')}${pwaInstallEntry()}<button class="mobile-side-logout" onclick="ownerLogout()"><svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M13 4h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/></svg><span class="label">Sair</span></button></nav><div class="side-foot"><small>Acesso da empresa</small><b>${subscriptionLabel()}</b></div></aside>`;
   }
@@ -2606,13 +2608,38 @@ function agendaSubscriptionCheckoutCard(){
   if(!companyCtx||!['owner','admin'].includes(companyRole())||Number(companyCtx.plan?.monthly_price_cents||0)<=0)return '';
   return `<section class="panel" style="margin-top:16px;padding:18px"><span class="eyebrow">Assinatura</span><h3>Mensalidade do Agenda Pro</h3><p>Plano: ${appModalEscape(companyCtx.plan.name)} · Situação: ${appModalEscape(subscriptionLabel())}</p><p>Você será direcionado ao Mercado Pago. O plano será atualizado somente após confirmação do pagamento.</p><button class="btn primary" onclick="startAgendaSubscriptionCheckout()">${companyCtx.subscription?.mp_checkout_url?'Continuar pagamento':'Contratar pelo Mercado Pago'}</button></section>`;
 }
+    let subscriptionCatalog=[],subscriptionCatalogLoading=false,subscriptionCatalogLoaded=false;
+    async function loadSubscriptionCatalog(){
+      if(subscriptionCatalogLoaded||subscriptionCatalogLoading||!sb)return;
+      subscriptionCatalogLoading=true;
+      try{
+        const {data,error}=await sb.from('agenda_plans').select('id,code,name,description,monthly_price_cents,max_users,active').eq('active',true).order('monthly_price_cents');
+        if(error)throw error;
+        subscriptionCatalog=data||[];subscriptionCatalogLoaded=true;
+      }catch(e){console.error('Planos indisponíveis',e);toast('Não foi possível carregar os planos.');}
+      finally{subscriptionCatalogLoading=false;if(page==='subscription')render();}
+    }
+    function companySubscriptionPage(){
+      if(!companyCtx)return '';
+      if(!subscriptionCatalogLoaded&&!subscriptionCatalogLoading)setTimeout(loadSubscriptionCatalog,0);
+      const pl=companyCtx.plan,sub=companyCtx.subscription;
+      const currentId=String(pl?.id||'');
+      const owner=['owner','admin'].includes(companyRole());
+      const cards=subscriptionCatalog.map(p=>{
+        const current=String(p.id)===currentId;
+        const amount=moneyBR(Number(p.monthly_price_cents||0)/100);
+        return `<article class="card" style="padding:20px;min-width:0"><span class="eyebrow">${current?'Seu plano atual':'Plano disponível'}</span><h3>${appModalEscape(p.name||'Plano')}</h3><p>${appModalEscape(p.description||'')}</p><h2>${amount}<small style="font-size:13px"> /mês</small></h2><p>${p.max_users==null?'Usuários ilimitados':Number(p.max_users)+' usuário(s)'}</p>${current?'<span class="status-badge status-active">Plano atual</span>':'<button class="btn" disabled title="Troca de plano será liberada após a validação do Mercado Pago">Em breve: escolher este plano</button>'}</article>`;
+      }).join('');
+      const payment=owner&&Number(pl?.monthly_price_cents||0)>0?agendaSubscriptionCheckoutCard():'';
+      return shell(`<div class="section-title"><span class="eyebrow">Minha empresa</span><h2>Planos e assinatura</h2><p>Consulte seus planos e pagamentos. A troca de plano estará disponível após a validação das cobranças.</p></div><section class="card" style="padding:20px"><h3>Assinatura atual</h3><p><b>${appModalEscape(pl?.name||'Plano')}</b> · ${appModalEscape(subscriptionLabel())}</p><p>Próximo vencimento: ${sub?.current_period_end?new Date(sub.current_period_end).toLocaleDateString('pt-BR'):'Não definido'}</p></section>${payment}<div class="section-title" style="margin-top:24px"><h2>Conheça os planos</h2></div><div class="plans-grid">${cards||'<p>Carregando planos disponíveis...</p>'}</div><p style="margin-top:18px">Os planos pagos só serão liberados após confirmação do pagamento pelo Mercado Pago. Não há cobrança automática ativa no momento.</p>`);
+    }
     function myProfile(){
   const profile=companyCtx?.profile||{};
   const name=profile.display_name||'Usuário';
   const phone=profile.phone?formatBusinessPhone(profile.phone):'';
   const email=authUser?.email||'';
   const role=teamRoleLabel(companyRole());
-  return shell(`<div class="profile-page">${agendaSubscriptionCheckoutCard()}
+  return shell(`<div class="profile-page">
     <div class="section-title profile-title"><span class="eyebrow">Sua conta</span><h2>Meu perfil</h2><p>Atualize seus dados pessoais usados para acessar o Agenda Pro.</p></div>
     <div class="profile-layout">
       <aside class="profile-summary-card">
@@ -5055,7 +5082,7 @@ function agendaSubscriptionCheckoutCard(){
   closeMobileMenu();
   if(!appMode){render();return}
   if(appMode==='owner'){page='admin';adminTab=['overview','clients','plans','billing','settings'].includes(p)?p:'overview';render();scrollTo(0,0);return}
-  const allowed={home:true,agenda:hasFeature('agenda'),services:hasFeature('agenda'),clients:hasFeature('clients'),cash:hasFeature('finance'),wa:true,team:canAdminCompany(),profile:true};
+  const allowed={home:true,agenda:hasFeature('agenda'),services:hasFeature('agenda'),clients:hasFeature('clients'),cash:hasFeature('finance'),wa:true,team:canAdminCompany(),profile:true,subscription:true};
   if(!allowed[p])return toast(p==='team'?'Seu perfil não permite gerenciar usuários':'Este recurso não está incluído no seu plano');
   page=p;render();scrollTo(0,0);
   if(p==='team')setTimeout(()=>loadTeamMembers(true),0);
@@ -5111,7 +5138,7 @@ function agendaSubscriptionCheckoutCard(){
     requestAnimationFrame(resetMobileHorizontalPosition);
     return;
   }
-  R.innerHTML=page==='book'?booking():({home,agenda,clients,services,cash,wa,team,profile:myProfile}[page]||home)();
+  R.innerHTML=page==='book'?booking():({home,agenda,clients,services,cash,wa,team,profile:myProfile,subscription:companySubscriptionPage}[page]||home)();
   requestAnimationFrame(resetMobileHorizontalPosition);
 }
     window.addEventListener('pageshow',resetMobileHorizontalPosition);
