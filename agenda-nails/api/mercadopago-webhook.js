@@ -115,41 +115,35 @@ export default async function handler(req, res) {
     });
     if (!response.ok) return res.status(502).json({ error: 'audit_unavailable' });
   } catch (_) { return res.status(502).json({ error: 'audit_unavailable' }); }
-  // Record paid invoices separately, only after verifying the plan price.
-  // Renewal remains disabled until a controlled end-to-end subscription test.
-  if (invoicePaid) {
-    const amount = Number(invoice.transaction_amount);
+  // Atomic renewal is opt-in and MUST be enabled only after checkout and
+  // end-to-end tests. The database RPC owns idempotency and price validation.
+  if (invoicePaid && process.env.AGENDA_MP_RENEWAL_ENABLED === 'true') {
+    const cents = Math.round(Number(invoice.transaction_amount) * 100);
     const currency = String(invoice.currency_id || '');
-    const amountCents = Math.round(amount * 100);
-    if (!Number.isFinite(amount) || amount <= 0 || !Number.isSafeInteger(amountCents) || currency !== 'BRL') {
-      return res.status(200).json({ ok: true, verified: true, audited: true, processed: false, reason: 'invalid_amount' });
+    const paidAt = String(invoice.payment?.date_approved || invoice.date_created || '');
+    if (!Number.isSafeInteger(cents) || cents <= 0 || currency !== 'BRL' || !Number.isFinite(Date.parse(paidAt))) {
+      return res.status(200).json({ ok: true, processed: false, reason: 'invalid_invoice_details' });
     }
+    const rpc = new URL('/rest/v1/rpc/agenda_mp_apply_verified_invoice', supabaseUrl);
+    let response;
     try {
-      const planUrl = new URL('/rest/v1/agenda_plans', supabaseUrl);
-      planUrl.searchParams.set('select', 'monthly_price_cents');
-      planUrl.searchParams.set('id', 'eq.' + matches[0].plan_id);
-      const headers = { apikey: supabaseKey, Authorization: 'Bearer ' + supabaseKey, Accept: 'application/json' };
-      const planResponse = await fetch(planUrl, { headers });
-      if (!planResponse.ok) return res.status(502).json({ error: 'plan_lookup_failed' });
-      const plans = await planResponse.json();
-      if (plans.length !== 1 || Number(plans[0].monthly_price_cents) !== amountCents) {
-        return res.status(200).json({ ok: true, verified: true, audited: true, processed: false, reason: 'plan_amount_mismatch' });
-      }
-      const ledgerUrl = new URL('/rest/v1/agenda_mp_verified_invoices', supabaseUrl);
-      const saved = await fetch(ledgerUrl, {
-        method: 'POST',
-        headers: { ...headers, 'Content-Type': 'application/json', Prefer: 'resolution=ignore-duplicates,return=minimal' },
-        body: JSON.stringify({
-          authorized_payment_id: dataId,
-          preapproval_id: linkedPreapprovalId,
-          business_id: matches[0].business_id,
-          amount_cents: amountCents,
-          currency,
-          payment_status: 'approved'
+      response = await fetch(rpc, {
+        method:'POST',
+        headers:{apikey:supabaseKey,Authorization:'Bearer '+supabaseKey,'Content-Type':'application/json'},
+        body:JSON.stringify({
+          p_business_id:matches[0].business_id,
+          p_preapproval_id:linkedPreapprovalId,
+          p_invoice_id:dataId,
+          p_amount_cents:cents,
+          p_currency:currency,
+          p_provider_status:'approved',
+          p_paid_at:paidAt
         })
       });
-      if (!saved.ok) return res.status(502).json({ error: 'invoice_ledger_failed' });
-    } catch (_) { return res.status(502).json({ error: 'invoice_ledger_failed' }); }
+    } catch (_) { return res.status(502).json({ error:'renewal_unavailable' }); }
+    if (!response.ok) return res.status(502).json({ error:'renewal_rejected' });
+    const result = await response.json();
+    return res.status(200).json({ok:true,verified:true,invoice_paid:true,renewed:Boolean(result?.applied),duplicate:result?.reason==='duplicate'});
   }
   return res.status(200).json({ ok: true, verified: true, provider_checked: true, linked: true, audited: true, invoice_paid: Boolean(invoicePaid), processed: false });
 }
