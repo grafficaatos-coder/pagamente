@@ -53,7 +53,7 @@ export default async function handler(req,res) {
         return res.status(200).json({ok:true,checkout_url:sub.mp_checkout_url,payment_pending:true,reused:true});
       return res.status(409).json({error:'subscription_already_linked'});
     }
-    if(sub.plan_id===planId && sub.status==='active')return res.status(409).json({error:'already_on_plan'});
+    // Also allow an existing manually activated paid plan to start its first recurring agreement.
     const reference='agenda:'+businessId+':'+planId;
     const response=await fetch('https://api.mercadopago.com/preapproval',{
       method:'POST',
