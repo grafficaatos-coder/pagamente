@@ -307,6 +307,11 @@ export class WhatsSession{
         printQRInTerminal:false,
         markOnlineOnConnect:false,
         syncFullHistory:false,
+        // Agenda Pro only sends 1:1 reminders and confirmations. Incoming chat
+        // history and group/status traffic need not be decrypted on this relay.
+        // Keep real one-to-one traffic and WhatsApp's auth/state updates intact.
+        shouldSyncHistoryMessage:()=>false,
+        shouldIgnoreJid:jid=>typeof jid==="string"&&(jid.endsWith("@g.us")||jid.endsWith("@broadcast")),
         generateHighQualityLinkPreview:false,
         maxMsgRetryCount:1,
         connectTimeoutMs:30000,
