@@ -2602,7 +2602,16 @@ async function installAgendaApp(){
       if(reason==='checkout_not_enabled')return toast('Pagamento online ainda não liberado.');
       if(reason==='checkout_limited_to_pilot')return toast('Teste autorizado somente para a Julli no plano Essencial.');
       if(reason==='subscription_already_linked')return toast('Assinatura já vinculada. Contate o suporte.');
-      if(reason==='checkout_provider_rejected')return toast('Mercado Pago recusou a criação da assinatura (HTTP '+(data.provider_status||response.status)+'). Informe esse código ao suporte.');
+      if(reason==='checkout_provider_rejected'){
+        const safe=s=>String(s||'').replace(/[^a-zA-ZÀ-ÿ0-9 _.,:;/'()-]/g,' ').slice(0,145);
+        const details=safe(data.provider_hint);
+        const code=safe(data.provider_code);
+        const message='Mercado Pago HTTP '+(data.provider_status||response.status)+
+          (code?' / código '+code:'')+(details?' / '+details:' / motivo não informado');
+        console.warn('Motivo do checkout recusado',{code,details});
+        window.alert(message);
+        return;
+      }
       if(!reason)return toast('Servidor não respondeu corretamente ao pagamento (HTTP '+response.status+'). Envie este código para suporte.');
       return toast('Falha ao iniciar pagamento: '+reason+' (HTTP '+response.status+')');
     }
@@ -2656,7 +2665,15 @@ async function cancelAgendaSubscription(){
         const currentPlan=p.id===current?.id;
         const amount=moneyBR(Number(p.monthly_price_cents||0)/100);
         let action='<span class="status-badge status-active">Seu plano atual</span>';
-        if(owner&&Number(p.monthly_price_cents||0)>0){
+        // Pilot is restricted to Julli / Essencial to avoid advertising an
+        // unavailable charge button to every tenant or to higher-priced plans.
+        const pilotAllowed=owner&&
+          companyCtx.business?.id==='7f00c45b-b228-4ee8-b795-aadbdcfb9d45'&&
+          p.code==='essencial'&&Number(p.monthly_price_cents)===4990;
+        if(owner&&Number(p.monthly_price_cents||0)>0&&!pilotAllowed){
+          action='<span class="status-badge">Contratação ainda não liberada</span>';
+        }
+        if(pilotAllowed){
           if(linked&&pendingId===p.id){
             action="<button class=\"btn primary\" onclick=\"startAgendaSubscriptionCheckout('"+p.id+"')\">Continuar pagamento</button>";
           }else if(!linked && (!currentPlan || !['active'].includes(sub?.status))){
