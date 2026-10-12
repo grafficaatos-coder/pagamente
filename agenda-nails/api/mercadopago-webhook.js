@@ -14,7 +14,7 @@ export default async function handler(req, res) {
   const requestId = String(req.headers['x-request-id'] || '');
   const parts = Object.fromEntries(signature.split(',').map(s => s.trim().split('=').map(v => v.trim())).filter(p => p.length === 2));
   const ts = parts.ts, provided = parts.v1;
-  const rawId = req.query?.['data.id'] || req.query?.id;
+  const rawId = req.query?.['data.id'] || req.query?.id || req.body?.data?.id;
   const dataId = Array.isArray(rawId) ? rawId[0] : String(rawId || '');
   if (!dataId || !requestId || !ts || !provided || !/^[a-f0-9]{64}$/i.test(provided) || !/^\d{10,16}$/.test(ts)) {
     return res.status(401).json({ error: 'invalid_signature' });
@@ -59,7 +59,7 @@ export default async function handler(req, res) {
       if (!/^[a-zA-Z0-9_-]{1,120}$/.test(preapprovalId)) return res.status(502).json({ error: 'invoice_without_subscription' });
       const check = await fetch('https://api.mercadopago.com/preapproval/' + encodeURIComponent(preapprovalId), {
         headers: { Authorization: 'Bearer ' + token, Accept: 'application/json' },
-        signal: controller.signal
+        signal: AbortSignal.timeout(9000)
       });
       if (!check.ok) return res.status(502).json({ error: 'subscription_unavailable' });
       subscription = await check.json();
@@ -67,7 +67,9 @@ export default async function handler(req, res) {
     } else subscription = resource;
   } catch (_) { return res.status(502).json({ error: 'provider_unavailable' }); }
   const linkedPreapprovalId = String(subscription.id);
-  const invoicePaid = isInvoice && invoice.payment?.status === 'approved' && String(invoice.status || '') === 'processed';
+  const invoicePaid = isInvoice && invoice.payment?.status === 'approved' && !!invoice.payment?.id;
+  // Invoices are scheduling records; even an approved-looking invoice is NOT a
+  // verified payment. Before renewal, independently fetch /v1/payments/{id}.
   // Only a subscription already linked in Agenda Pro may ever be processed.
   // The lookup uses a server-side Supabase key; it is never sent to the browser.
   const supabaseUrl = process.env.AGENDA_SUPABASE_URL;
@@ -78,7 +80,7 @@ export default async function handler(req, res) {
     const base = new URL(supabaseUrl);
     if (base.protocol !== 'https:') throw new Error('invalid_database_url');
     const url = new URL('/rest/v1/agenda_subscriptions', base);
-    url.searchParams.set('select', 'business_id,plan_id,mp_preapproval_id');
+    url.searchParams.set('select', 'business_id,plan_id,mp_pending_plan_id,mp_preapproval_id');
     url.searchParams.set('mp_preapproval_id', 'eq.' + linkedPreapprovalId);
     url.searchParams.set('limit', '2');
     const controller = new AbortController();
@@ -115,35 +117,66 @@ export default async function handler(req, res) {
     });
     if (!response.ok) return res.status(502).json({ error: 'audit_unavailable' });
   } catch (_) { return res.status(502).json({ error: 'audit_unavailable' }); }
-  // Atomic renewal is opt-in and MUST be enabled only after checkout and
-  // end-to-end tests. The database RPC owns idempotency and price validation.
+  // Only the server may apply a verified payment; never trust webhook POST data.
   if (invoicePaid && process.env.AGENDA_MP_RENEWAL_ENABLED === 'true') {
-    const cents = Math.round(Number(invoice.transaction_amount) * 100);
-    const currency = String(invoice.currency_id || '');
-    const paidAt = String(invoice.payment?.date_approved || invoice.date_created || '');
-    if (!Number.isSafeInteger(cents) || cents <= 0 || currency !== 'BRL' || !Number.isFinite(Date.parse(paidAt))) {
-      return res.status(200).json({ ok: true, processed: false, reason: 'invalid_invoice_details' });
+    const match=matches[0];
+    const targetPlan=String(match.mp_pending_plan_id||match.plan_id);
+    const reference='agenda:'+match.business_id+':'+targetPlan;
+    const invoiceId=String(invoice.id||'');
+    const paymentId=String(invoice.payment.id||'');
+    const cents=value=>Math.round(Number(value)*100);
+    if(subscription.status!=='authorized' ||
+       String(subscription.external_reference||'')!==reference ||
+       String(invoice.external_reference||'')!==reference ||
+       !/^\\d{1,24}$/.test(invoiceId) || !/^\\d{1,24}$/.test(paymentId) ||
+       String(invoice.preapproval_id||'')!==linkedPreapprovalId ||
+       invoice.currency_id!=='BRL' ||
+       subscription.auto_recurring?.currency_id!=='BRL' ||
+       !Number.isSafeInteger(cents(invoice.transaction_amount)) ||
+       cents(invoice.transaction_amount)<=0 ||
+       cents(invoice.transaction_amount)!==cents(subscription.auto_recurring?.transaction_amount)) {
+      return res.status(200).json({ok:true,processed:false,reason:'payment_not_verified'});
     }
-    const rpc = new URL('/rest/v1/rpc/agenda_mp_apply_verified_invoice', supabaseUrl);
+    let payment;
+    try {
+      const paymentResponse=await fetch(
+        'https://api.mercadopago.com/v1/payments/'+encodeURIComponent(paymentId),
+        {headers:{Authorization:'Bearer '+token,Accept:'application/json'},signal:AbortSignal.timeout(9000)}
+      );
+      if(!paymentResponse.ok)return res.status(502).json({error:'payment_provider_unavailable'});
+      payment=await paymentResponse.json();
+    }catch(_){return res.status(502).json({error:'payment_provider_unavailable'})}
+    const approvedAt=String(payment.date_approved||'');
+    const paidAtMillis=Date.parse(approvedAt);
+    if(String(payment.id||'')!==paymentId || payment.status!=='approved' ||
+       payment.status_detail!=='accredited' || payment.currency_id!=='BRL' ||
+       cents(payment.transaction_amount)!==cents(invoice.transaction_amount) ||
+       !Number.isFinite(paidAtMillis) || paidAtMillis>Date.now()+600000) {
+      return res.status(200).json({ok:true,processed:false,reason:'payment_not_approved'});
+    }
+    const rpc=new URL('/rest/v1/rpc/agenda_mp_apply_verified_invoice',supabaseUrl);
     let response;
     try {
-      response = await fetch(rpc, {
+      response=await fetch(rpc,{
         method:'POST',
         headers:{apikey:supabaseKey,Authorization:'Bearer '+supabaseKey,'Content-Type':'application/json'},
         body:JSON.stringify({
-          p_business_id:matches[0].business_id,
+          p_business_id:match.business_id,
           p_preapproval_id:linkedPreapprovalId,
-          p_invoice_id:dataId,
-          p_amount_cents:cents,
-          p_currency:currency,
+          p_invoice_id:invoiceId,
+          p_amount_cents:cents(invoice.transaction_amount),
+          p_currency:'BRL',
           p_provider_status:'approved',
-          p_paid_at:paidAt
-        })
+          p_paid_at:approvedAt
+        }),
+        signal:AbortSignal.timeout(10000)
       });
-    } catch (_) { return res.status(502).json({ error:'renewal_unavailable' }); }
-    if (!response.ok) return res.status(502).json({ error:'renewal_rejected' });
-    const result = await response.json();
-    return res.status(200).json({ok:true,verified:true,invoice_paid:true,renewed:Boolean(result?.applied),duplicate:result?.reason==='duplicate'});
+    }catch(_){return res.status(502).json({error:'renewal_unavailable'})}
+    if(!response.ok)return res.status(502).json({error:'renewal_rejected'});
+    const result=await response.json();
+    return res.status(200).json({ok:true,verified:true,payment_approved:true,
+      renewed:Boolean(result?.applied),duplicate:result?.reason==='duplicate'});
   }
-  return res.status(200).json({ ok: true, verified: true, provider_checked: true, linked: true, audited: true, invoice_paid: Boolean(invoicePaid), processed: false });
+  return res.status(200).json({ok:true,verified:true,linked:true,
+    audited:true,invoice_paid:Boolean(invoicePaid),processed:false});
 }
