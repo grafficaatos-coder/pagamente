@@ -89,9 +89,9 @@ export default async function handler(req,res) {
       // Never return an MP token, full provider payload or payer details.
       const cause=Array.isArray(rejected.cause)?rejected.cause[0]||{}:{};
       const sanitize=value=>String(value??'')
-        .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}/gi,'[email]')
-        .replace(/\\b\\d{12,}\\b/g,'[id]')
-        .replace(/[^a-zA-ZÀ-ÿ0-9 _.,:/()\\[\\]-]/g,' ')
+        .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,'[email]')
+        .replace(/\b\d{12,}\b/g,'[id]')
+        .replace(/[^a-zA-ZÀ-ÿ0-9 _.,:;/'()-]/g,' ')
         .slice(0,145).trim();
       const providerCode=sanitize(cause.code||rejected.code||rejected.error||'');
       const providerHint=sanitize(cause.description||rejected.message||'');
