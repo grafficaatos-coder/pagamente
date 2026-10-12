@@ -131,6 +131,10 @@ function serviceTerms(segment){
 function publicBusinessName(name){
   return String(name||"Agenda Pro").replace(/^\s*by\s+/i,"").trim()||"Agenda Pro";
 }
+function appointmentDisplayName(name){
+  const publicName=publicBusinessName(name);
+  return /^Juliana Garcia$/i.test(publicName)?"Juliana":publicName;
+}
 function catalogText(business,customer,services){
   const first=String(customer?.name||"").trim().split(/\s+/)[0]||"Cliente";
   const terms=serviceTerms(business?.segment);
@@ -162,7 +166,7 @@ function messageText(kind,business,customer,service,appointment){
       "\n\nEsperamos que tenha gostado. Quando quiser agendar novamente, é só chamar a gente por aqui. 💛";
   }
   return "Olá, "+first+"! ✨"+
-    "\nSeu horário na *"+publicBusinessName(business.name)+"* foi agendado."+
+    "\nSeu horário com *"+appointmentDisplayName(business.name)+"* foi agendado."+
     "\n\n📅 *Data:* "+when.date+
     "\n🕐 *Horário:* "+when.time+
     "\n✨ *"+terms.one+":* "+service.name+
