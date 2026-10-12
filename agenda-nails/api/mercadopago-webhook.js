@@ -34,25 +34,40 @@ export default async function handler(req, res) {
   // The callback is not evidence of paid service. Verify against Mercado Pago.
   // This first stage is intentionally read-only: never grant, cancel or renew.
   const topic = String(req.query?.type || req.body?.type || '');
-  if (topic !== 'subscription_preapproval') return res.status(200).json({ ok: true, verified: true, processed: false });
+  const isInvoice = topic === 'subscription_authorized_payment';
+  if (topic !== 'subscription_preapproval' && !isInvoice) return res.status(200).json({ ok: true, verified: true, processed: false });
   const token = process.env.AGENDA_MP_ACCESS_TOKEN;
   if (!token) return res.status(503).json({ error: 'mercadopago_api_not_configured' });
   if (!/^[a-zA-Z0-9_-]{1,120}$/.test(dataId)) return res.status(400).json({ error: 'invalid_subscription_id' });
-  let subscription;
+  let subscription, invoice;
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
     let response;
     try {
-      response = await fetch('https://api.mercadopago.com/preapproval/' + encodeURIComponent(dataId), {
+      response = await fetch('https://api.mercadopago.com/' + (isInvoice ? 'authorized_payments/' : 'preapproval/') + encodeURIComponent(dataId), {
         headers: { Authorization: 'Bearer ' + token, Accept: 'application/json' },
         signal: controller.signal
       });
     } finally { clearTimeout(timeout); }
     if (!response.ok) return res.status(response.status === 404 ? 200 : 502).json({ ok: response.status === 404, verified: true, processed: false });
-    subscription = await response.json();
+    const resource = await response.json();
+    if (String(resource.id) !== dataId) return res.status(502).json({ error: 'provider_mismatch' });
+    if (isInvoice) {
+      invoice = resource;
+      const preapprovalId = String(invoice.preapproval_id || '');
+      if (!/^[a-zA-Z0-9_-]{1,120}$/.test(preapprovalId)) return res.status(502).json({ error: 'invoice_without_subscription' });
+      const check = await fetch('https://api.mercadopago.com/preapproval/' + encodeURIComponent(preapprovalId), {
+        headers: { Authorization: 'Bearer ' + token, Accept: 'application/json' },
+        signal: controller.signal
+      });
+      if (!check.ok) return res.status(502).json({ error: 'subscription_unavailable' });
+      subscription = await check.json();
+      if (String(subscription.id) !== preapprovalId) return res.status(502).json({ error: 'subscription_mismatch' });
+    } else subscription = resource;
   } catch (_) { return res.status(502).json({ error: 'provider_unavailable' }); }
-  if (String(subscription.id) !== dataId) return res.status(502).json({ error: 'provider_mismatch' });
+  const linkedPreapprovalId = String(subscription.id);
+  const invoicePaid = isInvoice && invoice.payment?.status === 'approved' && String(invoice.status || '') === 'processed';
   // Only a subscription already linked in Agenda Pro may ever be processed.
   // The lookup uses a server-side Supabase key; it is never sent to the browser.
   const supabaseUrl = process.env.AGENDA_SUPABASE_URL;
@@ -64,7 +79,7 @@ export default async function handler(req, res) {
     if (base.protocol !== 'https:') throw new Error('invalid_database_url');
     const url = new URL('/rest/v1/agenda_subscriptions', base);
     url.searchParams.set('select', 'business_id,mp_preapproval_id');
-    url.searchParams.set('mp_preapproval_id', 'eq.' + dataId);
+    url.searchParams.set('mp_preapproval_id', 'eq.' + linkedPreapprovalId);
     url.searchParams.set('limit', '2');
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 8000);
@@ -93,13 +108,13 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         request_id: requestId.slice(0, 160),
         business_id: matches[0].business_id,
-        preapproval_id: dataId,
+        preapproval_id: linkedPreapprovalId,
         event_type: topic,
-        provider_status: String(subscription.status || '').slice(0, 100)
+        provider_status: String(isInvoice ? (invoice.status || '') + ':' + (invoice.payment?.status || '') : subscription.status || '').slice(0, 100)
       })
     });
     if (!response.ok) return res.status(502).json({ error: 'audit_unavailable' });
   } catch (_) { return res.status(502).json({ error: 'audit_unavailable' }); }
   // Future phase: verify paid installments and atomically renew the subscription.
-  return res.status(200).json({ ok: true, verified: true, provider_checked: true, linked: true, audited: true, processed: false });
+  return res.status(200).json({ ok: true, verified: true, provider_checked: true, linked: true, audited: true, invoice_paid: Boolean(invoicePaid), processed: false });
 }
