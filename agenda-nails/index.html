@@ -2631,11 +2631,11 @@ async function installAgendaApp(){
         let action='<span class="status-badge status-active">Seu plano atual</span>';
         if(owner&&Number(p.monthly_price_cents||0)>0){
           if(linked&&pendingId===p.id){
-            action='<button class="btn primary" onclick="startAgendaSubscriptionCheckout(\\''+p.id+'\\')">Continuar pagamento</button>';
+            action="<button class=\"btn primary\" onclick=\"startAgendaSubscriptionCheckout('"+p.id+"')\">Continuar pagamento</button>";
           }else if(!linked && (!currentPlan || !['active'].includes(sub?.status))){
-            action='<button class="btn primary" onclick="startAgendaSubscriptionCheckout(\\''+p.id+'\\')">Contratar este plano</button>';
+            action="<button class=\"btn primary\" onclick=\"startAgendaSubscriptionCheckout('"+p.id+"')\">Contratar este plano</button>";
           }else if(!linked && currentPlan){
-            action='<button class="btn primary" onclick="startAgendaSubscriptionCheckout(\\''+p.id+'\\')">Iniciar mensalidade</button>';
+            action="<button class=\"btn primary\" onclick=\"startAgendaSubscriptionCheckout('"+p.id+"')\">Iniciar mensalidade</button>";
           }else if(!currentPlan){
             action='<span class="status-badge">Plano indisponível para troca automática</span>';
           }
