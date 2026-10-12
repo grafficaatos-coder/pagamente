@@ -9,7 +9,13 @@ const mpCheckoutUrl=url=>{
 };
 export default async function handler(req,res) {
   res.setHeader('Cache-Control','no-store');
-  if(req.method!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({error:'method_not_allowed'})}
+  if(req.method==='GET')return res.status(200).json({
+    ok:true,service:'agenda-mp-checkout',pilot:true,
+    enabled:process.env.AGENDA_MP_CHECKOUT_ENABLED==='true',
+    restricted:Boolean(process.env.AGENDA_MP_TEST_BUSINESS_ID&&process.env.AGENDA_MP_TEST_PLAN_ID),
+    configured:Boolean(process.env.AGENDA_SUPABASE_URL&&process.env.AGENDA_SUPABASE_SECRET_KEY&&process.env.AGENDA_MP_ACCESS_TOKEN)
+  });
+  if(req.method!=='POST'){res.setHeader('Allow','GET,POST');return res.status(405).json({error:'method_not_allowed'})}
   // Explicitly gated: do not create production charges until supervised testing.
   if(process.env.AGENDA_MP_CHECKOUT_ENABLED!=='true')return res.status(503).json({error:'checkout_not_enabled'});
   const root=process.env.AGENDA_SUPABASE_URL,key=process.env.AGENDA_SUPABASE_SECRET_KEY,mpKey=process.env.AGENDA_MP_ACCESS_TOKEN;
@@ -25,7 +31,8 @@ export default async function handler(req,res) {
   if(!UUID.test(testBusiness)||!UUID.test(testPlan)||
      businessId!==testBusiness||planId!==testPlan)
     return res.status(403).json({error:'checkout_limited_to_pilot'});
-  const base=new URL(root);
+  let base;
+  try{base=new URL(root)}catch(_){return res.status(503).json({error:'invalid_database_url'})}
   if(base.protocol!=='https:')return res.status(503).json({error:'invalid_configuration'});
   const serverHeaders={apikey:key,Authorization:'Bearer '+key,Accept:'application/json'};
   const select=async (table,params)=>{
@@ -76,7 +83,12 @@ export default async function handler(req,res) {
       }),
       signal:AbortSignal.timeout(15000)
     });
-    if(!response.ok)return res.status(502).json({error:'checkout_provider_rejected'});
+    if(!response.ok){
+      const rejected=await response.json().catch(()=>({}));
+      const providerCode=String(rejected?.cause?.[0]?.code||rejected?.code||'').slice(0,80);
+      console.warn('Mercado Pago não criou a assinatura',{status:response.status,code:providerCode});
+      return res.status(502).json({error:'checkout_provider_rejected',provider_status:response.status});
+    }
     const result=await response.json();
     if(!result.id||!mpCheckoutUrl(result.init_point)||result.status!=='pending'||
        String(result.external_reference||'')!==reference||
@@ -101,5 +113,8 @@ export default async function handler(req,res) {
     const updated=await saved.json();
     if(updated.length!==1)return res.status(409).json({error:'checkout_link_conflict'});
     return res.status(200).json({ok:true,checkout_url:result.init_point,payment_pending:true});
-  }catch(_){return res.status(502).json({error:'checkout_unavailable'})}
+  }catch(e){
+    console.error('Falha no endpoint de checkout',{name:String(e?.name||'Error').slice(0,80),cause:String(e?.message||'unknown').slice(0,120)});
+    return res.status(502).json({error:'checkout_unavailable'});
+  }
 }
