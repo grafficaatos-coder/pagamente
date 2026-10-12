@@ -99,6 +99,24 @@ export default async function handler(req,res) {
         status:response.status,code:providerCode||'unknown',
         hint:providerHint||'unspecified'
       });
+      // Store only redacted error details in an RLS-restricted audit table
+      // so the operator can diagnose the provider's exact rejection without
+      // accessing Vercel logs. Never persist credentials, payer data or body.
+      try {
+        const diagnostics=new URL('/rest/v1/agenda_mp_checkout_failures',base);
+        await fetch(diagnostics,{
+          method:'POST',
+          headers:{...serverHeaders,'Content-Type':'application/json',Prefer:'return=minimal'},
+          body:JSON.stringify({
+            business_id:businessId,
+            provider_http_status:response.status,
+            provider_code:providerCode,
+            provider_message:providerHint,
+            credential_mode:mpKey.startsWith('APP_USR-')?'production':mpKey.startsWith('TEST-')?'test':'unknown'
+          }),
+          signal:AbortSignal.timeout(5000)
+        });
+      }catch(_){console.warn('Diagnóstico do Mercado Pago não pôde ser salvo');}
       return res.status(502).json({
         error:'checkout_provider_rejected',
         provider_status:response.status,
