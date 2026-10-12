@@ -120,7 +120,8 @@ export default async function handler(req, res) {
   if (invoicePaid && process.env.AGENDA_MP_RENEWAL_ENABLED === 'true') {
     const cents = Math.round(Number(invoice.transaction_amount) * 100);
     const currency = String(invoice.currency_id || '');
-    const paidAt = String(invoice.payment?.date_approved || invoice.date_created || '');
+    const paidAt = String(invoice.payment?.date_approved || '');
+    // Never treat invoice creation as proof of payment. A provider-confirmed approval date is mandatory.
     if (!Number.isSafeInteger(cents) || cents <= 0 || currency !== 'BRL' || !Number.isFinite(Date.parse(paidAt))) {
       return res.status(200).json({ ok: true, processed: false, reason: 'invalid_invoice_details' });
     }
