@@ -2406,6 +2406,10 @@ async function installAgendaApp(){
     function whatsappBusinessName(name){
   return displayBusinessName(name);
 }
+    function whatsappBookingName(name){
+  const publicName=whatsappBusinessName(name);
+  return /^Juliana Garcia$/i.test(publicName)?'Juliana':publicName;
+}
     function normalizeWhatsPhone(phone){
   let n=String(phone||'').replace(/\D/g,'');
   n=n.replace(/^0+/,'');
@@ -3164,7 +3168,7 @@ async function installAgendaApp(){
   if(item.message_type==='followup'){
     return `Olá${first?', '+first:''}! ${E.smile}\n\nObrigado pelo seu atendimento com *${business}*.\n\nEsperamos que tenha gostado. Quando quiser agendar novamente, é só chamar a gente por aqui. ${E.heart}`;
   }
-  return `Olá${first?', '+first:''}! ${E.smile}\n\nSeu horário com *${business}* foi agendado.\n\n${E.calendar} Data: *${date}*\n${E.clock} Horário: *${time}*\n${E.sparkle} ${P().service}: *${service}*${professional?`\n${E.person} ${P().professional}: *${professional}*`:''}\n\nSe precisar alterar o horário, fale com a gente por aqui.`;
+  return `Olá${first?', '+first:''}! ${E.smile}\n\nSeu horário com *${whatsappBookingName(companyCtx?.business?.name)}* foi agendado.\n\n${E.calendar} Data: *${date}*\n${E.clock} Horário: *${time}*\n${E.sparkle} ${P().service}: *${service}*${professional?`\n${E.person} ${P().professional}: *${professional}*`:''}\n\nSe precisar alterar o horário, fale com a gente por aqui.`;
 }
     function dueWhatsappQueue(){
   const now=Date.now();
@@ -4504,7 +4508,7 @@ async function installAgendaApp(){
   const lines=[
     `Olá${first?', '+first:''}! ${EMOJI.smile}`,
     '',
-    `Seu horário com *${whatsappBusinessName(companyCtx.business.name)}* foi agendado.`,
+    `Seu horário com *${whatsappBookingName(companyCtx.business.name)}* foi agendado.`,
     '',
     `${EMOJI.calendar} Data: *${dateBR}*`,
     `${EMOJI.clock} Horário: *${time}*`,
