@@ -7,6 +7,18 @@ const trustedUrl=value=>{
     ['mercadopago.com.br','mercadopago.com'].some(d=>u.hostname===d||u.hostname.endsWith('.'+d));}
   catch(_){return false;}
 };
+// O PIX não exige login nem conta do comprador no Mercado Pago.
+const pixData=payment=>{
+  const transaction=payment?.point_of_interaction?.transaction_data||{};
+  const code=String(transaction.qr_code||'');
+  const base64=String(transaction.qr_code_base64||'');
+  const url=String(transaction.ticket_url||'');
+  return {
+    pix_copy_paste:code.length>=20&&code.length<=4000?code:'',
+    qr_code_base64:base64.length>20&&base64.length<300000&&/^[A-Za-z0-9+/=]+$/.test(base64)?base64:'',
+    checkout_url:trustedUrl(url)?url:''
+  };
+};
 export default async function handler(req,res){
   res.setHeader('Cache-Control','no-store');
   if(req.method==='GET')return res.status(200).json({
@@ -78,8 +90,22 @@ export default async function handler(req,res){
     if(existing.length===1){
       const old=existing[0];
       if(Date.parse(old.expires_at)>Date.now()){
-        if(old.plan_id===planId&&old.mp_payment_id&&trustedUrl(old.checkout_url))
-          return res.status(200).json({ok:true,payment_pending:true,reused:true,checkout_url:old.checkout_url});
+        if(old.plan_id===planId&&/^\d{1,40}$/.test(String(old.mp_payment_id||''))){
+          const resumed=await fetch('https://api.mercadopago.com/v1/payments/'+encodeURIComponent(old.mp_payment_id),{
+            headers:{Authorization:'Bearer '+mpKey,Accept:'application/json'},signal:AbortSignal.timeout(10000)
+          });
+          if(!resumed.ok)return res.status(502).json({error:'pix_provider_unavailable'});
+          const current=await resumed.json();
+          if(String(current.id)!==String(old.mp_payment_id)||
+             current.payment_method_id!=='pix'||
+             current.currency_id!=='BRL'||
+             current.external_reference!=='agenda-pix:'+old.id||
+             Math.round(Number(current.transaction_amount)*100)!==4990)
+            return res.status(502).json({error:'pix_provider_invalid'});
+          const details=pixData(current);
+          if(!details.pix_copy_paste)return res.status(502).json({error:'pix_code_unavailable'});
+          return res.status(200).json({ok:true,payment_pending:true,reused:true,...details});
+        }
         return res.status(409).json({error:'pix_already_processing'});
       }
       await patch(old.id,{status:'expired'});
@@ -94,8 +120,7 @@ export default async function handler(req,res){
     if((Array.isArray(collector.tags)&&collector.tags.includes('test_user'))||
        /@(?:[a-z0-9-]+\.)?testuser\.com$/i.test(String(collector.email||'')))
       return res.status(409).json({error:'collector_is_test_account'});
-    if(String(collector.email||'').trim().toLowerCase()===payerEmail)
-      return res.status(409).json({error:'payer_equals_collector'});
+    // E-mail e apenas identificador da cobranca; nao precisa pertencer a conta MP.
     const chargeId=randomUUID(),reference='agenda-pix:'+chargeId;
     const expires=new Date(Date.now()+24*3600000).toISOString();
     const created=await fetch(new URL('/rest/v1/agenda_mp_pix_charges',base),{
@@ -128,17 +153,18 @@ export default async function handler(req,res){
       // A requisicao pode ter chegado ao provedor: nao crie outra ate conciliar.
       return res.status(502).json({error:'pix_payment_unknown_retry_later'});
     }
-    const ticket=String(payment.point_of_interaction?.transaction_data?.ticket_url||'');
+    const details=pixData(payment);
     if(!/^\d{1,40}$/.test(String(payment.id||''))||
        payment.payment_method_id!=='pix'||
        payment.currency_id!=='BRL'||
        payment.external_reference!==reference||
-       Math.round(Number(payment.transaction_amount)*100)!==4990||
-       !trustedUrl(ticket))
+       Math.round(Number(payment.transaction_amount)*100)!==4990)
       return res.status(502).json({error:'pix_provider_invalid'});
-    const updated=await patch(chargeId,{status:'pending',mp_payment_id:String(payment.id),checkout_url:ticket});
+    const updated=await patch(chargeId,{status:'pending',mp_payment_id:String(payment.id),
+      checkout_url:details.checkout_url||null});
     if(updated.length!==1)return res.status(502).json({error:'pix_link_failed'});
-    return res.status(200).json({ok:true,payment_pending:true,checkout_url:ticket});
+    if(!details.pix_copy_paste)return res.status(502).json({error:'pix_code_unavailable'});
+    return res.status(200).json({ok:true,payment_pending:true,...details});
   }catch(e){
     console.error('PIX checkout failed',{name:String(e?.name||'Error').slice(0,50),reason:String(e?.message||'unknown').slice(0,80)});
     return res.status(502).json({error:'pix_unavailable'});
