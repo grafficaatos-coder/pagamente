@@ -3549,6 +3549,73 @@ async function cancelAgendaSubscription(toPix=false){
   if(baileysSession.status==='connected')toast('WhatsApp conectado com sucesso');
   else toast('Ainda aguardando. Conclua o código no WhatsApp.');
 }
+    function defaultThankYouMessage(){
+  return [
+    'Olá, {{cliente}}! 💖✨',
+    '',
+    'Foi um prazer receber você hoje na *{{empresa}}*! 🥰',
+    '',
+    'Agradecemos pela confiança e por escolher nossos serviços. Esperamos que tenha gostado do atendimento! 💕',
+    '',
+    'Sua satisfação é muito importante para nós, e será sempre um prazer cuidar de você.',
+    '',
+    '🌷 *Esperamos te ver novamente em breve!*',
+    '',
+    'Com carinho,',
+    '*Equipe {{empresa}}* 💖'
+  ].join('\n');
+}
+    function renderThankYouPreview(template){
+  const company=displayBusinessName(companyCtx?.business?.name||'Estabelecimento');
+  return String(template||defaultThankYouMessage())
+    .replace(/\{\{cliente\}\}/gi,'Cliente')
+    .replace(/\{\{empresa\}\}/gi,company);
+}
+    function updateThankYouEditorPreview(){
+  const text=document.getElementById('thankYouMessageInput')?.value||'';
+  const el=document.getElementById('thankYouEditorPreview');
+  if(el)el.textContent=renderThankYouPreview(text);
+}
+    function openThankYouEditor(){
+  if(!canAdminCompany()||!companyCtx||!sb)return toast('Somente o administrador pode editar.');
+  const saved=companyCtx.preferences?.thank_you_message;
+  const template=typeof saved==='string'&&saved.trim()?saved:defaultThankYouMessage();
+  const content='<div class="field"><label for="thankYouMessageInput"><b>Mensagem de agradecimento</b></label>'+
+    '<textarea id="thankYouMessageInput" rows="10" maxlength="1600" oninput="updateThankYouEditorPreview()" style="width:100%;min-height:205px;resize:vertical;line-height:1.6;box-sizing:border-box">'+appModalEscape(template)+'</textarea>'+
+    '<small>Use <b>{{cliente}}</b> para o primeiro nome da cliente e <b>{{empresa}}</b> para o nome do estabelecimento. Limite de 1.600 caracteres.</small></div>'+
+    '<div style="margin-top:14px"><b>Prévia da mensagem</b><p id="thankYouEditorPreview" style="white-space:pre-wrap;line-height:1.6;background:#f8f5f7;padding:12px;border-radius:10px"></p></div>'+
+    '<button type="button" class="btn secondary" onclick="restoreDefaultThankYou()" style="margin-top:12px">Restaurar mensagem padrão</button>'+
+    '<p style="font-size:12px;margin-top:10px">Salvar o texto não ativa os envios. O agradecimento continua opcional.</p>';
+  openAppModal({
+    title:'Editar mensagem de agradecimento',
+    subtitle:'Personalize somente a mensagem desta empresa.',
+    content,submitLabel:'Salvar mensagem',size:'wide',
+    onSubmit:async()=>{
+      const text=String(document.getElementById('thankYouMessageInput')?.value||'').trim();
+      if(!text||text.length>1600)throw new Error('A mensagem precisa ter entre 1 e 1.600 caracteres.');
+      const {data,error}=await sb.from('agenda_business_preferences')
+        .upsert({business_id:companyCtx.business.id,thank_you_message:text,updated_at:new Date().toISOString()},
+          {onConflict:'business_id'}).select('*').single();
+      if(error){console.error(error);throw new Error('Falha ao salvar. Tente novamente.')}
+      companyCtx.preferences=data;
+      closeAppModal();render();
+      toast('Mensagem de agradecimento salva para esta empresa.');
+    }
+  });
+  updateThankYouEditorPreview();
+}
+    async function restoreDefaultThankYou(){
+  if(!canAdminCompany()||!companyCtx||!sb)return;
+  const ok=window.confirm('Restaurar a mensagem padrão para esta empresa? A ativação do envio não será alterada.');
+  if(!ok)return;
+  const {data,error}=await sb.from('agenda_business_preferences')
+    .upsert({business_id:companyCtx.business.id,thank_you_message:null,updated_at:new Date().toISOString()},
+      {onConflict:'business_id'}).select('*').single();
+  if(error){console.error(error);return toast('Não foi possível restaurar a mensagem padrão.')}
+  companyCtx.preferences=data;
+  closeAppModal();render();
+  toast('Mensagem padrão restaurada.');
+}
     async function togglePostVisitThankYou(){
   if(!canAdminCompany()||!companyCtx||!sb)return toast('Somente o administrador pode alterar esta opção');
   const next=companyCtx.preferences?.send_thank_you_after_service!==true;
@@ -3591,14 +3658,16 @@ async function cancelAgendaSubscription(toPix=false){
 
   const baileysEnabled=!!(companyCtx?.settings?.baileys_enabled&&companyCtx?.settings?.baileys_service_url);
   const thankYouEnabled=companyCtx?.preferences?.send_thank_you_after_service===true;
-  const thanksBusiness=appModalEscape(displayBusinessName(companyCtx?.business?.name||'estabelecimento'));
+  const customThanks=companyCtx?.preferences?.thank_you_message;
+  const thankYouTemplate=typeof customThanks==='string'&&customThanks.trim()?customThanks:defaultThankYouMessage();
+  const thanksPreview=appModalEscape(renderThankYouPreview(thankYouTemplate));
   const thankYouCard=`<section class="panel" style="padding:20px;margin-top:18px">
     <div class="head"><div><span class="eyebrow">Opcional por empresa</span><h3>Agradecimento após atendimento</h3></div>
       <span class="status-badge ${thankYouEnabled?'status-active':'status-neutral'}">${thankYouEnabled?'Ativado':'Desativado'}</span></div>
     <p>Enviar mensagem de agradecimento automaticamente somente quando o atendimento for marcado como <b>Concluído</b>. Não envia para cancelados ou faltas.</p>
-    ${admin?`<button type="button" class="btn ${thankYouEnabled?'secondary':'primary'}" onclick="togglePostVisitThankYou()">${thankYouEnabled?'Desativar agradecimento':'Ativar agradecimento'}</button>`:''}
-    <details style="margin-top:12px"><summary>Ver exemplo da mensagem</summary>
-      <p style="white-space:pre-line;line-height:1.65">Olá, Cliente! 💖✨\n\nFoi um prazer receber você hoje na <b>${thanksBusiness}</b>!\n\nAgradecemos pela confiança e por escolher nossos serviços. Esperamos que tenha gostado do atendimento! 💕\n\nEsperamos te ver novamente em breve! 🌷\n\nCom carinho, Equipe ${thanksBusiness} 💖</p></details>
+    ${admin?`<div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center"><button type="button" class="btn ${thankYouEnabled?'secondary':'primary'}" onclick="togglePostVisitThankYou()">${thankYouEnabled?'Desativar agradecimento':'Ativar agradecimento'}</button><button type="button" class="btn secondary" onclick="openThankYouEditor()">✏️ Editar mensagem</button></div>`:''}
+    <details style="margin-top:12px"><summary>Ver mensagem ${customThanks?'personalizada':'padrão'}</summary>
+      <p style="white-space:pre-wrap;line-height:1.65">${thanksPreview}</p></details>
     <p style="font-size:12px;margin-top:12px">Desativado por padrão. Se ativado, o envio usa o WhatsApp automático conectado e depende da disponibilidade do serviço. Não envia mensagens de atendimentos antigos ao ativar.</p>
   </section>`;
   const preferredPhoneRaw=baileysPreferredPhone();
