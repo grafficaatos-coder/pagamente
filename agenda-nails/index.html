@@ -2629,7 +2629,8 @@ async function installAgendaApp(){
   if(!plan)return toast('Plano indisponível para contratação.');
   const linked=companyCtx.subscription?.mp_preapproval_id;
   const pendingPlanId=companyCtx.subscription?.mp_pending_plan_id;
-  if(linked && (method==='pix'||(pendingPlanId&&pendingPlanId!==plan.id))){
+  const linkedPlanId=String(pendingPlanId||companyCtx.subscription?.plan_id||'');
+  if(linked && (method==='pix'||linkedPlanId!==plan.id)){
     // Antes de criar outra cobrança, exigir autorização e confirmação do cancelamento.
     const cancelled=await cancelAgendaSubscription(method==='pix'?'pix':'plan');
     if(!cancelled)return;
@@ -2842,6 +2843,8 @@ async function cancelAgendaSubscription(toPix=false){
               action='<p style="font-size:12px;margin-top:9px">Trocar na próxima renovação, sem perder o mês já pago.</p>'+
                 '<button class="btn primary" onclick="chooseAgendaPlan(\''+p.id+'\')">Escolher este plano</button>';
             }
+          }else if(linked&&currentPlan&&!pendingId){
+            action='<span class="status-badge status-active">Cobrança automática no cartão vinculada</span>';
           }else if(linked){
             action='<p style="font-size:12px">Existe uma assinatura por cartão vinculada. Para mudar, autorize o cancelamento antes de contratar outro plano.</p>'+
               '<button class="btn primary" onclick="startAgendaSubscriptionCheckout(\''+p.id+'\',\'pix\')">Escolher PIX</button>'+
