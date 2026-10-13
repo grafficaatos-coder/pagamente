@@ -162,8 +162,13 @@ function messageText(kind,business,customer,service,appointment){
       (pendingConfirmation?confirmationBlock:"");
   }
   if(kind==="followup"){
-    return "Olá, "+first+"! 😊\n\nObrigado pelo seu atendimento na *"+publicBusinessName(business.name)+"*."+
-      "\n\nEsperamos que tenha gostado. Quando quiser agendar novamente, é só chamar a gente por aqui. 💛";
+    const name=publicBusinessName(business.name);
+    return "Olá, "+first+"! 💖✨"+
+      "\n\nFoi um prazer receber você hoje na *"+name+"*! 🥰"+
+      "\n\nAgradecemos pela confiança e por escolher nossos serviços. Esperamos que tenha gostado do atendimento! 💕"+
+      "\n\nSua satisfação é muito importante para nós, e será sempre um prazer cuidar de você."+
+      "\n\n🌷 *Esperamos te ver novamente em breve!*"+
+      "\n\nCom carinho,\n*Equipe "+name+"* 💖";
   }
   return "Olá, "+first+"! ✨"+
     "\nSeu horário com *"+appointmentDisplayName(business.name)+"* foi agendado."+
@@ -197,8 +202,19 @@ async function claimAndValidate(businessId,leaseId){
     if(appointment.status==="cancelled"||appointment.status==="no_show"){
       await cancelClaimed(businessId,job,"Agendamento cancelado ou marcado como falta.");continue;
     }
-    if(job.message_type==="followup"&&appointment.status!=="completed"){
-      await cancelClaimed(businessId,job,"Pós-atendimento cancelado porque o atendimento não foi concluído.");continue;
+    if(job.message_type==="followup"){
+      if(appointment.status!=="completed"){
+        await cancelClaimed(businessId,job,"Agradecimento cancelado: atendimento não foi concluído.");continue;
+      }
+      // Preferencia por empresa, avaliada imediatamente antes do envio.
+      // Registro inexistente => desativado; nunca reenviar mensagens antigas.
+      const prefs=await fetchOne(
+        "/rest/v1/agenda_business_preferences?business_id=eq."+encodeURIComponent(businessId)+
+        "&select=send_thank_you_after_service&limit=1"
+      );
+      if(prefs?.send_thank_you_after_service!==true){
+        await cancelClaimed(businessId,job,"Agradecimento desativado pela empresa.");continue;
+      }
     }
     if(job.message_type!=="followup"&&new Date(appointment.starts_at).getTime()<=Date.now()){
       await cancelClaimed(businessId,job,"Lembrete expirou porque o horário já passou.");continue;
