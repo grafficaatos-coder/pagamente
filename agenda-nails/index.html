@@ -3549,6 +3549,24 @@ async function cancelAgendaSubscription(toPix=false){
   if(baileysSession.status==='connected')toast('WhatsApp conectado com sucesso');
   else toast('Ainda aguardando. Conclua o código no WhatsApp.');
 }
+    async function togglePostVisitThankYou(){
+  if(!canAdminCompany()||!companyCtx||!sb)return toast('Somente o administrador pode alterar esta opção');
+  const next=companyCtx.preferences?.send_thank_you_after_service!==true;
+  const payload={
+    business_id:companyCtx.business.id,
+    send_thank_you_after_service:next,
+    updated_at:new Date().toISOString()
+  };
+  const {data,error}=await sb.from('agenda_business_preferences')
+    .upsert(payload,{onConflict:'business_id'}).select('*').single();
+  if(error){
+    console.error(error);
+    return toast('Não foi possível atualizar a mensagem de agradecimento.');
+  }
+  companyCtx.preferences=data||{...(companyCtx.preferences||{}),...payload};
+  render();
+  toast(next?'Mensagem de agradecimento ativada para próximos atendimentos concluídos.':'Mensagem de agradecimento desativada.');
+}
     function wa(){
   const conn=whatsappState?.connection;
   const connected=conn?.status==='connected';
@@ -3572,6 +3590,17 @@ async function cancelAgendaSubscription(toPix=false){
     : `<b>💻 No computador</b><span>O Agenda Pro prepara tudo sozinho e avisa quando houver mensagem. Ao abrir, o WhatsApp Web já vem com o texto pronto.</span>`;
 
   const baileysEnabled=!!(companyCtx?.settings?.baileys_enabled&&companyCtx?.settings?.baileys_service_url);
+  const thankYouEnabled=companyCtx?.preferences?.send_thank_you_after_service===true;
+  const thanksBusiness=appModalEscape(displayBusinessName(companyCtx?.business?.name||'estabelecimento'));
+  const thankYouCard=`<section class="panel" style="padding:20px;margin-top:18px">
+    <div class="head"><div><span class="eyebrow">Opcional por empresa</span><h3>Agradecimento após atendimento</h3></div>
+      <span class="status-badge ${thankYouEnabled?'status-active':'status-neutral'}">${thankYouEnabled?'Ativado':'Desativado'}</span></div>
+    <p>Enviar mensagem de agradecimento automaticamente somente quando o atendimento for marcado como <b>Concluído</b>. Não envia para cancelados ou faltas.</p>
+    ${admin?`<button type="button" class="btn ${thankYouEnabled?'secondary':'primary'}" onclick="togglePostVisitThankYou()">${thankYouEnabled?'Desativar agradecimento':'Ativar agradecimento'}</button>`:''}
+    <details style="margin-top:12px"><summary>Ver exemplo da mensagem</summary>
+      <p style="white-space:pre-line;line-height:1.65">Olá, Cliente! 💖✨\n\nFoi um prazer receber você hoje na <b>${thanksBusiness}</b>!\n\nAgradecemos pela confiança e por escolher nossos serviços. Esperamos que tenha gostado do atendimento! 💕\n\nEsperamos te ver novamente em breve! 🌷\n\nCom carinho, Equipe ${thanksBusiness} 💖</p></details>
+    <p style="font-size:12px;margin-top:12px">Desativado por padrão. Se ativado, o envio usa o WhatsApp automático conectado e depende da disponibilidade do serviço. Não envia mensagens de atendimentos antigos ao ativar.</p>
+  </section>`;
   const preferredPhoneRaw=baileysPreferredPhone();
   const preferredPhone=preferredPhoneRaw?formatBusinessPhone(preferredPhoneRaw):'';
   const baileysWaiting=baileysSession.status==='qr'||baileysSession.status==='connecting';
@@ -3654,6 +3683,7 @@ async function cancelAgendaSubscription(toPix=false){
 
   return shell(`<div class="section-title"><span class="eyebrow">WhatsApp</span><h2>Conexão do WhatsApp</h2><p>Conecte o número pelo próprio celular usando o servidor Servidor WhatsApp, sem depender de QR Code.</p></div>
 
+  ${thankYouCard}
   ${baileysCard||'<section class="panel"><div class="empty-state">A conexão pelo servidor WhatsApp ainda não está habilitada para esta empresa.</div></section>'}`);
 }
     function setup(){const p=P();return shell(`<div class="section-title"><span class="eyebrow">Personalização</span><h2>Profissão / área</h2><p>O sistema adapta automaticamente clientes ou pacientes, serviços ou sessões e o fluxo de agendamento.</p></div><div class="setup-grid">${Object.values(PROFILES).map(x=>`<button class="setup-card ${x.key===segment?'on':''}" onclick="setSegment('${x.key}')"><span class="big-emoji">${x.emoji}</span><b>${x.segment}</b><small>${x.key==='salon'?'Clientes, serviços, profissionais, agenda e caixa.':x.key==='esthetic'?'Clientes, procedimentos, sessões, profissionais e pacotes.':'Pacientes, consultas, médicos, convênio e teleconsulta.'}</small></button>`).join('')}</div><div class="profile-row"><div class="profile-box"><span>Empresa demonstrada</span><b>${p.business}</b></div><div class="profile-box"><span>Terminologia ativa</span><b>${p.people} · ${p.serviceLabel} · ${p.professionals}</b></div></div><div class="context-note"><b>Multiempresa:</b> na versão comercial, cada assinante terá seu próprio cadastro, logo, equipe, horários, serviços e dados isolados. Esta tela demonstra como um único produto pode atender segmentos diferentes.</div>`)}
