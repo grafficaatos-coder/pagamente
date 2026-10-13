@@ -2740,7 +2740,22 @@ async function cancelAgendaSubscription(toPix=false){
       body:JSON.stringify({business_id:companyCtx.business.id})
     });
     const data=await response.json().catch(()=>({}));
-    if(!response.ok){toast('Não foi possível cancelar: '+(data.error||'tente novamente'));return false;}
+    if(!response.ok){
+      if(data.error==='cancel_provider_failed'){
+        const safe=value=>String(value||'').replace(/[^a-zA-ZÀ-ÿ0-9 _.,:;/'()-]/g,' ').slice(0,115);
+        const http=Number(data.provider_http_status)||response.status;
+        const code=safe(data.provider_code);
+        const hint=safe(data.provider_hint);
+        const status=safe(data.subscription_status);
+        const diagnostic='HTTP '+http+(code?' / '+code:'')+(hint?' / '+hint:'')+
+          (status?' (assinatura: '+status+')':'');
+        window.alert('O Mercado Pago não confirmou o cancelamento do cartão. Nenhum PIX foi gerado.\n\n'+
+          diagnostic+'\n\nEnvie essa mensagem ao suporte para verificarmos o motivo. Não faça outra cobrança enquanto o cartão estiver vinculado.');
+        return false;
+      }
+      toast('Cancelamento não concluído: '+(data.error||'tente novamente'));
+      return false;
+    }
     Object.assign(companyCtx.subscription,{
       mp_preapproval_id:null,mp_pending_plan_id:null,mp_checkout_url:null,mp_status:'canceled'
     });
@@ -2778,7 +2793,8 @@ async function cancelAgendaSubscription(toPix=false){
           companyCtx.business?.id==='7f00c45b-b228-4ee8-b795-aadbdcfb9d45'&&
           p.code==='essencial'&&Number(p.monthly_price_cents)===4990;
         if(owner&&Number(p.monthly_price_cents||0)>0&&!pilotAllowed){
-          action='<span class="status-badge">Contratação ainda não liberada</span>';
+          action='<span class="status-badge">Pagamento deste plano ainda em validação</span>'+
+            '<p style="font-size:12px;margin-top:8px">Nesta etapa, PIX e cartão estão em teste somente no Essencial da Julli.</p>';
         }
         if(pilotAllowed){
           const methods='<div style="display:flex;flex-wrap:wrap;gap:9px;margin-top:14px">'+
