@@ -25,6 +25,7 @@ AS $function$
     v_reminder timestamptz;
     v_followup timestamptz;
     v_send_thankyou boolean := false;
+    v_changed_to_completed boolean := false;
   begin
     if tg_op='DELETE' then
       return old;
@@ -102,7 +103,12 @@ AS $function$
     else
       -- Ao ativar a preferencia nao mandar mensagens retroativas:
       -- somente o evento de conclusao gera o agradecimento.
-      if tg_op='INSERT' or old.status is distinct from 'completed' then
+      if tg_op='INSERT' then
+        v_changed_to_completed:=true;
+      else
+        v_changed_to_completed:=old.status is distinct from 'completed';
+      end if;
+      if v_changed_to_completed then
         select coalesce(p.send_thank_you_after_service,false)
         into v_send_thankyou
         from public.agenda_business_preferences p
