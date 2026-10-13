@@ -52,7 +52,7 @@ BEGIN
  END IF;
  SELECT p.monthly_price_cents,p.active,p.visible
  INTO v_price,v_active,v_visible FROM public.agenda_plans p WHERE p.id=c.plan_id;
- IF NOT FOUND OR NOT coalesce(v_active,false) OR NOT coalesce(v_visible,false)
+ IF NOT FOUND OR NOT coalesce(v_active,false)
     OR v_price IS DISTINCT FROM c.amount_cents OR v_price<=0 THEN
    RAISE EXCEPTION 'plan_amount_mismatch';
  END IF;
