@@ -2082,6 +2082,22 @@
       .dashboard-kpis{grid-template-columns:minmax(0,1fr)}
     }
 
+
+    .side .brand .brand-caption{display:block}
+    .login-brand .logo{
+      width:178px;height:134px;border-radius:12px;
+      background:#fff url('/brand/agenda-pro-original.svg') center / contain no-repeat;
+      color:transparent;font-size:0;border:1px solid rgba(255,255,255,.2);box-shadow:0 7px 25px rgba(0,0,0,.12)
+    }
+    .auth-loading .logo,.blocked-screen .logo{
+      background:#fff url('/brand/agenda-pro-original.svg') center / contain no-repeat;
+      color:transparent;font-size:0
+    }
+    @media(max-width:980px) and (min-width:721px){
+      .side .brand .brand-logo-image{object-fit:contain;max-width:65px;height:58px}
+      .side .brand .brand-caption{display:none}
+    }
+
 </style>
 </head>
 <body>
@@ -5812,7 +5828,7 @@ async function cancelAgendaSubscription(toPix=false){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-oraclepair44',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261013-agendapro-blue',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
