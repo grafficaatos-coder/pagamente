@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-  <meta name="theme-color" content="#80596D">
+  <meta name="theme-color" content="#073560">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -1896,6 +1896,208 @@
       .side,.mobile-menu-overlay,.btn,.metric,.panel,.next-card{transition:none!important}
       html{scroll-behavior:auto}
     }
+
+    /* Agenda Pro 2026 — identidade corporativa azul, baseada na referência escolhida */
+    :root{
+      --bg:#f3f6fb;--surface:#fff;--surface-2:#f7f9fd;--ink:#102442;
+      --muted:#63758f;--line:#e0e8f2;--wine:#073560;--wine-2:#1265a4;
+      --rose:#eaf3ff;--rose-2:#dbeaff;--shadow:0 8px 28px rgba(19,52,88,.055);
+      --focus-ring:#3b82f6;--green:#e6f7ed;--green-ink:#18834c;
+    }
+    body{background:#f3f6fb;color:var(--ink)}
+    .app{grid-template-columns:250px minmax(0,1fr)}
+    .side{
+      background:linear-gradient(180deg,#092f57 0%,#062747 100%);
+      border-right:1px solid #14466f;box-shadow:none;padding:24px 13px;
+    }
+    .side .brand{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:0 4px 25px;min-height:130px}
+    .side .brand .brand-logo-image{display:block;width:min(100%,182px);height:112px;object-fit:contain;border-radius:9px;background:#fff;padding:5px;box-shadow:0 3px 14px rgba(0,0,0,.1)}
+    .side .brand .brand-caption{color:#a7c2dc;font-weight:650;font-size:10px;letter-spacing:.03em;text-align:center;line-height:1.4}
+    .side .brand .logo,.side .brand b,.side .brand small{display:none}
+    .side .nav{gap:6px}
+    .side .nav button{color:#e2eaf4;border-radius:10px;padding:12px 13px;min-height:46px;font-size:13px;font-weight:650}
+    .side .nav button:hover{background:#174a7c;color:#fff}
+    .side .nav button.on{background:#21649f;color:#fff;box-shadow:0 3px 13px rgba(2,17,39,.13)}
+    .side .nav svg{width:19px;height:19px;stroke-width:2}
+    .side-foot{border:1px solid #2b5274;border-radius:12px;background:rgba(255,255,255,.035)}
+    .side-foot small{color:#bfd1df}
+    .side-foot b{color:#fff}
+    .top{background:#fff;border-bottom:1px solid var(--line);height:64px;padding:0 26px;box-shadow:none}
+    .top h1{color:#102441}
+    .top small{color:#657993}
+    .top-actions{gap:10px}
+    .top .owner-session{color:#365a7d;background:#f4f8fc;border:1px solid var(--line)}
+    .top .owner-dot{background:#1da65b}
+    .top .agenda-global-search{display:flex;gap:8px;align-items:center;min-width:230px;width:min(26vw,365px);background:#f7f9fc;border:1px solid var(--line);border-radius:10px;padding:8px 11px;color:#507496}
+    .top .agenda-global-search svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.8;flex:none}
+    .top .agenda-global-search input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:#162d4e;font-size:12px}
+    .top .agenda-global-search input::placeholder{color:#8091a5}
+    .top .agenda-profile-button{background:#fff;border:1px solid var(--line);border-radius:10px;min-height:38px;padding:6px 10px;display:flex;gap:8px;align-items:center;font-size:11px;color:#153456;font-weight:750}
+    .top .agenda-profile-avatar{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#093762;color:#fff;font-size:10px}
+    .primary{background:#073560;color:#fff;box-shadow:0 5px 13px rgba(7,53,96,.14)}
+    .primary:hover{background:#0c467d}
+    .secondary{background:#f7f9fc;color:#123e69;border:1px solid #cfdaea}
+    .btn{border-radius:9px;font-weight:750}
+    .eyebrow{color:#396b9a}
+    .panel,.card,.metric{border:1px solid #e1e9f3;box-shadow:0 5px 19px rgba(18,50,88,.038);border-radius:13px}
+    .content{max-width:1730px;padding:24px 28px 38px}
+    .hero:not(.agenda-home-hero){background:#fff;border-color:#e1e8f2}
+    .hero h2{font-family:Inter,ui-sans-serif,system-ui,sans-serif}
+    .next-card{background:linear-gradient(145deg,#0c3d6c,#17568a)}
+    .nav button:focus-visible,.btn:focus-visible,.metric-link:focus-visible{outline:3px solid #54a4ee;outline-offset:2px}
+    .login-brand{background:linear-gradient(145deg,#072c51 0%,#0b477b 100%)}
+    .login-brand .logo{background:linear-gradient(145deg,#1466a3,#073560)}
+    .mobile-menu-toggle{color:#123f6b;border-color:#ccdded}
+    .bottom{border-top-color:#dae6f3}
+    .bottom button.on{color:#0c5a9b}
+    .pwa-install-entry{color:#e2f2ff!important}
+    .agenda-dashboard{display:grid;gap:14px}
+    .agenda-home-hero{border:0;box-shadow:none;border-radius:0;background:transparent;padding:0;margin:0 0 4px;align-items:center}
+    .agenda-home-hero h2{font-size:clamp(26px,3vw,35px);letter-spacing:-.04em;margin:0 0 6px;font-weight:850;color:#102442}
+    .agenda-home-hero p{font-size:13px}
+    .agenda-home-hero .hero-shortcuts{margin-top:0;display:flex;flex-wrap:wrap;gap:8px}
+    .agenda-home-hero .hero-shortcuts .btn{min-height:39px;font-size:11px}
+    .dashboard-kpis{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+    .dashboard-kpi{display:flex;align-items:center;gap:12px;min-width:0;padding:16px 14px;background:#fff;border:1px solid #e0e9f2;border-radius:12px;box-shadow:0 5px 16px rgba(18,47,80,.035);text-align:left;color:#153255}
+    .dashboard-kpi[role="button"]{cursor:pointer}
+    .dashboard-kpi[role="button"]:hover{border-color:#8bb7df;box-shadow:0 8px 19px rgba(15,70,119,.08)}
+    .dashboard-kpi-icon{display:grid;place-items:center;border-radius:13px;width:44px;height:44px;flex:0 0 auto;color:#186cb4;background:#e9f3fe}
+    .dashboard-kpi-icon svg,.dashboard-heading-icon svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2}
+    .dashboard-kpi-icon.money{color:#198b51;background:#e5f7ed}
+    .dashboard-kpi-copy{min-width:0}
+    .dashboard-kpi-copy span{font-size:11px;font-weight:750;display:block;color:#3c5774}
+    .dashboard-kpi-copy strong{font-size:clamp(16px,1.55vw,24px);letter-spacing:-.035em;display:block;color:#122747;margin:5px 0 2px;overflow-wrap:anywhere;line-height:1.1}
+    .dashboard-kpi-copy small{font-size:10px;color:#72849c;display:block;line-height:1.35}
+    .dashboard-main-grid{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(260px,.95fr) minmax(270px,1fr);gap:12px;align-items:start}
+    .dashboard-panel{background:#fff;border:1px solid #e0e9f2;box-shadow:0 5px 19px rgba(17,50,84,.035);border-radius:13px;min-width:0;padding:16px}
+    .dashboard-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
+    .dashboard-heading-main{display:flex;gap:10px;align-items:center;min-width:0}
+    .dashboard-heading-icon{display:grid;place-items:center;width:27px;height:27px;border-radius:8px;background:#e7f2ff;color:#1472c7;flex:0 0 auto}
+    .dashboard-heading h3{font-size:15px;margin:0;color:#102442}
+    .dashboard-heading small{font-size:10px;color:#8190a4;display:block;margin-top:2px}
+    .dashboard-outline-action{border:1px solid #d6e1ee;border-radius:8px;background:#fff;padding:9px 12px;font-size:11px;font-weight:750;color:#16456e;white-space:nowrap}
+    .dashboard-outline-action:hover{background:#f4f9ff}
+    .dashboard-day-row{display:grid;grid-template-columns:55px 5px 31px minmax(0,1fr) auto;gap:10px;align-items:center;border-bottom:1px solid #eaf0f6;padding:12px 0;min-width:0}
+    .dashboard-day-row:last-child{border:0}
+    .dashboard-day-row .time{font-weight:850;font-size:12px;color:#162b49;font-variant-numeric:tabular-nums}
+    .dashboard-day-row .time small{font-size:10px;color:#7b90a7;display:block;margin-top:4px}
+    .dashboard-day-row .bar{width:4px;height:34px;background:#2e81d9;border-radius:4px}
+    .dashboard-day-row .bar.completed,.dashboard-day-row .bar.confirmed{background:#38b971}
+    .dashboard-day-row .bar.pending{background:#a5b3c6}
+    .dashboard-day-row .bar.cancelled{background:#e1a9a9}
+    .dashboard-initials{display:grid;place-items:center;width:30px;height:30px;border-radius:50%;background:#eaf1fa;color:#16395f;font-size:10px;font-weight:800}
+    .dashboard-day-row .person{min-width:0}
+    .dashboard-day-row .person strong{font-size:12px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .dashboard-day-row .person small{font-size:10px;color:#70829b;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:3px}
+    .dashboard-state{display:inline-block;border-radius:99px;background:#eef2f6;color:#596d84;font-size:10px;padding:6px 8px;font-weight:700;white-space:nowrap}
+    .dashboard-state.confirmed,.dashboard-state.completed{background:#e5f7ed;color:#18834c}
+    .dashboard-state.cancelled,.dashboard-state.no_show{background:#fff0ef;color:#a24d43}
+    .dashboard-bottom-link{border:0;background:transparent;padding:11px 0 0;color:#1672ca;font-size:11px;font-weight:750}
+    .dashboard-month-switch{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;gap:7px}
+    .dashboard-month-switch strong{font-size:12px;text-transform:capitalize}
+    .dashboard-month-switch button{border:1px solid #dce5f0;background:#fff;border-radius:8px;color:#164d7e;min-width:29px;height:29px;cursor:pointer}
+    .dashboard-month-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px}
+    .dashboard-month-weekday{font-size:10px;text-align:center;color:#7285a0;padding:8px 0}
+    .dashboard-month-day{display:grid;place-items:center;gap:2px;border:0;border-radius:8px;background:transparent;color:#294667;height:38px;min-width:0;font-size:11px;cursor:pointer}
+    .dashboard-month-day:disabled{cursor:default;color:#c6d2df}
+    .dashboard-month-day.active{background:#0a3b68;color:#fff;font-weight:800}
+    .dashboard-month-day:hover:not(:disabled){background:#e8f2ff}
+    .dashboard-month-day.active:hover{background:#0a3b68}
+    .dashboard-month-dots{display:flex;justify-content:center;gap:3px;height:4px}
+    .dashboard-month-dots span{width:4px;height:4px;border-radius:50%;background:#1d85e4}
+    .dashboard-month-dots .completed{background:#22b567}
+    .dashboard-month-legend{display:flex;gap:12px;flex-wrap:wrap;margin-top:13px;color:#7789a1;font-size:10px}
+    .dashboard-month-legend i{display:inline-block;width:7px;height:7px;margin-right:4px;border-radius:50%;background:#228cf1}
+    .dashboard-month-legend i.green{background:#28b866}
+    .dashboard-side-stack{display:grid;gap:12px}
+    .dashboard-wa-status{border-radius:99px;padding:5px 8px;background:#eef2f6;color:#6b7e96;font-size:10px;font-weight:750;white-space:nowrap}
+    .dashboard-wa-status.connected{background:#e3f7eb;color:#16814a}
+    .dashboard-wa-hint{font-size:12px;line-height:1.55;color:#61748d;margin:5px 0 18px}
+    .dashboard-wa-button{border:1px solid #ccdceb;background:#f4f8fc;border-radius:9px;width:100%;padding:11px;font-weight:750;font-size:11px;color:#174971}
+    .dashboard-client-row{display:flex;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid #eaf0f6;cursor:pointer}
+    .dashboard-client-row:last-child{border:0}
+    .dashboard-client-row strong{display:block;font-size:11px;color:#1e3859}
+    .dashboard-client-row small{display:block;font-size:10px;margin-top:3px;color:#7d8fa3}
+    .dashboard-bottom-grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,.9fr);gap:12px}
+    .dashboard-chart{display:flex;align-items:flex-end;gap:12px;height:142px}
+    .dashboard-chart-col{display:flex;flex:1;flex-direction:column;gap:5px;align-items:center;justify-content:flex-end;height:100%;min-width:0}
+    .dashboard-chart-bar{width:100%;max-width:36px;min-height:3px;border-radius:4px 4px 0 0;background:#b7d7f7}
+    .dashboard-chart-col:nth-child(5) .dashboard-chart-bar{background:#237bd0}
+    .dashboard-chart-col small{font-size:10px;color:#8292a7}
+    .dashboard-finance-total{font-size:23px;font-weight:850;color:#112c4c;letter-spacing:-.035em}
+    .dashboard-service-row{display:grid;grid-template-columns:24px minmax(90px,1fr) minmax(55px,1fr) 35px;gap:9px;align-items:center;padding:7px 0;border-bottom:1px solid #eef2f7;font-size:11px}
+    .dashboard-service-row:last-child{border:0}
+    .dashboard-service-rank{display:grid;place-items:center;background:#eaf1f9;border-radius:50%;width:23px;height:23px;color:#24486c;font-weight:750}
+    .dashboard-service-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .dashboard-service-track{height:8px;border-radius:20px;background:#edf3f8;overflow:hidden}
+    .dashboard-service-track div{height:100%;background:#3989ce;border-radius:20px}
+    .dashboard-service-percent{text-align:right;color:#5e7088}
+    .dashboard-empty{font-size:12px;color:#8293a8;line-height:1.6;padding:20px 0}
+    @media(max-width:1430px){
+      .dashboard-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
+      .dashboard-main-grid{grid-template-columns:minmax(0,1.45fr) minmax(240px,.9fr)}
+      .dashboard-side-stack{grid-column:1/-1;grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
+    @media(max-width:1080px){
+      .top .agenda-global-search{display:none}
+      .dashboard-main-grid{grid-template-columns:minmax(0,1fr) minmax(0,.85fr)}
+    }
+    @media(max-width:980px){
+      .app{grid-template-columns:82px minmax(0,1fr)}
+      .side .brand{min-height:62px;padding:0 0 20px}
+      .side .brand .brand-logo-image{width:58px;height:52px;object-fit:cover;object-position:top}
+      .side .brand .brand-caption{display:none}
+    }
+    @media(max-width:720px){
+      .app{display:block}
+      .side{width:min(86vw,312px)}
+      .side .brand{min-height:125px;padding:0 4px 19px}
+      .side .brand .brand-logo-image{width:175px;height:108px;object-fit:contain}
+      .side .brand .brand-caption{display:block}
+      .top{height:auto;min-height:62px;padding:10px 12px}
+      .top .agenda-profile-button,.top .agenda-global-search{display:none}
+      .content{padding:14px 12px calc(92px + env(safe-area-inset-bottom))}
+      .agenda-home-hero{padding:0;border:0;align-items:flex-start;gap:11px}
+      .agenda-home-hero h2{font-size:27px}
+      .agenda-home-hero .hero-shortcuts{width:100%;display:flex;gap:7px}
+      .agenda-home-hero .hero-shortcuts .btn{flex:1;min-width:90px;padding:9px 8px}
+      .dashboard-kpis{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+      .dashboard-kpi{padding:12px 9px;gap:8px;min-height:86px}
+      .dashboard-kpi-icon{width:34px;height:34px;border-radius:9px}
+      .dashboard-kpi-icon svg{width:17px;height:17px}
+      .dashboard-kpi-copy strong{font-size:clamp(14px,4vw,20px)}
+      .dashboard-kpi-copy span{font-size:10px}
+      .dashboard-main-grid,.dashboard-side-stack,.dashboard-bottom-grid{grid-template-columns:minmax(0,1fr)!important}
+      .dashboard-side-stack{grid-column:auto}
+      .dashboard-panel{padding:13px;overflow:hidden}
+      .dashboard-day-row{grid-template-columns:43px 4px 27px minmax(0,1fr);gap:6px}
+      .dashboard-day-row .dashboard-state{grid-column:4;justify-self:start;margin-top:-4px}
+      .dashboard-day-row .time{font-size:10px}
+      .dashboard-initials{height:26px;width:26px}
+      .dashboard-service-row{grid-template-columns:22px minmax(80px,1fr) minmax(55px,.8fr) 32px;gap:6px}
+      .dashboard-heading{flex-wrap:wrap}
+      .dashboard-outline-action{white-space:normal}
+    }
+    @media(max-width:380px){
+      .dashboard-kpis{grid-template-columns:minmax(0,1fr)}
+    }
+
+
+    .side .brand .brand-caption{display:block}
+    .login-brand .logo{
+      width:178px;height:134px;border-radius:12px;
+      background:#fff url('/brand/agenda-pro-original.svg') center / contain no-repeat;
+      color:transparent;font-size:0;border:1px solid rgba(255,255,255,.2);box-shadow:0 7px 25px rgba(0,0,0,.12)
+    }
+    .auth-loading .logo,.blocked-screen .logo{
+      background:#fff url('/brand/agenda-pro-original.svg') center / contain no-repeat;
+      color:transparent;font-size:0
+    }
+    @media(max-width:980px) and (min-width:721px){
+      .side .brand .brand-logo-image{object-fit:contain;max-width:65px;height:58px}
+      .side .brand .brand-caption{display:none}
+    }
+
 </style>
 </head>
 <body>
@@ -2234,10 +2436,10 @@ async function installAgendaApp(){
     if(canAdminCompany())n.push(['team','userplus','Equipe']);
     n.push(['subscription','wallet','Planos e assinatura']);
     n.push(['profile','users','Meu perfil']);
-    return `<aside class="side"><div class="brand"><div class="logo">${p.initials}</div><div><b>${displayBusinessName(companyCtx?.business?.name||p.brand)}</b><small>${companyCtx?.plan?.name||'PLANO'}</small></div></div><nav class="nav">${n.map(x=>`<button class="${page===x[0]?'on':''}" onclick="go('${x[0]}')">${I[x[1]]}<span class="label">${x[2]}</span></button>`).join('')}${pwaInstallEntry()}<button class="mobile-side-logout" onclick="ownerLogout()"><svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M13 4h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/></svg><span class="label">Sair</span></button></nav><div class="side-foot"><small>Acesso da empresa</small><b>${subscriptionLabel()}</b></div></aside>`;
+    return `<aside class="side"><div class="brand"><img class="brand-logo-image" src="/brand/agenda-pro-original.svg" alt="Agenda Pro" loading="eager"><small class="brand-caption">${appModalEscape(displayBusinessName(companyCtx?.business?.name||p.brand))} · ${appModalEscape(companyCtx?.plan?.name||'Plano')}</small></div><nav class="nav">${n.map(x=>`<button class="${page===x[0]?'on':''}" onclick="go('${x[0]}')">${I[x[1]]}<span class="label">${x[2]}</span></button>`).join('')}${pwaInstallEntry()}<button class="mobile-side-logout" onclick="ownerLogout()"><svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M13 4h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/></svg><span class="label">Sair</span></button></nav><div class="side-foot"><small>Acesso da empresa</small><b>${subscriptionLabel()}</b></div></aside>`;
   }
   const n=[['overview','home','Visão geral'],['clients','users','Assinantes'],['plans','sparkle','Planos'],['billing','wallet','Cobranças'],['settings','more','Configurações']];
-  return `<aside class="side"><div class="brand"><div class="logo">AP</div><div><b>Agenda Pro</b><small>PROPRIETÁRIO</small></div></div><nav class="nav">${n.map(x=>`<button class="${adminTab===x[0]?'on':''}" onclick="setAdminTab('${x[0]}')">${I[x[1]]}<span class="label">${x[2]}</span></button>`).join('')}${pwaInstallEntry()}<button class="mobile-side-logout" onclick="ownerLogout()"><svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M13 4h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/></svg><span class="label">Sair</span></button></nav><div class="side-foot"><small>Acesso</small><b>Administrador da plataforma</b></div></aside>`;
+  return `<aside class="side"><div class="brand"><img class="brand-logo-image" src="/brand/agenda-pro-original.svg" alt="Agenda Pro" loading="eager"><small class="brand-caption">Administração da plataforma</small></div><nav class="nav">${n.map(x=>`<button class="${adminTab===x[0]?'on':''}" onclick="setAdminTab('${x[0]}')">${I[x[1]]}<span class="label">${x[2]}</span></button>`).join('')}${pwaInstallEntry()}<button class="mobile-side-logout" onclick="ownerLogout()"><svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M13 4h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/></svg><span class="label">Sair</span></button></nav><div class="side-foot"><small>Acesso</small><b>Administrador da plataforma</b></div></aside>`;
 }
     function bottom(){
   if(appMode==='company'){
@@ -2256,7 +2458,7 @@ async function installAgendaApp(){
     function shell(content){
   if(appMode==='company'){
     const p=P(),t=companyTitles()[page]||companyTitles().home;
-    return `<div class="app company-app">${nav()}<div class="mobile-menu-overlay" onclick="closeMobileMenu()" aria-hidden="true"></div><main class="main"><header class="top"><div class="top-left"><button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Abrir menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="menu-label">Menu</span></button><div class="logo mini-logo">${p.initials}</div><div><h1>${t[0]}</h1><small>${t[1]}</small></div></div><div class="top-actions"><span class="owner-session"><i class="owner-dot"></i> ${companyCtx?.plan?.name||'Plano'} · ${companyRole()}</span>${hasFeature('agenda')&&canOperateCompany()?'<button class="btn primary" onclick="book()">+ Novo horário</button>':''}<button class="logout-btn mobile-password-btn" onclick="changeMyPassword()">Senha</button><button class="logout-btn mobile-top-logout" onclick="ownerLogout()">Sair</button></div></header><div class="content">${content}</div></main>${bottom()}</div>`;
+    return `<div class="app company-app">${nav()}<div class="mobile-menu-overlay" onclick="closeMobileMenu()" aria-hidden="true"></div><main class="main"><header class="top"><div class="top-left"><button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Abrir menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="menu-label">Menu</span></button><div class="logo mini-logo">${p.initials}</div><div><h1>${t[0]}</h1><small>${t[1]}</small></div></div><div class="top-actions"><label class="agenda-global-search">${I.search}<input type="search" aria-label="Pesquisar clientes" placeholder="Buscar clientes..." onkeydown="if(event.key==='Enter')dashboardQuickSearch(this.value)"></label><span class="owner-session"><i class="owner-dot"></i> ${appModalEscape(companyCtx?.plan?.name||'Plano')} · ${companyRole()}</span><button class="agenda-profile-button" onclick="go('profile')"><span class="agenda-profile-avatar">AP</span>Meu perfil</button>${hasFeature('agenda')&&canOperateCompany()?'<button class="btn primary" onclick="book()">+ Novo horário</button>':''}<button class="logout-btn mobile-password-btn" onclick="changeMyPassword()">Senha</button><button class="logout-btn mobile-top-logout" onclick="ownerLogout()">Sair</button></div></header><div class="content">${content}</div></main>${bottom()}</div>`;
   }
   const t=titles()[adminTab]||titles().overview;
   return `<div class="app admin-owner-app">${nav()}<div class="mobile-menu-overlay" onclick="closeMobileMenu()" aria-hidden="true"></div><main class="main"><header class="top"><div class="top-left"><button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Abrir menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="menu-label">Menu</span></button><div class="logo mini-logo">AP</div><div><h1>${t[0]}</h1><small>${t[1]}</small></div></div><div class="top-actions"><span class="owner-session"><i class="owner-dot"></i> Proprietário</span><button class="logout-btn mobile-password-btn" onclick="changeMyPassword()">Senha</button><button class="logout-btn mobile-top-logout" onclick="ownerLogout()">Sair</button></div></header><div class="content">${content}</div></main>${bottom()}</div>`;
@@ -2278,23 +2480,134 @@ async function installAgendaApp(){
   const clickable=!!target;
   return `<div class="metric ${clickable?'metric-link':''}" ${clickable?`onclick="openDashboardMetric('${target}')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openDashboardMetric('${target}')}"`:''}><div class="metric-top"><span>${label}</span><div class="metric-icon">${I[icon]}</div></div><b>${value}</b><small class="${good?'good':''}">${foot}</small></div>`;
 }
-    function home(){
-  const p=P();
-  const upcoming=companyData.appointments
-    .filter(a=>new Date(a.starts_at)>=new Date()&&a.status!=='cancelled')
-    .sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at));
-  const next=upcoming[0];
-  const customer=next?companyData.customers.find(x=>x.id===next.customer_id):null;
-  const service=next?companyData.services.find(x=>x.id===next.service_id):null;
-  const nextCard=next
-    ? `<article class="next-card"><span class="eyebrow">Próximo ${p.appointment.toLowerCase()}</span><h3>${new Date(next.starts_at).toLocaleDateString('pt-BR')}</h3><div class="next-time">${new Date(next.starts_at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div><div class="next-person">${customer?.name||'Cliente'}</div><div class="next-service">${service?.name||'Serviço'} · ${next.professional_name||'Profissional'}</div><div class="next-actions"><button onclick="go('agenda')">Ver agenda</button></div></article>`
-    : `<article class="next-card empty-next"><span class="eyebrow">Agenda</span><h3>Nenhum horário futuro cadastrado</h3><p>Cadastre o primeiro atendimento da empresa.</p><div class="next-actions"><button onclick="book()">+ Novo horário</button></div></article>`;
-  const openAgendaButton=hasFeature('agenda')?"<button class=\"btn secondary\" onclick=\"go('agenda')\">Abrir agenda</button>":"";
-  const rows=upcoming.slice(0,5).map(a=>{
-    const d=new Date(a.starts_at),cu=companyData.customers.find(x=>x.id===a.customer_id),se=companyData.services.find(x=>x.id===a.service_id);
-    return `<div class="appt"><div class="appt-time">${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div><span class="status-line ${a.status==='pending'?'p':''}"></span><div><strong>${cu?.name||'Cliente'}</strong><small>${d.toLocaleDateString('pt-BR')} · ${se?.name||'Serviço'}</small></div><span class="tag ${a.status==='pending'?'p':''}">${a.status==='pending'?'Pendente':'Confirmado'}</span></div>`;
+let dashboardMonthOffset=0;
+function moveDashboardMonth(delta){dashboardMonthOffset=Math.max(-36,Math.min(36,dashboardMonthOffset+delta));render()}
+function resetDashboardMonth(){dashboardMonthOffset=0;render()}
+function dashboardInitials(name){return String(name||'').trim().split(/\s+/).filter(Boolean).slice(0,2).map(x=>x[0]).join('').toUpperCase()||'—'}
+function dashboardQuickSearch(value){
+  const query=String(value||'').trim();
+  if(!query)return;
+  go('clients');const input=document.querySelector('.toolbar input.search');
+  if(input){input.value=query;filterClientCards(query)}
+}
+function dashboardKpi(icon,label,value,foot,target,cl=''){
+  const role=target?`role="button" tabindex="0" onclick="openDashboardMetric('${target}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openDashboardMetric('${target}')}"`:'';
+  return `<div class="dashboard-kpi" ${role}><span class="dashboard-kpi-icon ${cl}">${I[icon]}</span><div class="dashboard-kpi-copy"><span>${appModalEscape(label)}</span><strong>${appModalEscape(String(value))}</strong><small>${appModalEscape(foot)}</small></div></div>`;
+}
+function home(){
+  const now=new Date(),today=agendaDateKey(now),monthKey=today.slice(0,7),p=P(),data=companyData;
+  const appts=data.appointments||[],customers=data.customers||[],services=data.services||[],entries=data.financialEntries||[];
+  const customerMap=new Map(customers.map(x=>[x.id,x])),serviceMap=new Map(services.map(x=>[x.id,x]));
+  const valid=appts.filter(x=>!['cancelled','no_show'].includes(x.status));
+  const todayAppts=valid.filter(x=>agendaDateKey(x.starts_at)===today).sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at));
+  const thisMonth=valid.filter(x=>agendaDateKey(x.starts_at).slice(0,7)===monthKey);
+  const billed=thisMonth.filter(x=>x.status==='confirmed').reduce((n,x)=>n+Number(serviceMap.get(x.service_id)?.price_cents||0),0);
+  const received=thisMonth.filter(x=>x.status==='completed').reduce((n,x)=>n+Number(serviceMap.get(x.service_id)?.price_cents||0),0)
+     +entries.filter(x=>x.type==='income'&&String(x.occurred_on||'').slice(0,7)===monthKey).reduce((n,x)=>n+Number(x.amount_cents||0),0);
+  const finance=hasFeature('finance');
+  const todayTitle=now.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
+  const metrics=[
+    dashboardKpi('calendar','Horários de hoje',todayAppts.length,'Agendamentos não cancelados','agenda'),
+    dashboardKpi('users',p.people,customers.length,'Cadastros da empresa','clients'),
+    dashboardKpi('sparkle',p.serviceLabel,services.length,'Serviços cadastrados','services'),
+    ...(finance?[
+      dashboardKpi('money','A receber',moneyBR(billed/100),thisMonth.filter(x=>x.status==='confirmed').length+' confirmados','receivable','money'),
+      dashboardKpi('chart','Recebido no mês',moneyBR(received/100),'Concluídos e entradas','cash')
+    ]:[])
+  ].join('');
+  const rows=todayAppts.slice(0,7).map(a=>{
+    const d=new Date(a.starts_at),cu=customerMap.get(a.customer_id),service=serviceMap.get(a.service_id),name=String(cu?.name||'Cliente');
+    return `<div class="dashboard-day-row"><div class="time">${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>
+      <div class="bar ${a.status}"></div><div class="dashboard-initials">${appModalEscape(dashboardInitials(name))}</div>
+      <div class="person"><strong>${appModalEscape(name)}</strong><small>${appModalEscape(service?.name||'Serviço')}</small></div>
+      <span class="dashboard-state ${a.status}">${appModalEscape(agendaStatusText(a.status))}</span></div>`;
   }).join('');
-  return shell(`<section class="hero"><div><span class="eyebrow">${displayBusinessName(companyCtx.business.name)} · ${companyCtx.plan.name}</span><h2>${greeting()} 👋</h2><p>Seus horários, clientes e financeiro em um só lugar.</p><div class="hero-shortcuts">${hasFeature('agenda')?'<button class="btn primary" onclick="book()">+ Novo agendamento</button><button class="btn secondary" onclick="go(\'agenda\')">Ver agenda</button>':''}${hasFeature('finance')?'<button class="btn secondary" onclick="go(\'cash\')">Financeiro</button>':''}</div></div><span class="date-chip">${I.calendar}${todayText()}</span></section><section class="dashboard-grid">${nextCard}<section class="metrics">${p.metrics.map(m=>metric(...m)).join('')}</section></section><section class="section-grid"><section class="panel"><div class="head"><div><span class="eyebrow">Próximos horários</span><h3>Agenda</h3></div>${openAgendaButton}</div>${rows||'<div class="empty-state">Nenhum horário futuro.</div>'}</section><aside class="panel"><div class="head"><div><span class="eyebrow">Seu plano</span><h3>${companyCtx.plan.name}</h3></div></div><div class="feature-list">${Object.entries(CAPABILITIES).filter(([k])=>companyCtx.plan.permissions?.[k]).slice(0,7).map(([,label])=>`<div class="feature"><i>✓</i><span>${label}</span></div>`).join('')}</div></aside></section>`);
+  const pivot=new Date(now.getFullYear(),now.getMonth()+dashboardMonthOffset,1),last=new Date(pivot.getFullYear(),pivot.getMonth()+1,0).getDate(),start=pivot.getDay();
+  const calendarCounts=new Map();
+  for(const a of valid){
+    const key=agendaDateKey(a.starts_at);
+    if(key.slice(0,7)!==agendaDateKey(pivot).slice(0,7))continue;
+    const previous=calendarCounts.get(key)||{all:0,done:0};previous.all++;
+    if(a.status==='completed')previous.done++;
+    calendarCounts.set(key,previous);
+  }
+  const weekdays=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].map(x=>`<span class="dashboard-month-weekday">${x}</span>`).join('');
+  const days=Array.from({length:42},(_,i)=>{
+    const day=i-start+1;
+    if(day<1||day>last)return '<button class="dashboard-month-day" disabled aria-hidden="true"></button>';
+    const date=new Date(pivot.getFullYear(),pivot.getMonth(),day,12),key=agendaDateKey(date),c=calendarCounts.get(key);
+    return `<button class="dashboard-month-day ${key===today?'active':''}" onclick="openAgendaDay('${key}')" aria-label="Horários de ${date.toLocaleDateString('pt-BR')}">
+      <span>${day}</span><span class="dashboard-month-dots">${c?`<span></span>${c.done?'<span class="completed"></span>':''}`:''}</span></button>`;
+  }).join('');
+  const cal=`<section class="dashboard-panel"><div class="dashboard-heading"><div class="dashboard-heading-main"><span class="dashboard-heading-icon">${I.calendar}</span><h3>Calendário mensal</h3></div></div>
+    <div class="dashboard-month-switch"><button onclick="moveDashboardMonth(-1)" aria-label="Mês anterior">‹</button>
+    <strong>${pivot.toLocaleDateString('pt-BR',{month:'long',year:'numeric'})}</strong><div style="display:flex;gap:5px">
+    <button onclick="resetDashboardMonth()" style="width:auto;padding:0 6px;font-size:10px">Hoje</button>
+    <button onclick="moveDashboardMonth(1)" aria-label="Próximo mês">›</button></div></div>
+    <div class="dashboard-month-grid">${weekdays}${days}</div>
+    <div class="dashboard-month-legend"><span><i></i>Agendamentos</span><span><i class="green"></i>Concluídos</span></div></section>`;
+  const status=baileysSession?.status==='connected'?'Conectado':'Não conectado';
+  const recent=[...customers].sort((a,b)=>(Date.parse(b.created_at)||0)-(Date.parse(a.created_at)||0)).slice(0,4)
+    .map(c=>{const name=String(c.name||'Cliente');
+      const last=appts.filter(a=>a.customer_id===c.id).sort((a,b)=>Date.parse(b.starts_at)-Date.parse(a.starts_at))[0];
+      return `<div class="dashboard-client-row" onclick="go('clients')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')go('clients')">
+        <span class="dashboard-initials">${appModalEscape(dashboardInitials(name))}</span><div style="min-width:0">
+        <strong>${appModalEscape(name)}</strong><small>${last?'Último horário: '+new Date(last.starts_at).toLocaleDateString('pt-BR'):'Sem agendamento'}</small>
+        </div></div>`;}).join('');
+  const side=`<div class="dashboard-side-stack">
+    <section class="dashboard-panel"><div class="dashboard-heading"><div class="dashboard-heading-main">
+      <span class="dashboard-heading-icon">${I.message}</span><h3>WhatsApp</h3></div>
+      <span class="dashboard-wa-status ${status==='Conectado'?'connected':''}">${status}</span></div>
+      <p class="dashboard-wa-hint">${status==='Conectado'?'WhatsApp integrado para confirmações e lembretes.':'Conecte o número da empresa para usar mensagens automáticas.'}</p>
+      <button class="dashboard-wa-button" onclick="go('wa')">${status==='Conectado'?'Gerenciar WhatsApp':'Configurar WhatsApp'} ↗</button></section>
+    <section class="dashboard-panel"><div class="dashboard-heading"><h3>Últimos clientes</h3>
+      <button class="dashboard-outline-action" onclick="go('clients')">Ver todos ›</button></div>
+      ${recent||'<div class="dashboard-empty">Nenhum cliente cadastrado.</div>'}</section></div>`;
+  const months=Array.from({length:6},(_,i)=>{
+    const date=new Date(now.getFullYear(),now.getMonth()-5+i,1);
+    return {key:agendaDateKey(date).slice(0,7),label:date.toLocaleDateString('pt-BR',{month:'short'})};
+  });
+  const values=months.map(m=>valid.filter(a=>a.status==='completed'&&agendaDateKey(a.starts_at).slice(0,7)===m.key)
+    .reduce((n,a)=>n+Number(serviceMap.get(a.service_id)?.price_cents||0),0)+
+    entries.filter(e=>e.type==='income'&&String(e.occurred_on||'').slice(0,7)===m.key)
+    .reduce((n,e)=>n+Number(e.amount_cents||0),0));
+  const max=Math.max(1,...values);
+  const bars=months.map((m,i)=>`<div class="dashboard-chart-col" title="${appModalEscape(m.label)}: ${moneyBR(values[i]/100)}">
+      <div class="dashboard-chart-bar" style="height:${values[i]?Math.max(4,Math.round(values[i]/max*110)):3}px"></div><small>${appModalEscape(m.label)}</small></div>`).join('');
+  const counts=new Map();for(const a of valid)counts.set(a.service_id,(counts.get(a.service_id)||0)+1);
+  const ranked=services.map(s=>({...s,total:counts.get(s.id)||0})).filter(s=>s.total>0).sort((a,b)=>b.total-a.total).slice(0,4);
+  const denominator=[...counts.values()].reduce((sum,n)=>sum+n,0)||1;
+  const ranking=ranked.map((s,i)=>{
+    const pct=Math.round(100*s.total/denominator);
+    return `<div class="dashboard-service-row"><span class="dashboard-service-rank">${i+1}</span>
+      <span class="dashboard-service-label" title="${appModalEscape(s.name||'Serviço')}">${appModalEscape(s.name||'Serviço')} <small>· ${s.total}</small></span>
+      <div class="dashboard-service-track"><div style="width:${pct}%"></div></div><span class="dashboard-service-percent">${pct}%</span></div>`;
+  }).join('');
+  const servicesPanel=`<section class="dashboard-panel"><div class="dashboard-heading"><div class="dashboard-heading-main">
+    <span class="dashboard-heading-icon">${I.sparkle}</span><h3>Serviços mais agendados</h3></div></div>
+    ${ranking||'<div class="dashboard-empty">Os serviços mais agendados aparecerão aqui.</div>'}</section>`;
+  const financePanel=finance?`<section class="dashboard-panel"><div class="dashboard-heading"><div class="dashboard-heading-main">
+    <span class="dashboard-heading-icon">${I.chart}</span><div><h3>Desempenho financeiro</h3>
+    <small>Receitas dos últimos 6 meses</small></div></div><button class="dashboard-outline-action" onclick="go('cash')">Ver financeiro ›</button></div>
+    <div style="display:grid;grid-template-columns:minmax(0,1fr) minmax(110px,.43fr);gap:12px;align-items:center">
+      <div class="dashboard-chart" aria-label="Gráfico de receitas reais">${bars}</div>
+      <div><small>Receita no mês</small><div class="dashboard-finance-total">${moneyBR(received/100)}</div></div>
+    </div></section>`:'';
+  const actions=hasFeature('agenda')&&canOperateCompany()?'<button class="btn primary" onclick="book()">＋ Novo agendamento</button>':'';
+  const addCustomer=hasFeature('clients')&&canOperateCompany()?'<button class="btn secondary" onclick="addCompanyCustomer()">＋ Novo cliente</button>':'';
+  const addService=hasFeature('agenda')&&canOperateCompany()?'<button class="btn secondary" onclick="openServiceModal()">＋ Novo serviço</button>':'';
+  return shell(`<div class="agenda-dashboard">
+    <section class="hero agenda-home-hero"><div><h2>${greeting()}! 👋</h2><p>Resumo de ${appModalEscape(displayBusinessName(companyCtx.business.name))} · ${appModalEscape(todayTitle)}</p></div>
+      <div class="hero-shortcuts">${actions}${addCustomer}${addService}</div></section>
+    <div class="dashboard-kpis">${metrics}</div>
+    <div class="dashboard-main-grid">
+      <section class="dashboard-panel"><div class="dashboard-heading"><div class="dashboard-heading-main">
+        <span class="dashboard-heading-icon">${I.calendar}</span><div><h3>Agenda do dia</h3><small>${appModalEscape(todayTitle)}</small></div></div>
+        ${hasFeature('agenda')?'<button class="dashboard-outline-action" onclick="go(\'agenda\')">Ver agenda completa ›</button>':''}</div>
+        ${rows||'<div class="dashboard-empty">Nenhum horário para hoje.</div>'}
+        <button class="dashboard-bottom-link" onclick="go('agenda')">Ver todos os agendamentos do dia →</button>
+      </section>${cal}${side}</div>
+      <div class="dashboard-bottom-grid">${financePanel}${servicesPanel}</div></div>`);
 }
     function agendaDateKey(value){
   const d=value instanceof Date?value:new Date(value);
@@ -5515,7 +5828,7 @@ async function cancelAgendaSubscription(toPix=false){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261006-oraclepair44',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261013-agendapro-blue',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });

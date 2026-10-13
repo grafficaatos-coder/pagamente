@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#b8879a"/>
-      <stop offset="1" stop-color="#65384b"/>
-    </linearGradient>
-  </defs>
-  <rect width="512" height="512" rx="112" fill="url(#g)"/>
-  <circle cx="256" cy="256" r="170" fill="#ffffff" opacity=".10"/>
-  <text x="256" y="302" text-anchor="middle" font-family="Georgia,serif" font-size="170" font-weight="700" fill="#ffffff">AP</text>
-</svg>
+ <title>Agenda Pro</title>
+ <rect width="512" height="512" rx="112" fill="#0a335b"/>
+ <rect x="85" y="110" width="342" height="290" rx="40" fill="#fff"/>
+ <rect x="85" y="110" width="342" height="93" rx="39" fill="#fff"/>
+ <rect x="140" y="75" width="43" height="100" rx="22" fill="#fff"/>
+ <rect x="330" y="75" width="43" height="100" rx="22" fill="#fff"/>
+ <path d="M126 350L207 220L271 350H225L205 308H181L162 350Z" fill="#0a335b"/>
+ <path d="M270 220h66c54 0 68 25 68 62s-22 60-70 60h-24v24h-40Zm40 40v44h25c15 0 24-8 24-22s-9-22-24-22Z" fill="#454f5b"/>
+ <rect x="323" y="270" width="27" height="27" rx="6" fill="#357cb4"/>
+ </svg>

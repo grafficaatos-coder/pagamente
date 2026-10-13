@@ -1,5 +1,5 @@
-const CACHE_NAME='agenda-pro-shell-v44-oracle-pair';
-const SHELL=['/','/manifest.webmanifest','/icons/app-icon.svg','/icons/app-icon-maskable.svg'];
+const CACHE_NAME='agenda-pro-shell-v45-blue-identity';
+const SHELL=['/','/manifest.webmanifest','/icons/app-icon.svg','/icons/app-icon-maskable.svg','/brand/agenda-pro-original.svg'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(
