@@ -2,6 +2,7 @@
 // Validation only. Subscription state is deliberately NOT modified here.
 // Configure AGENDA_MP_WEBHOOK_SECRET before enabling notifications.
 import { createHmac, timingSafeEqual } from 'node:crypto';
+import {reconcilePixPayment} from '../lib/agenda-mp-pix.js';
 
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
@@ -34,6 +35,15 @@ export default async function handler(req, res) {
   // The callback is not evidence of paid service. Verify against Mercado Pago.
   // This first stage is intentionally read-only: never grant, cancel or renew.
   const topic = String(req.query?.type || req.body?.type || '');
+  // Recebimento PIX: notificacao assinada -> consulta no MP -> RPC atomica no Supabase.
+  // Eventos de outras cobrancas da conta MP nunca alteram o Agenda Pro.
+  if(topic === 'payment'){
+    const result=await reconcilePixPayment(dataId);
+    if(!result.ok)return res.status(result.http||502).json({error:result.error});
+    return res.status(200).json({ok:true,verified:result.linked===true,
+      linked:result.linked===true,processed:result.processed===true,
+      duplicate:result.duplicate===true});
+  }
   const isInvoice = topic === 'subscription_authorized_payment';
   if (topic !== 'subscription_preapproval' && !isInvoice) return res.status(200).json({ ok: true, verified: true, processed: false });
   const token = process.env.AGENDA_MP_ACCESS_TOKEN;
