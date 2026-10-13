@@ -44,3 +44,34 @@ test('queue cannot dispatch with migration pause or expired lease',async()=>{
   s.sock={sendMessage(){assert.fail('must not send')}};
   assert.equal(s.hasLease(),false);await s.dispatchCycle();assert.equal(s.dispatchBusy,false);
 });
+
+test('pairing code is not exposed after the QR challenge changes or code expires',()=>{
+  const s=new WhatsSession('11111111-1111-4111-8111-111111111111');
+  s.state='waiting_qr';s.qrReady=true;s.pairCode='ABCD1234';s.pairExpires=Date.now()+60000;
+  assert.equal(s.status().pairing_code,'ABCD1234');
+  s.qrReady=false;
+  assert.equal(s.status().pairing_code,null);
+  s.qrReady=true;s.pairExpires=Date.now()-1000;
+  assert.equal(s.status().pairing_code,null);
+});
+test('force_new requests a fresh code instead of reusing a cached one',async()=>{
+  const original=globalThis.fetch;
+  let requests=0;
+  try{
+    globalThis.fetch=async()=>new Response('',{status:201});
+    const s=new WhatsSession('11111111-1111-4111-8111-111111111111');
+    s.hasLease=()=>true;
+    s.state='waiting_qr';
+    s.qrReady=true;
+    s.sock={requestPairingCode:async()=>{requests++;return requests===1?'ABCD1234':'WXYZ5678'}};
+    const first=await s.pairingCode('41999999999');
+    assert.equal(first,'ABCD1234');
+    const reused=await s.pairingCode('41999999999');
+    assert.equal(reused,'ABCD1234');
+    assert.equal(requests,1);
+    const refreshed=await s.pairingCode('41999999999',{forceNew:true});
+    assert.equal(refreshed,'WXYZ5678');
+    assert.equal(requests,2);
+    assert.equal(s.status().pairing_code,'WXYZ5678');
+  }finally{globalThis.fetch=original}
+});
