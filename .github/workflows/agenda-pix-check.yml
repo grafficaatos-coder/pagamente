@@ -23,6 +23,8 @@ jobs:
         run: |
           node --check agenda-nails/api/mercadopago-pix.js
           node --check agenda-nails/api/mercadopago-pix-status.js
+          node --check agenda-nails/api/mercadopago-checkout.js
+          node --check agenda-nails/api/mercadopago-plan-choice.js
           node --check agenda-nails/api/mercadopago-webhook.js
           node --check agenda-nails/lib/agenda-mp-pix.js
       - name: Verificar JavaScript embutido na interface
@@ -43,3 +45,5 @@ jobs:
           if(total===0)throw Error('Nenhum script inline encontrado');
           console.log('Scripts da interface verificados:',total);
           NODE
+      - name: Testar troca de planos sem cobrar nem ativar antecipadamente
+        run: node --test agenda-nails/test/plan-choice.test.mjs
