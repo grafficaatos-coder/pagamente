@@ -11,9 +11,9 @@ const mpCheckoutUrl=url=>{
 export default async function handler(req,res) {
   res.setHeader('Cache-Control','no-store');
   if(req.method==='GET')return res.status(200).json({
-    ok:true,service:'agenda-mp-checkout',pilot:true,
+    ok:true,service:'agenda-mp-checkout',pilot:false,
     enabled:process.env.AGENDA_MP_CHECKOUT_ENABLED==='true',
-    restricted:Boolean(process.env.AGENDA_MP_TEST_BUSINESS_ID&&process.env.AGENDA_MP_TEST_PLAN_ID),
+    restricted:false,
     configured:Boolean(process.env.AGENDA_SUPABASE_URL&&process.env.AGENDA_SUPABASE_SECRET_KEY&&process.env.AGENDA_MP_ACCESS_TOKEN)
   });
   if(req.method!=='POST'){res.setHeader('Allow','GET,POST');return res.status(405).json({error:'method_not_allowed'})}
@@ -25,13 +25,6 @@ export default async function handler(req,res) {
   if(!token||token.length>4096)return res.status(401).json({error:'unauthorized'});
   const businessId=String(req.body?.business_id||''),planId=String(req.body?.plan_id||'');
   if(!UUID.test(businessId)||!UUID.test(planId))return res.status(400).json({error:'invalid_input'});
-  // Fail closed: even with the production flag enabled, checkout is restricted
-  // to the single authorized company/plan. Other tenants cannot be charged.
-  const testBusiness=String(process.env.AGENDA_MP_TEST_BUSINESS_ID||'');
-  const testPlan=String(process.env.AGENDA_MP_TEST_PLAN_ID||'');
-  if(!UUID.test(testBusiness)||!UUID.test(testPlan)||
-     businessId!==testBusiness||planId!==testPlan)
-    return res.status(403).json({error:'checkout_limited_to_pilot'});
   let base;
   try{base=new URL(root)}catch(_){return res.status(503).json({error:'invalid_database_url'})}
   if(base.protocol!=='https:')return res.status(503).json({error:'invalid_configuration'});
@@ -55,21 +48,28 @@ export default async function handler(req,res) {
       return res.status(400).json({error:'invalid_payer_email'});
     if(/(?:^|\.)testuser\.(?:com|com\.br)$/i.test(payerEmail.split('@')[1]||''))
       return res.status(409).json({error:'payer_test_account_not_allowed'});
-    const [members,plans,subs,companies]=await Promise.all([
+    const [members,plans,subs,companies,pixPending]=await Promise.all([
       select('agenda_members',{select:'role',business_id:'eq.'+businessId,user_id:'eq.'+user.id,limit:'2'}),
       select('agenda_plans',{select:'id,code,name,monthly_price_cents,active,visible',id:'eq.'+planId,limit:'2'}),
-      select('agenda_subscriptions',{select:'business_id,plan_id,status,mp_preapproval_id,mp_checkout_url,mp_pending_plan_id',business_id:'eq.'+businessId,limit:'2'}),
-      select('agenda_businesses',{select:'id,manual_blocked',id:'eq.'+businessId,limit:'2'})
+      select('agenda_subscriptions',{select:'business_id,plan_id,status,mp_preapproval_id,mp_checkout_url,mp_pending_plan_id,current_period_end,mp_last_payment_at',business_id:'eq.'+businessId,limit:'2'}),
+      select('agenda_businesses',{select:'id,manual_blocked',id:'eq.'+businessId,limit:'2'}),
+      select('agenda_mp_pix_charges',{select:'id',business_id:'eq.'+businessId,
+        status:'in.(creating,pending)',expires_at:'gt.'+new Date().toISOString(),limit:'1'})
     ]);
     if(members.length!==1||!['owner','admin'].includes(members[0].role))return res.status(403).json({error:'owner_required'});
     if(companies.length!==1||companies[0].manual_blocked)return res.status(403).json({error:'business_blocked'});
     if(plans.length!==1||!plans[0].active||!plans[0].visible)return res.status(400).json({error:'plan_not_available'});
     const cents=Number(plans[0].monthly_price_cents);
-    if(!Number.isSafeInteger(cents)||cents!==4990||plans[0].code!=='essencial')
-      return res.status(409).json({error:'pilot_amount_mismatch'});
+    if(!Number.isSafeInteger(cents)||cents<100||cents>10000000)
+      return res.status(409).json({error:'plan_amount_invalid'});
     if(subs.length!==1)return res.status(404).json({error:'subscription_not_found'});
     const sub=subs[0];
     if(['suspended','cancelled'].includes(sub.status))return res.status(403).json({error:'subscription_blocked'});
+    if(pixPending.length)return res.status(409).json({error:'pix_already_processing'});
+    const paidUntil=Date.parse(String(sub.current_period_end||''));
+    if(sub.status==='active'&&sub.mp_last_payment_at&&
+       Number.isFinite(paidUntil)&&paidUntil>Date.now()+7*86400000)
+      return res.status(409).json({error:'already_paid_until_later'});
     // Never change a running paid subscription by replacing its payment agreement.
     if(sub.mp_preapproval_id){
       if(sub.mp_pending_plan_id===planId&&mpCheckoutUrl(sub.mp_checkout_url))
