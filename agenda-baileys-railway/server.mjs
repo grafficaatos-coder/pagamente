@@ -142,7 +142,14 @@ function catalogText(business,customer,services){
   return "Olá, "+first+"! ✨\n\nSegue nosso catálogo de "+terms.many+" da *"+publicBusinessName(business.name)+"*:\n\n"+items+
     "\n\nSe quiser agendar, é só entrar em contato por aqui. 💖";
 }
-function messageText(kind,business,customer,service,appointment){
+// Substituições permitidas; nenhuma interpretação de HTML ou JavaScript.
+export function personalizeThankYouMessage(template,customerFirst,businessName){
+  if(typeof template!=="string"||!template.trim()||template.length>1600)return null;
+  return template
+    .replace(/\{\{cliente\}\}/gi,String(customerFirst||"Cliente"))
+    .replace(/\{\{empresa\}\}/gi,String(businessName||"Agenda Pro"));
+}
+function messageText(kind,business,customer,service,appointment,thankYouTemplate=null){
   const first=String(customer.name||"").trim().split(/\s+/)[0]||"Cliente";
   const when=formatAppointment(appointment.starts_at);
   const professional=String(appointment.professional_name||"").trim();
@@ -163,6 +170,8 @@ function messageText(kind,business,customer,service,appointment){
   }
   if(kind==="followup"){
     const name=publicBusinessName(business.name);
+    const custom=personalizeThankYouMessage(thankYouTemplate,first,name);
+    if(custom)return custom;
     return "Olá, "+first+"! 💖✨"+
       "\n\nFoi um prazer receber você hoje na *"+name+"*! 🥰"+
       "\n\nAgradecemos pela confiança e por escolher nossos serviços. Esperamos que tenha gostado do atendimento! 💕"+
@@ -192,6 +201,7 @@ async function claimAndValidate(businessId,leaseId){
       p_lease_id:leaseId
     });
     if(!job)return null;
+    let thankYouTemplate=null;
 
     const appointment=await fetchOne(
       "/rest/v1/agenda_appointments?id=eq."+encodeURIComponent(job.appointment_id)+
@@ -210,11 +220,12 @@ async function claimAndValidate(businessId,leaseId){
       // Registro inexistente => desativado; nunca reenviar mensagens antigas.
       const prefs=await fetchOne(
         "/rest/v1/agenda_business_preferences?business_id=eq."+encodeURIComponent(businessId)+
-        "&select=send_thank_you_after_service&limit=1"
+        "&select=send_thank_you_after_service,thank_you_message&limit=1"
       );
       if(prefs?.send_thank_you_after_service!==true){
         await cancelClaimed(businessId,job,"Agradecimento desativado pela empresa.");continue;
       }
+      thankYouTemplate=prefs.thank_you_message;
     }
     if(job.message_type!=="followup"&&new Date(appointment.starts_at).getTime()<=Date.now()){
       await cancelClaimed(businessId,job,"Lembrete expirou porque o horário já passou.");continue;
@@ -239,7 +250,7 @@ async function claimAndValidate(businessId,leaseId){
       reservation_token:job.reservation_token,
       delivery_semantics:job.delivery_semantics||"AT_MOST_ONCE",
       phone:currentPhone,
-      text:messageText(job.message_type,business,customer,service,appointment)
+      text:messageText(job.message_type,business,customer,service,appointment,thankYouTemplate)
     };
   }
   return null;
