@@ -2577,6 +2577,48 @@ async function installAgendaApp(){
   const parts=String(name).trim().split(/\s+/).filter(Boolean);
   return (parts.length>1?(parts[0][0]+parts[parts.length-1][0]):String(name).slice(0,2)).toUpperCase();
 }
+    function showAgendaPixPayment(details){
+  const code=String(details?.pix_copy_paste||'');
+  const base64=String(details?.qr_code_base64||'');
+  const existing=document.getElementById('agendaPixPayment');
+  if(existing)existing.remove();
+  if(!code)return toast('Não foi possível mostrar o código PIX. Tente novamente.');
+  const overlay=document.createElement('div');
+  overlay.id='agendaPixPayment';
+  overlay.setAttribute('role','presentation');
+  overlay.style.cssText='position:fixed;inset:0;z-index:2147483000;background:rgba(15,23,42,.78);display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto';
+  overlay.innerHTML='<section role="dialog" aria-modal="true" aria-label="Pagamento PIX" style="width:min(480px,100%);max-height:94vh;overflow:auto;padding:23px;background:#fff;color:#172436;border-radius:18px;box-shadow:0 22px 65px rgba(0,0,0,.25)">'+
+    '<div style="display:flex;justify-content:space-between;gap:12px;align-items:start"><div><h2 style="margin:0 0 5px;font-size:22px">Pagar com PIX</h2><p style="margin:0;color:#475569">Agenda Pro — Essencial · R$ 49,90</p></div><button type="button" id="agendaPixClose" aria-label="Fechar" style="font-size:23px;background:transparent;border:0;cursor:pointer">×</button></div>'+
+    '<p style="margin:18px 0 12px">Use o app de qualquer banco. <b>Não precisa criar conta no Mercado Pago.</b></p>'+
+    '<div id="agendaPixQrHolder" style="text-align:center"></div>'+
+    '<label for="agendaPixCopy" style="display:block;font-weight:650;margin:10px 0 7px">PIX Copia e Cola</label>'+
+    '<textarea id="agendaPixCopy" readonly rows="3" style="box-sizing:border-box;width:100%;max-width:100%;border:1px solid #cbd5e1;border-radius:8px;padding:10px;overflow-wrap:anywhere"></textarea>'+
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:12px"><button type="button" id="agendaPixCopyButton" class="btn primary">Copiar código PIX</button><button type="button" id="agendaPixVerifyButton" class="btn">Já paguei — verificar</button></div>'+
+    '<p style="font-size:13px;color:#475569;margin:15px 0 0">Seu plano será liberado somente quando o banco confirmar o pagamento. O PIX é mensal e deve ser gerado novamente no próximo vencimento.</p>'+
+    '</section>';
+  overlay.querySelector('#agendaPixCopy').value=code;
+  if(base64.length>20&&base64.length<300000&&/^[A-Za-z0-9+/=]+$/.test(base64)){
+    const img=document.createElement('img');
+    img.src='data:image/png;base64,'+base64;
+    img.alt='QR Code para pagar a mensalidade via PIX';
+    img.width=240;img.height=240;
+    img.style.cssText='display:block;margin:6px auto 15px;max-width:100%;height:auto';
+    overlay.querySelector('#agendaPixQrHolder').appendChild(img);
+  }
+  overlay.querySelector('#agendaPixClose').addEventListener('click',()=>overlay.remove());
+  overlay.addEventListener('click',event=>{if(event.target===overlay)overlay.remove();});
+  overlay.querySelector('#agendaPixCopyButton').addEventListener('click',async()=>{
+    try{
+      await navigator.clipboard.writeText(code);
+      toast('Código PIX copiado. Abra o aplicativo do seu banco.');
+    }catch(_){
+      const field=overlay.querySelector('#agendaPixCopy');field.focus();field.select();
+      toast('Selecione e copie o código PIX.');
+    }
+  });
+  overlay.querySelector('#agendaPixVerifyButton').addEventListener('click',()=>checkAgendaPixPayment());
+  document.body.appendChild(overlay);
+}
     async function startAgendaSubscriptionCheckout(planId,method='card'){
   if(!sb||!companyCtx||!['owner','admin'].includes(companyRole()))
     return toast('Somente administradores podem contratar planos.');
@@ -2589,6 +2631,18 @@ async function installAgendaApp(){
   const session=await sb.auth.getSession();
   const token=session?.data?.session?.access_token;
   if(!token)return toast('Sua sessão expirou. Entre novamente.');
+  let payerEmail=String(document.getElementById('mpPayerEmail')?.value||authUser?.email||'').trim();
+  if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(payerEmail)){
+    const entered=window.prompt(method==='pix'
+      ?'Informe seu e-mail para identificar o pagamento PIX. Não é necessário ter conta no Mercado Pago.'
+      :'Informe um e-mail válido para a contratação do cartão.',payerEmail);
+    if(entered===null)return;
+    payerEmail=String(entered).trim();
+    if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(payerEmail))
+      return toast('Informe um e-mail válido. Não precisa ser cadastrado no Mercado Pago para pagar via PIX.');
+    const input=document.getElementById('mpPayerEmail');
+    if(input)input.value=payerEmail;
+  }
   try {
     const response=await fetch(method==='pix'?'/api/mercadopago-pix':'/api/mercadopago-checkout',{
       method:'POST',
@@ -2596,7 +2650,7 @@ async function installAgendaApp(){
       body:JSON.stringify({
         business_id:companyCtx.business.id,
         plan_id:plan.id,
-        payer_email:String(document.getElementById('mpPayerEmail')?.value||'').trim()
+        payer_email:payerEmail
       })
     });
     const contentType=String(response.headers.get('content-type')||'');
@@ -2621,7 +2675,7 @@ async function installAgendaApp(){
         return window.alert('O pagador e o recebedor devem ser contas diferentes do Mercado Pago. Informe outra conta real para o teste.');
       if(reason==='collector_verification_unavailable'||reason==='collector_verification_incomplete')
         return window.alert('Não foi possível confirmar a identidade da conta que recebe pelo Mercado Pago. Não foi criada cobrança.');
-      if(reason==='invalid_payer_email')return toast('Informe um e-mail válido de uma conta Mercado Pago real.');
+      if(reason==='invalid_payer_email')return toast('Informe um e-mail válido para identificar o pagamento. Não precisa de conta Mercado Pago para PIX.');
       if(reason==='checkout_provider_rejected'){
         const safe=s=>String(s||'').replace(/[^a-zA-ZÀ-ÿ0-9 _.,:;/'()-]/g,' ').slice(0,145);
         const details=safe(data.provider_hint);
@@ -2634,6 +2688,10 @@ async function installAgendaApp(){
       }
       if(!reason)return toast('Servidor não respondeu corretamente ao pagamento (HTTP '+response.status+'). Envie este código para suporte.');
       return toast('Falha ao iniciar pagamento: '+reason+' (HTTP '+response.status+')');
+    }
+    if(method==='pix'){
+      showAgendaPixPayment(data);
+      return;
     }
     const target=new URL(String(data.checkout_url||''));
     if(target.protocol!=='https:'||!['mercadopago.com','mercadopago.com.br','mercadopago.com.ar']
@@ -2656,6 +2714,7 @@ async function checkAgendaPixPayment(){
     if(!data.payment_found)return toast('Nenhum PIX gerado para esta empresa.');
     if(!data.paid)return toast('O PIX ainda não foi confirmado pelo Mercado Pago.');
     await loadCompanyData();render();
+    document.getElementById('agendaPixPayment')?.remove();
     toast('PIX confirmado. Plano atualizado conforme o pagamento.');
   }catch(_){toast('Não foi possível consultar o pagamento.');}
 }
@@ -2734,9 +2793,9 @@ async function cancelAgendaSubscription(){
       }).join('');
       const end=sub?.current_period_end?new Date(sub.current_period_end).toLocaleDateString('pt-BR'):'Não definido';
       const pilotEmailField=owner&&companyCtx.business?.id==='7f00c45b-b228-4ee8-b795-aadbdcfb9d45'&&!linked?
-        '<div style="margin-top:14px;max-width:480px"><label for="mpPayerEmail"><b>E-mail de quem vai pagar</b></label>'+
-        '<input id="mpPayerEmail" type="email" inputmode="email" autocomplete="email" placeholder="email-da-conta-mercado-pago" value="'+appModalEscape(authUser?.email||'')+'" style="width:100%;margin-top:8px">'+
-        '<p style="font-size:13px;margin-top:8px">Cartão: use uma conta real do Mercado Pago diferente da recebedora. PIX: pague no seu banco pelo QR Code ou Copia e Cola. O plano só é liberado após confirmação.</p></div>':'';
+        '<div style="margin-top:14px;max-width:480px"><label for="mpPayerEmail"><b>E-mail para identificar o pagamento</b></label>'+
+        '<input id="mpPayerEmail" type="email" inputmode="email" autocomplete="email" placeholder="seu@email.com" value="'+appModalEscape(authUser?.email||'')+'" style="width:100%;margin-top:8px">'+
+        '<p style="font-size:13px;margin-top:8px">PIX: não precisa de conta Mercado Pago. Use o QR Code ou Copia e Cola no aplicativo de qualquer banco. Para assinatura recorrente no cartão, o Mercado Pago pode solicitar login. O plano só é liberado após a confirmação do pagamento.</p></div>':'';
       const cancelAction=owner&&linked?'<p style="margin-top:12px"><button class="btn" onclick="cancelAgendaSubscription()">Cancelar cobrança recorrente</button></p>':'';
       const pixCheckAction=owner&&!linked&&companyCtx.business?.id==='7f00c45b-b228-4ee8-b795-aadbdcfb9d45'?'<p style="margin-top:12px"><button class="btn" onclick="checkAgendaPixPayment()">Já paguei via PIX — verificar</button></p>':'';
       const alert=linked&&pendingId?'<p style="margin-top:12px">Existe uma contratação aguardando confirmação. Seu plano atual será mantido até o pagamento aprovado.</p>':'';
