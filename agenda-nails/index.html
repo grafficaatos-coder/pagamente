@@ -2641,6 +2641,24 @@ async function installAgendaApp(){
     window.location.assign(target.href);
   }catch(e){toast(e.message||'Falha ao iniciar o pagamento');}
 }
+async function checkAgendaPixPayment(){
+  if(!sb||!companyCtx||!['owner','admin'].includes(companyRole()))return toast('Somente administradores podem verificar pagamentos.');
+  const session=await sb.auth.getSession();
+  const token=session?.data?.session?.access_token;
+  if(!token)return toast('Sua sessão expirou. Entre novamente.');
+  try {
+    const response=await fetch('/api/mercadopago-pix-status',{
+      method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},
+      body:JSON.stringify({business_id:companyCtx.business.id})
+    });
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)return toast('Não foi possível verificar o PIX. Tente novamente.');
+    if(!data.payment_found)return toast('Nenhum PIX gerado para esta empresa.');
+    if(!data.paid)return toast('O PIX ainda não foi confirmado pelo Mercado Pago.');
+    await loadCompanyData();render();
+    toast('PIX confirmado. Plano atualizado conforme o pagamento.');
+  }catch(_){toast('Não foi possível consultar o pagamento.');}
+}
 async function cancelAgendaSubscription(){
   if(!sb||!companyCtx?.subscription?.mp_preapproval_id||!['owner','admin'].includes(companyRole()))return;
   if(!window.confirm('Cancelar as próximas cobranças do Mercado Pago? O período que já foi pago será mantido até o vencimento.'))return;
@@ -2720,12 +2738,13 @@ async function cancelAgendaSubscription(){
         '<input id="mpPayerEmail" type="email" inputmode="email" autocomplete="email" placeholder="email-da-conta-mercado-pago" value="'+appModalEscape(authUser?.email||'')+'" style="width:100%;margin-top:8px">'+
         '<p style="font-size:13px;margin-top:8px">Cartão: use uma conta real do Mercado Pago diferente da recebedora. PIX: pague no seu banco pelo QR Code ou Copia e Cola. O plano só é liberado após confirmação.</p></div>':'';
       const cancelAction=owner&&linked?'<p style="margin-top:12px"><button class="btn" onclick="cancelAgendaSubscription()">Cancelar cobrança recorrente</button></p>':'';
+      const pixCheckAction=owner&&!linked&&companyCtx.business?.id==='7f00c45b-b228-4ee8-b795-aadbdcfb9d45'?'<p style="margin-top:12px"><button class="btn" onclick="checkAgendaPixPayment()">Já paguei via PIX — verificar</button></p>':'';
       const alert=linked&&pendingId?'<p style="margin-top:12px">Existe uma contratação aguardando confirmação. Seu plano atual será mantido até o pagamento aprovado.</p>':'';
       return shell('<div class="section-title"><span class="eyebrow">Minha empresa</span>'+
         '<h2>Planos e assinatura</h2><p>Escolha um plano e acompanhe sua mensalidade.</p></div>'+
         '<section class="card" style="padding:20px"><h3>Assinatura atual</h3>'+
         '<p><b>'+appModalEscape(current?.name||'Plano')+'</b> · '+appModalEscape(subscriptionLabel())+'</p>'+
-        '<p>Próximo vencimento: '+end+'</p>'+pilotEmailField+alert+cancelAction+'</section>'+
+        '<p>Próximo vencimento: '+end+'</p>'+pilotEmailField+alert+cancelAction+pixCheckAction+'</section>'+
         '<div class="section-title" style="margin-top:24px"><h2>Conheça os planos</h2></div>'+
         '<div class="plans-grid">'+(cards||'<p>Carregando planos disponíveis...</p>')+'</div>'+
         '<p style="margin-top:18px">PIX: o pagamento é mensal e exige um novo PIX no próximo vencimento; não é débito automático. Cartão: cobrança recorrente pelo Mercado Pago. Em ambos os casos, o plano só é liberado após a confirmação do pagamento.</p>');
