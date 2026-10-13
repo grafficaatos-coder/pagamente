@@ -2757,7 +2757,7 @@ async function cancelAgendaSubscription(toPix=false){
       return false;
     }
     Object.assign(companyCtx.subscription,{
-      mp_preapproval_id:null,mp_pending_plan_id:null,mp_checkout_url:null,mp_status:'canceled'
+      mp_preapproval_id:null,mp_pending_plan_id:null,mp_checkout_url:null,mp_status:'cancelled'
     });
     render();
     toast(toPix?'Cartão cancelado. Preparando o PIX...':'Cobranças futuras canceladas no Mercado Pago.');

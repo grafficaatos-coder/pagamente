@@ -1,5 +1,9 @@
 // Cancel recurring charges at Mercado Pago. Preserve paid access until period end.
 const UUID=/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i;
+// The subscriptions API currently rejects `canceled` (one L) for updates.
+// Its SDK uses `cancelled`. Keep both spellings for older GET responses.
+const MP_CANCEL_STATUS='cancelled';
+const isCancelled=status=>status==='cancelled'||status==='canceled';
 export default async function handler(req,res){
   res.setHeader('Cache-Control','no-store');
   if(req.method!=='POST'){res.setHeader('Allow','POST');return res.status(405).json({error:'method_not_allowed'})}
@@ -42,12 +46,12 @@ export default async function handler(req,res){
     const target=String(sub.mp_pending_plan_id||sub.plan_id);
     if(String(current.id||'')!==id || String(current.external_reference||'')!=='agenda:'+businessId+':'+target)
       return res.status(409).json({error:'provider_subscription_mismatch'});
-    if(current.status!=='canceled'){
+    if(!isCancelled(current.status)){
       if(!['pending','authorized','paused'].includes(current.status))
         return res.status(409).json({error:'provider_status_unknown',subscription_status:String(current.status||'unknown').slice(0,35)});
       const canceled=await fetch(baseMp,{
         method:'PUT',headers:{...authorization,'Content-Type':'application/json'},
-        body:JSON.stringify({status:'canceled'}),signal:AbortSignal.timeout(12000)
+        body:JSON.stringify({status:MP_CANCEL_STATUS}),signal:AbortSignal.timeout(12000)
       });
       // A API pode responder com falha mesmo apos concluir a alteracao.
       // Confirme o estado remoto antes de liberar PIX ou limpar o vinculo local.
@@ -68,7 +72,7 @@ export default async function handler(req,res){
           const check=await fetch(baseMp,{headers:authorization,signal:AbortSignal.timeout(9000)});
           if(check.ok){
             const latest=await check.json();
-            confirmed=String(latest.id)===id&&latest.status==='canceled';
+            confirmed=String(latest.id)===id&&isCancelled(latest.status);
           }
         }catch(_){ /* Nao assumir cancelamento quando o provedor estiver indisponivel */ }
         if(!confirmed){
@@ -77,12 +81,12 @@ export default async function handler(req,res){
             provider_http_status:canceled.status,provider_code:code,provider_hint:hint,
             subscription_status:String(current.status||'').slice(0,35)});
         }
-      }else if(String(result.id||'')!==id||result.status!=='canceled'){
+      }else if(String(result.id||'')!==id||!isCancelled(result.status)){
         // Resposta inesperada: nao trate como sucesso sem reverificar.
         const check=await fetch(baseMp,{headers:authorization,signal:AbortSignal.timeout(9000)});
         if(!check.ok)return res.status(502).json({error:'cancel_not_confirmed'});
         const latest=await check.json();
-        if(String(latest.id)!==id||latest.status!=='canceled')
+        if(String(latest.id)!==id||!isCancelled(latest.status))
           return res.status(502).json({error:'cancel_not_confirmed'});
       }
     }
@@ -94,7 +98,7 @@ export default async function handler(req,res){
       headers:{...headers,'Content-Type':'application/json',Prefer:'return=representation'},
       body:JSON.stringify({
         mp_preapproval_id:null,mp_pending_plan_id:null,mp_checkout_url:null,
-        mp_status:'canceled',mp_payer_email:null,updated_at:new Date().toISOString()
+        mp_status:MP_CANCEL_STATUS,mp_payer_email:null,updated_at:new Date().toISOString()
       }),
       signal:AbortSignal.timeout(10000)
     });
