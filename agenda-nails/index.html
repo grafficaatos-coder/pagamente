@@ -2626,8 +2626,14 @@ async function installAgendaApp(){
   if(!plan)return toast('Plano indisponível para contratação.');
   const linked=companyCtx.subscription?.mp_preapproval_id;
   const pendingPlanId=companyCtx.subscription?.mp_pending_plan_id;
-  if(linked && method==='pix')return toast('Antes de pagar por PIX, cancele a cobrança recorrente por cartão nesta tela.');
-  if(linked && pendingPlanId!==plan.id)return toast('Já existe uma assinatura vinculada. Contate o suporte para trocar de plano.');
+  if(linked && method!=='pix' && pendingPlanId!==plan.id)
+    return toast('Já existe uma assinatura vinculada. Contate o suporte para trocar de plano.');
+  if(linked && method==='pix'){
+    // A cobrança no cartão só é cancelada após confirmação explícita do assinante.
+    // O plano e os pagamentos existentes não são alterados por esta ação.
+    const cancelled=await cancelAgendaSubscription(true);
+    if(!cancelled)return;
+  }
   const session=await sb.auth.getSession();
   const token=session?.data?.session?.access_token;
   if(!token)return toast('Sua sessão expirou. Entre novamente.');
@@ -2718,12 +2724,15 @@ async function checkAgendaPixPayment(){
     toast('PIX confirmado. Plano atualizado conforme o pagamento.');
   }catch(_){toast('Não foi possível consultar o pagamento.');}
 }
-async function cancelAgendaSubscription(){
-  if(!sb||!companyCtx?.subscription?.mp_preapproval_id||!['owner','admin'].includes(companyRole()))return;
-  if(!window.confirm('Cancelar as próximas cobranças do Mercado Pago? O período que já foi pago será mantido até o vencimento.'))return;
+async function cancelAgendaSubscription(toPix=false){
+  if(!sb||!companyCtx?.subscription?.mp_preapproval_id||!['owner','admin'].includes(companyRole()))return false;
+  const question=toPix
+    ?'Para pagar por PIX, será necessário cancelar a cobrança recorrente por cartão no Mercado Pago. O período já pago será mantido. O PIX não renova automaticamente. Deseja cancelar o cartão e continuar com PIX?'
+    :'Cancelar as próximas cobranças do Mercado Pago? O período que já foi pago será mantido até o vencimento.';
+  if(!window.confirm(question))return false;
   const session=await sb.auth.getSession();
   const token=session?.data?.session?.access_token;
-  if(!token)return toast('Sua sessão expirou. Entre novamente.');
+  if(!token){toast('Sua sessão expirou. Entre novamente.');return false;}
   try{
     const response=await fetch('/api/mercadopago-cancel',{
       method:'POST',
@@ -2731,13 +2740,14 @@ async function cancelAgendaSubscription(){
       body:JSON.stringify({business_id:companyCtx.business.id})
     });
     const data=await response.json().catch(()=>({}));
-    if(!response.ok)return toast('Não foi possível cancelar: '+(data.error||'tente novamente'));
+    if(!response.ok){toast('Não foi possível cancelar: '+(data.error||'tente novamente'));return false;}
     Object.assign(companyCtx.subscription,{
       mp_preapproval_id:null,mp_pending_plan_id:null,mp_checkout_url:null,mp_status:'canceled'
     });
     render();
-    toast('Cobranças futuras canceladas no Mercado Pago.');
-  }catch(e){toast('Não foi possível confirmar o cancelamento.');}
+    toast(toPix?'Cartão cancelado. Preparando o PIX...':'Cobranças futuras canceladas no Mercado Pago.');
+    return true;
+  }catch(e){toast('Não foi possível confirmar o cancelamento.');return false;}
 }
     let subscriptionCatalog=[],subscriptionCatalogLoading=false,subscriptionCatalogLoaded=false;
     async function loadSubscriptionCatalog(){
@@ -2774,13 +2784,14 @@ async function cancelAgendaSubscription(){
           const methods='<div style="display:flex;flex-wrap:wrap;gap:9px;margin-top:14px">'+
             '<button class="btn primary" onclick="startAgendaSubscriptionCheckout(\''+p.id+'\',\'pix\')">Pagar com PIX</button>'+
             '<button class="btn" onclick="startAgendaSubscriptionCheckout(\''+p.id+'\',\'card\')">Pagar com cartão</button></div>';
-          if(linked&&pendingId===p.id){
-            action='<p style="font-size:13px">Existe uma cobrança por cartão pendente. Para usar PIX, cancele primeiro a cobrança recorrente no quadro acima.</p>'+
-              '<button class="btn primary" onclick="startAgendaSubscriptionCheckout(\''+p.id+'\',\'card\')">Continuar no cartão</button>';
-          }else if(!linked){
+          if(linked){
+            action='<p style="font-size:13px;margin-top:10px">Já existe cobrança por cartão vinculada. Para pagar por PIX, você poderá confirmar o cancelamento das futuras cobranças no cartão antes de gerar o PIX.</p>'+
+              '<div style="display:flex;flex-wrap:wrap;gap:9px;margin-top:12px">'+
+              '<button class="btn primary" onclick="startAgendaSubscriptionCheckout(\''+p.id+'\',\'pix\')">Trocar para PIX</button>'+
+              (pendingId===p.id?'<button class="btn" onclick="startAgendaSubscriptionCheckout(\''+p.id+'\',\'card\')">Continuar no cartão</button>':'')+
+              '</div>';
+          }else{
             action=methods;
-          }else if(!currentPlan){
-            action='<span class="status-badge">Plano indisponível para troca automática</span>';
           }
         }
         return '<article class="card" style="padding:20px;min-width:0">'+
