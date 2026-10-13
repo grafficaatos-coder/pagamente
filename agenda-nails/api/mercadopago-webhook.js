@@ -131,12 +131,26 @@ export default async function handler(req, res) {
   if (invoicePaid && process.env.AGENDA_MP_RENEWAL_ENABLED === 'true') {
     const match=matches[0];
     const targetPlan=String(match.mp_pending_plan_id||match.plan_id);
-    // Fail closed for the single authorized R$49.90 pilot; even if the
-    // renewal feature flag is accidentally enabled, other tenants are safe.
-    if(String(process.env.AGENDA_MP_TEST_BUSINESS_ID||'')!==String(match.business_id) ||
-       String(process.env.AGENDA_MP_TEST_PLAN_ID||'')!==targetPlan ||
-       Math.round(Number(invoice.transaction_amount)*100)!==4990)
-      return res.status(200).json({ok:true,processed:false,reason:'pilot_not_authorized'});
+    // Conferir no banco o plano vinculado, preço e visibilidade.
+    // O webhook jamais define preço ou plano a partir do POST do cliente.
+    const plansUrl=new URL('/rest/v1/agenda_plans',supabaseUrl);
+    plansUrl.searchParams.set('select','monthly_price_cents,active,visible');
+    plansUrl.searchParams.set('id','eq.'+targetPlan);
+    plansUrl.searchParams.set('limit','2');
+    let verifiedPlans;
+    try{
+      const check=await fetch(plansUrl,{
+        headers:{apikey:supabaseKey,Authorization:'Bearer '+supabaseKey,Accept:'application/json'},
+        signal:AbortSignal.timeout(9000)
+      });
+      if(!check.ok)return res.status(502).json({error:'plan_unavailable'});
+      verifiedPlans=await check.json();
+    }catch(_){return res.status(502).json({error:'plan_unavailable'})}
+    const requiredCents=Number(verifiedPlans?.[0]?.monthly_price_cents);
+    if(verifiedPlans.length!==1||!verifiedPlans[0].active||!verifiedPlans[0].visible||
+       !Number.isSafeInteger(requiredCents)||requiredCents<=0||
+       Math.round(Number(invoice.transaction_amount)*100)!==requiredCents)
+      return res.status(200).json({ok:true,processed:false,reason:'plan_not_verified'});
     const reference='agenda:'+match.business_id+':'+targetPlan;
     const invoiceId=String(invoice.id||'');
     const paymentId=String(invoice.payment.id||'');
