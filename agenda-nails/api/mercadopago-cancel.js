@@ -44,15 +44,47 @@ export default async function handler(req,res){
       return res.status(409).json({error:'provider_subscription_mismatch'});
     if(current.status!=='canceled'){
       if(!['pending','authorized','paused'].includes(current.status))
-        return res.status(409).json({error:'provider_status_unknown'});
+        return res.status(409).json({error:'provider_status_unknown',subscription_status:String(current.status||'unknown').slice(0,35)});
       const canceled=await fetch(baseMp,{
         method:'PUT',headers:{...authorization,'Content-Type':'application/json'},
         body:JSON.stringify({status:'canceled'}),signal:AbortSignal.timeout(12000)
       });
-      if(!canceled.ok)return res.status(502).json({error:'cancel_provider_failed'});
-      const result=await canceled.json();
-      if(String(result.id||'')!==id||result.status!=='canceled')
-        return res.status(502).json({error:'cancel_not_confirmed'});
+      // A API pode responder com falha mesmo apos concluir a alteracao.
+      // Confirme o estado remoto antes de liberar PIX ou limpar o vinculo local.
+      const result=await canceled.json().catch(()=>({}));
+      const safe=value=>String(value??'')
+        .replace(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi,'[email]')
+        .replace(/\b\d{12,}\b/g,'[id]')
+        .replace(/[^a-zA-ZÀ-ÿ0-9 _.,:;/'()-]/g,' ')
+        .slice(0,120).trim();
+      const cause=Array.isArray(result.cause)?result.cause[0]||{}:{};
+      if(!canceled.ok){
+        const code=safe(cause.code??result.code??result.error??'');
+        const hint=safe(cause.description??result.message??'');
+        // Em algumas falhas o provedor conclui o cancelamento, mas a resposta
+        // retorna erro. Só o GET autenticado confirma se pode limpar o vinculo.
+        let confirmed=false;
+        try{
+          const check=await fetch(baseMp,{headers:authorization,signal:AbortSignal.timeout(9000)});
+          if(check.ok){
+            const latest=await check.json();
+            confirmed=String(latest.id)===id&&latest.status==='canceled';
+          }
+        }catch(_){ /* Nao assumir cancelamento quando o provedor estiver indisponivel */ }
+        if(!confirmed){
+          console.warn('Mercado Pago: cancelamento nao confirmado',{provider_http_status:canceled.status,provider_code:code||'unknown'});
+          return res.status(502).json({error:'cancel_provider_failed',
+            provider_http_status:canceled.status,provider_code:code,provider_hint:hint,
+            subscription_status:String(current.status||'').slice(0,35)});
+        }
+      }else if(String(result.id||'')!==id||result.status!=='canceled'){
+        // Resposta inesperada: nao trate como sucesso sem reverificar.
+        const check=await fetch(baseMp,{headers:authorization,signal:AbortSignal.timeout(9000)});
+        if(!check.ok)return res.status(502).json({error:'cancel_not_confirmed'});
+        const latest=await check.json();
+        if(String(latest.id)!==id||latest.status!=='canceled')
+          return res.status(502).json({error:'cancel_not_confirmed'});
+      }
     }
     const url=new URL('/rest/v1/agenda_subscriptions',base);
     url.searchParams.set('business_id','eq.'+businessId);
