@@ -2632,13 +2632,13 @@ async function installAgendaApp(){
   const token=session?.data?.session?.access_token;
   if(!token)return toast('Sua sessão expirou. Entre novamente.');
   let payerEmail=String(document.getElementById('mpPayerEmail')?.value||authUser?.email||'').trim();
-  if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(payerEmail)){
+  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payerEmail)){
     const entered=window.prompt(method==='pix'
       ?'Informe seu e-mail para identificar o pagamento PIX. Não é necessário ter conta no Mercado Pago.'
       :'Informe um e-mail válido para a contratação do cartão.',payerEmail);
     if(entered===null)return;
     payerEmail=String(entered).trim();
-    if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(payerEmail))
+    if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payerEmail))
       return toast('Informe um e-mail válido. Não precisa ser cadastrado no Mercado Pago para pagar via PIX.');
     const input=document.getElementById('mpPayerEmail');
     if(input)input.value=payerEmail;
