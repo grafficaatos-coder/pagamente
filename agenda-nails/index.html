@@ -2098,6 +2098,125 @@
       .side .brand .brand-caption{display:none}
     }
 
+
+    /* Dashboard compacto e sem recortes no celular — mantém o layout desktop */
+    @media (max-width:720px){
+      .company-app.dashboard-home .content{
+        width:100%!important;max-width:100%!important;
+        padding:14px 12px calc(92px + env(safe-area-inset-bottom))!important;
+        overflow-x:clip!important;
+      }
+      .company-app .agenda-dashboard,
+      .company-app .agenda-dashboard > *,
+      .company-app .agenda-dashboard .dashboard-main-grid > *,
+      .company-app .agenda-dashboard .dashboard-bottom-grid > *{
+        box-sizing:border-box;min-width:0!important;max-width:100%!important;
+      }
+      .company-app .agenda-dashboard{
+        width:100%;display:grid;gap:12px;overflow-x:clip;
+      }
+      .company-app .agenda-home-hero{width:100%;overflow:visible}
+      .company-app .agenda-home-hero .hero-shortcuts{
+        display:grid!important;
+        grid-template-columns:repeat(2,minmax(0,1fr))!important;
+        gap:8px!important;width:100%;margin-top:0;
+      }
+      .company-app .agenda-home-hero .hero-shortcuts .btn{
+        width:100%;min-width:0!important;min-height:42px;
+        flex:none!important;padding:9px 8px;font-size:12px;
+        white-space:normal;overflow-wrap:break-word;line-height:1.25;
+      }
+      .company-app .agenda-home-hero .hero-shortcuts .btn:first-child{
+        grid-column:1/-1;
+      }
+      .company-app .dashboard-kpis{
+        display:grid!important;
+        grid-template-columns:repeat(2,minmax(0,1fr))!important;
+        grid-auto-rows:max-content;
+        align-items:start!important;
+        gap:9px!important;
+        width:100%!important;
+        min-width:0!important;
+        max-width:100%!important;
+      }
+      .company-app .dashboard-kpis > .dashboard-kpi{
+        display:flex!important;
+        flex-direction:row!important;
+        align-items:center!important;
+        gap:10px;
+        width:100%!important;min-width:0!important;max-width:100%!important;
+        height:auto!important;min-height:84px!important;
+        padding:12px!important;
+        margin:0!important;
+        overflow:hidden!important;
+      }
+      /* Serviços e valores: largura total, sem estourar a coluna estreita */
+      .company-app .dashboard-kpis > .dashboard-kpi:nth-child(n+3){
+        grid-column:1/-1!important;
+      }
+      .company-app .dashboard-kpi-icon{
+        flex:0 0 36px;min-width:36px;
+        width:36px;height:36px;
+      }
+      .company-app .dashboard-kpi-copy{
+        flex:1 1 0;min-width:0!important;max-width:100%;
+        overflow:hidden;
+      }
+      .company-app .dashboard-kpi-copy span{
+        display:block;font-size:11px;line-height:1.3;
+        white-space:normal;overflow-wrap:normal;
+      }
+      .company-app .dashboard-kpi-copy strong{
+        display:block;
+        max-width:100%;margin:5px 0 3px;
+        font-size:clamp(16px,4.3vw,22px)!important;
+        line-height:1.15;
+        white-space:nowrap!important;
+        word-break:normal!important;
+        overflow-wrap:normal!important;
+        overflow:hidden;text-overflow:ellipsis;
+        font-variant-numeric:tabular-nums;
+      }
+      .company-app .dashboard-kpi-copy small{
+        display:block;font-size:10px;line-height:1.3;
+        white-space:normal;overflow-wrap:break-word;
+      }
+      .company-app .dashboard-main-grid,
+      .company-app .dashboard-side-stack,
+      .company-app .dashboard-bottom-grid{
+        display:grid!important;
+        grid-template-columns:minmax(0,1fr)!important;
+        width:100%;min-width:0;max-width:100%;
+        gap:12px!important;
+      }
+      .company-app .dashboard-side-stack{grid-column:auto!important}
+      .company-app .dashboard-panel{
+        width:100%!important;
+        min-width:0!important;
+        max-width:100%!important;
+        padding:13px;
+        overflow:hidden;
+      }
+      .company-app .dashboard-bottom-grid .dashboard-panel > div[style*="grid-template-columns"]{
+        grid-template-columns:minmax(0,1fr)!important;
+        gap:12px!important;
+      }
+      .company-app .dashboard-finance-total{
+        font-size:clamp(18px,5vw,23px);
+        overflow-wrap:normal;word-break:normal;
+      }
+      /* Já existe "Novo agendamento" no topo do painel */
+      .company-app.dashboard-home .fab{display:none!important}
+    }
+    @media (max-width:380px){
+      .company-app .dashboard-kpis{
+        grid-template-columns:minmax(0,1fr)!important;
+      }
+      .company-app .dashboard-kpis > .dashboard-kpi{
+        grid-column:1/-1!important;
+      }
+    }
+
 </style>
 </head>
 <body>
@@ -2458,7 +2577,7 @@ async function installAgendaApp(){
     function shell(content){
   if(appMode==='company'){
     const p=P(),t=companyTitles()[page]||companyTitles().home;
-    return `<div class="app company-app">${nav()}<div class="mobile-menu-overlay" onclick="closeMobileMenu()" aria-hidden="true"></div><main class="main"><header class="top"><div class="top-left"><button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Abrir menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="menu-label">Menu</span></button><div class="logo mini-logo">${p.initials}</div><div><h1>${t[0]}</h1><small>${t[1]}</small></div></div><div class="top-actions"><label class="agenda-global-search">${I.search}<input type="search" aria-label="Pesquisar clientes" placeholder="Buscar clientes..." onkeydown="if(event.key==='Enter')dashboardQuickSearch(this.value)"></label><span class="owner-session"><i class="owner-dot"></i> ${appModalEscape(companyCtx?.plan?.name||'Plano')} · ${companyRole()}</span><button class="agenda-profile-button" onclick="go('profile')"><span class="agenda-profile-avatar">AP</span>Meu perfil</button>${hasFeature('agenda')&&canOperateCompany()?'<button class="btn primary" onclick="book()">+ Novo horário</button>':''}<button class="logout-btn mobile-password-btn" onclick="changeMyPassword()">Senha</button><button class="logout-btn mobile-top-logout" onclick="ownerLogout()">Sair</button></div></header><div class="content">${content}</div></main>${bottom()}</div>`;
+    return `<div class="app company-app ${page==='home'?'dashboard-home':''}">${nav()}<div class="mobile-menu-overlay" onclick="closeMobileMenu()" aria-hidden="true"></div><main class="main"><header class="top"><div class="top-left"><button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Abrir menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="menu-label">Menu</span></button><div class="logo mini-logo">${p.initials}</div><div><h1>${t[0]}</h1><small>${t[1]}</small></div></div><div class="top-actions"><label class="agenda-global-search">${I.search}<input type="search" aria-label="Pesquisar clientes" placeholder="Buscar clientes..." onkeydown="if(event.key==='Enter')dashboardQuickSearch(this.value)"></label><span class="owner-session"><i class="owner-dot"></i> ${appModalEscape(companyCtx?.plan?.name||'Plano')} · ${companyRole()}</span><button class="agenda-profile-button" onclick="go('profile')"><span class="agenda-profile-avatar">AP</span>Meu perfil</button>${hasFeature('agenda')&&canOperateCompany()?'<button class="btn primary" onclick="book()">+ Novo horário</button>':''}<button class="logout-btn mobile-password-btn" onclick="changeMyPassword()">Senha</button><button class="logout-btn mobile-top-logout" onclick="ownerLogout()">Sair</button></div></header><div class="content">${content}</div></main>${bottom()}</div>`;
   }
   const t=titles()[adminTab]||titles().overview;
   return `<div class="app admin-owner-app">${nav()}<div class="mobile-menu-overlay" onclick="closeMobileMenu()" aria-hidden="true"></div><main class="main"><header class="top"><div class="top-left"><button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Abrir menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="menu-label">Menu</span></button><div class="logo mini-logo">AP</div><div><h1>${t[0]}</h1><small>${t[1]}</small></div></div><div class="top-actions"><span class="owner-session"><i class="owner-dot"></i> Proprietário</span><button class="logout-btn mobile-password-btn" onclick="changeMyPassword()">Senha</button><button class="logout-btn mobile-top-logout" onclick="ownerLogout()">Sair</button></div></header><div class="content">${content}</div></main>${bottom()}</div>`;
@@ -5828,7 +5947,7 @@ async function cancelAgendaSubscription(toPix=false){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261013-agendapro-blue',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261013-mobile-dashboard-fix',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });

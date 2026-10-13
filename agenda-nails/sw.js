@@ -1,4 +1,4 @@
-const CACHE_NAME='agenda-pro-shell-v45-blue-identity';
+const CACHE_NAME='agenda-pro-shell-v46-mobile-dashboard';
 const SHELL=['/','/manifest.webmanifest','/icons/app-icon.svg','/icons/app-icon-maskable.svg','/brand/agenda-pro-original.svg'];
 
 self.addEventListener('install',event=>{
