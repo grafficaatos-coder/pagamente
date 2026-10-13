@@ -4270,7 +4270,8 @@ async function cancelAgendaSubscription(toPix=false){
       status:out.status||'disconnected',
       phone:out.phone||null,
       qr_svg:out.qr_svg||null,
-      pairing_code:out.pairing_code||baileysSession.pairing_code||null,
+      // Nunca reapresentar um codigo que o servidor ja invalidou.
+      pairing_code:out.pairing_code||null,
       last_error:out.last_error||null,
       catalog_broadcast:out.catalog_broadcast||null
     };
@@ -4315,7 +4316,7 @@ async function cancelAgendaSubscription(toPix=false){
     render();
   }
 }
-    async function connectBaileysByPhone(forcedPhone=''){
+    async function connectBaileysByPhone(forcedPhone='',forceNew=false){
   const input=document.getElementById('baileysPhone');
   const btn=document.getElementById('baileysPhoneBtn');
   const err=document.getElementById('baileysConnectError');
@@ -4337,7 +4338,7 @@ async function cancelAgendaSubscription(toPix=false){
     baileysSession={status:'connecting',phone,qr_svg:null,pairing_code:null,last_error:null};
     render();
 
-    const out=await callBaileys('pair-code','POST',{phone});
+    const out=await callBaileys('pair-code','POST',{phone,force_new:forceNew===true});
     const code=String(out?.pairing_code||'').replace(/\s/g,'').toUpperCase();
     if(!code)throw new Error('O servidor do WhatsApp não gerou o código. Aguarde alguns segundos e tente novamente.');
 
@@ -4363,7 +4364,7 @@ async function cancelAgendaSubscription(toPix=false){
   }
 }
     function regenerateBaileysCode(){
-  return connectBaileysByPhone(baileysSession?.phone||baileysPreferredPhone());
+  return connectBaileysByPhone(baileysSession?.phone||baileysPreferredPhone(),true);
 }
     async function disconnectBaileys(){
   if(!confirm('Desconectar este WhatsApp do modo automático experimental?'))return;
