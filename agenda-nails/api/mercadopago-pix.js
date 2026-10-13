@@ -1,4 +1,4 @@
-// Agenda Pro — cobrança mensal avulsa via PIX (piloto Julli / Essencial).
+// Agenda Pro — cobrança mensal avulsa via PIX do plano visível escolhido.
 // Nao e debito recorrente: o assinante gera um novo PIX a cada periodo.
 import {randomUUID} from 'node:crypto';
 const UUID=/^[a-f0-9]{8}-(?:[a-f0-9]{4}-){3}[a-f0-9]{12}$/i;
@@ -22,7 +22,7 @@ const pixData=payment=>{
 export default async function handler(req,res){
   res.setHeader('Cache-Control','no-store');
   if(req.method==='GET')return res.status(200).json({
-    ok:true,service:'agenda-mp-pix',pilot:true,
+    ok:true,service:'agenda-mp-pix',pilot:false,
     enabled:process.env.AGENDA_MP_CHECKOUT_ENABLED==='true',
     configured:Boolean(process.env.AGENDA_MP_ACCESS_TOKEN&&process.env.AGENDA_SUPABASE_URL&&process.env.AGENDA_SUPABASE_SECRET_KEY)
   });
@@ -37,9 +37,6 @@ export default async function handler(req,res){
   if(!UUID.test(businessId)||!UUID.test(planId))return res.status(400).json({error:'invalid_input'});
   if(payerEmail.length>160||!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(payerEmail))
     return res.status(400).json({error:'invalid_payer_email'});
-  if(businessId!==String(process.env.AGENDA_MP_TEST_BUSINESS_ID||'')||
-     planId!==String(process.env.AGENDA_MP_TEST_PLAN_ID||''))
-    return res.status(403).json({error:'checkout_limited_to_pilot'});
   let base;
   try{base=new URL(root);if(base.protocol!=='https:')throw Error('url');}
   catch(_){return res.status(503).json({error:'invalid_configuration'});}
@@ -68,22 +65,23 @@ export default async function handler(req,res){
     const [member,plans,subs,companies,existing]=await Promise.all([
       rows('agenda_members',{select:'role',business_id:'eq.'+businessId,user_id:'eq.'+user.id,limit:'2'}),
       rows('agenda_plans',{select:'id,code,name,active,visible,monthly_price_cents',id:'eq.'+planId,limit:'2'}),
-      rows('agenda_subscriptions',{select:'status,mp_preapproval_id,current_period_end,plan_id',business_id:'eq.'+businessId,limit:'2'}),
+      rows('agenda_subscriptions',{select:'status,mp_preapproval_id,current_period_end,plan_id,mp_last_payment_at',business_id:'eq.'+businessId,limit:'2'}),
       rows('agenda_businesses',{select:'manual_blocked',id:'eq.'+businessId,limit:'2'}),
-      rows('agenda_mp_pix_charges',{select:'id,status,plan_id,checkout_url,mp_payment_id,expires_at',
+      rows('agenda_mp_pix_charges',{select:'id,status,plan_id,amount_cents,checkout_url,mp_payment_id,expires_at',
         business_id:'eq.'+businessId,status:'in.(creating,pending)',limit:'2'})
     ]);
     if(member.length!==1||!['owner','admin'].includes(member[0].role))return res.status(403).json({error:'owner_required'});
     if(companies.length!==1||companies[0].manual_blocked)return res.status(403).json({error:'business_blocked'});
+    const amountCents=Number(plans[0]?.monthly_price_cents);
     if(plans.length!==1||!plans[0].active||!plans[0].visible||
-       plans[0].code!=='essencial'||Number(plans[0].monthly_price_cents)!==4990)
-      return res.status(409).json({error:'pilot_amount_mismatch'});
+       !Number.isSafeInteger(amountCents)||amountCents<100||amountCents>10000000)
+      return res.status(409).json({error:'plan_not_available'});
     if(subs.length!==1||['suspended','cancelled'].includes(subs[0].status))
       return res.status(403).json({error:'subscription_unavailable'});
     if(subs[0].mp_preapproval_id)
       return res.status(409).json({error:'cancel_recurring_first'});
     const periodEnd=Date.parse(String(subs[0].current_period_end||''));
-    if(subs[0].status==='active'&&Number.isFinite(periodEnd)&&
+    if(subs[0].status==='active'&&subs[0].mp_last_payment_at&&Number.isFinite(periodEnd)&&
        periodEnd>Date.now()+7*86400000)
       return res.status(409).json({error:'already_paid_until_later'});
     if(existing.length>1)return res.status(409).json({error:'multiple_pending_pix'});
@@ -100,11 +98,12 @@ export default async function handler(req,res){
              current.payment_method_id!=='pix'||
              current.currency_id!=='BRL'||
              current.external_reference!=='agenda-pix:'+old.id||
-             Math.round(Number(current.transaction_amount)*100)!==4990)
+             Math.round(Number(current.transaction_amount)*100)!==amountCents)
             return res.status(502).json({error:'pix_provider_invalid'});
           const details=pixData(current);
           if(!details.pix_copy_paste)return res.status(502).json({error:'pix_code_unavailable'});
-          return res.status(200).json({ok:true,payment_pending:true,reused:true,...details});
+          return res.status(200).json({ok:true,payment_pending:true,reused:true,
+            plan_name:plans[0].name,amount_cents:amountCents,...details});
         }
         return res.status(409).json({error:'pix_already_processing'});
       }
@@ -126,7 +125,7 @@ export default async function handler(req,res){
     const created=await fetch(new URL('/rest/v1/agenda_mp_pix_charges',base),{
       method:'POST',headers:{...h,'Content-Type':'application/json',Prefer:'return=representation'},
       body:JSON.stringify({id:chargeId,business_id:businessId,plan_id:planId,
-        amount_cents:4990,external_reference:reference,expires_at:expires,status:'creating'}),
+        amount_cents:amountCents,external_reference:reference,expires_at:expires,status:'creating'}),
       signal:AbortSignal.timeout(9000)
     });
     if(!created.ok)return res.status(created.status===409?409:502).json({error:'pix_reservation_failed'});
@@ -137,7 +136,7 @@ export default async function handler(req,res){
         headers:{Authorization:'Bearer '+mpKey,Accept:'application/json','Content-Type':'application/json',
           'X-Idempotency-Key':chargeId},
         body:JSON.stringify({
-          transaction_amount:49.9,description:'Agenda Pro - Essencial (mensal)',
+          transaction_amount:amountCents/100,description:'Agenda Pro - '+String(plans[0].name).slice(0,70)+' (mensal)',
           payment_method_id:'pix',external_reference:reference,
           date_of_expiration:expires,payer:{email:payerEmail}
         }),
@@ -158,13 +157,14 @@ export default async function handler(req,res){
        payment.payment_method_id!=='pix'||
        payment.currency_id!=='BRL'||
        payment.external_reference!==reference||
-       Math.round(Number(payment.transaction_amount)*100)!==4990)
+       Math.round(Number(payment.transaction_amount)*100)!==amountCents)
       return res.status(502).json({error:'pix_provider_invalid'});
     const updated=await patch(chargeId,{status:'pending',mp_payment_id:String(payment.id),
       checkout_url:details.checkout_url||null});
     if(updated.length!==1)return res.status(502).json({error:'pix_link_failed'});
     if(!details.pix_copy_paste)return res.status(502).json({error:'pix_code_unavailable'});
-    return res.status(200).json({ok:true,payment_pending:true,...details});
+    return res.status(200).json({ok:true,payment_pending:true,plan_name:plans[0].name,
+      amount_cents:amountCents,...details});
   }catch(e){
     console.error('PIX checkout failed',{name:String(e?.name||'Error').slice(0,50),reason:String(e?.message||'unknown').slice(0,80)});
     return res.status(502).json({error:'pix_unavailable'});
