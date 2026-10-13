@@ -248,6 +248,7 @@ export class WhatsSession{
     this.timers=[];
     this.leaseBusy=false;this.leaseExpires=0;this.socketStarted=0;
     this.pairBusy=false;this.pairCode=null;this.pairExpires=0;this.pairPhone=null;this.qrReady=false;
+    this.pairRequests=[]; // Limita geracao excessiva de codigos por telefone/conta.
     this.savePending=Promise.resolve();this.lastCheckpoint=null;
     this.reconnectFailures=0;this.nextConnectAt=0;this.connectedSince=0;
   }
@@ -331,7 +332,9 @@ export class WhatsSession{
             this.qrReady=true;
             this.qrSvg=await QRCode.toString(update.qr,{type:"svg",width:320,margin:1});
             this.state="waiting_qr";this.error="";
-            await upsertSession(this.businessId,{status:"qr",last_error:null});
+            // Um novo desafio QR invalida o codigo numerico anterior.
+            // Limpar tambem a copia em Supabase para nunca reapresentar codigo antigo.
+            await upsertSession(this.businessId,{status:"qr",pairing_code:null,last_error:null});
           }
           if(update.connection==="open"){
             this.connectedSince=Date.now();
@@ -362,7 +365,7 @@ export class WhatsSession{
               this.delayReconnect();
               this.state="connecting";
               this.error=String(update.lastDisconnect?.error?.message||"Conexão interrompida. Reconectando.").slice(0,1200);
-              await upsertSession(this.businessId,{status:"connecting",last_error:this.error});
+              await upsertSession(this.businessId,{status:"connecting",pairing_code:null,last_error:this.error});
             }
           }
         }catch(e){logger.error(e)}
@@ -470,7 +473,7 @@ export class WhatsSession{
       this.broadcastBusy=false;
     }
   }
-  async pairingCode(phone){
+  async pairingCode(phone,{forceNew=false}={}){
     if(this.state==="online"){
       throw Object.assign(new Error("Este WhatsApp já está conectado."),{status:409});
     }
@@ -483,9 +486,17 @@ export class WhatsSession{
       throw Object.assign(new Error("A conexão está sendo usada por outro processo. Tente novamente em alguns segundos."),{status:409});
     }
     if(this.pairBusy)throw Object.assign(new Error("Já existe uma tentativa em andamento."),{status:409});
-    if(this.pairCode&&this.pairPhone===normalized&&Date.now()<this.pairExpires)return this.pairCode;
+    if(!forceNew&&this.pairCode&&this.pairPhone===normalized&&Date.now()<this.pairExpires)return this.pairCode;
+    this.pairRequests=this.pairRequests.filter(timestamp=>Date.now()-timestamp<5*60*1000);
+    if(this.pairRequests.length>=3)
+      throw Object.assign(new Error("Muitos códigos solicitados. Aguarde 5 minutos antes de tentar novamente."),{status:429});
     this.pairBusy=true;
     try{
+      if(forceNew){
+        this.pairCode=null;this.pairPhone=null;this.pairExpires=0;
+        // Nao manter no banco um codigo obsoleto durante a troca.
+        await upsertSession(this.businessId,{pairing_code:null});
+      }
       if(!this.sock&&!this.connectBusy)await this.connectSocket();
       const start=Date.now();
       while(Date.now()-start<20000&&(!this.sock||!this.qrReady)){
@@ -499,6 +510,7 @@ export class WhatsSession{
       const clean=String(code||"").replace(/\s+/g,"").trim();
       if(!clean)throw new Error("O WhatsApp não gerou o código.");
       this.pairCode=clean;this.pairPhone=normalized;this.pairExpires=Date.now()+60000;
+      this.pairRequests.push(Date.now());
       await upsertSession(this.businessId,{status:"qr",pairing_code:clean,last_error:null});
       return clean;
     }finally{this.pairBusy=false}
@@ -509,7 +521,9 @@ export class WhatsSession{
       status:this.state==="online"?"connected":
         this.state==="waiting_qr"?"qr":
         this.state==="error"?"error":"connecting",
-      pairing_code:Date.now()<this.pairExpires?this.pairCode:null,
+      // Codigo so pode ser exibido enquanto ainda corresponde ao ultimo
+      // desafio do socket; nunca retornar um codigo vencido.
+      pairing_code:this.qrReady&&Date.now()<this.pairExpires?this.pairCode:null,
       phone:this.phone,qr_svg:this.state==="waiting_qr"?this.qrSvg:null,
       last_error:this.error||null,
       catalog_broadcast:this.catalogBroadcast
@@ -584,7 +598,7 @@ const server=http.createServer(async(req,res)=>{
     if(action==="pair-code"){
       const payload=await bodyJson(req);
       const s=await ensureSession(businessId);
-      const code=await s.pairingCode(payload.phone||"");
+      const code=await s.pairingCode(payload.phone||"",{forceNew:payload.force_new===true});
       return json(res,200,{ok:true,status:"qr",pairing_code:code});
     }
     if(action==="send-catalog"){
