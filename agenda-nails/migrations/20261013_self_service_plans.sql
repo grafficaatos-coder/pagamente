@@ -69,7 +69,12 @@ BEGIN
     AND s.current_period_end>p_paid_at+interval '7 days' THEN
    RAISE EXCEPTION 'period_still_paid';
  END IF;
- v_end:=greatest(coalesce(s.current_period_end,p_paid_at),p_paid_at)+interval '1 month';
+ -- No primeiro pagamento, nao estender periodo gratuito/teste como se fosse pago.
+ IF s.mp_last_payment_at IS NULL THEN
+   v_end:=p_paid_at+interval '1 month';
+ ELSE
+   v_end:=greatest(coalesce(s.current_period_end,p_paid_at),p_paid_at)+interval '1 month';
+ END IF;
  UPDATE public.agenda_subscriptions
  SET plan_id=c.plan_id,mp_pending_plan_id=NULL,requested_plan_id=NULL,
      status='active',trial_ends_at=NULL,current_period_end=v_end,
