@@ -138,8 +138,7 @@ AS $function$
 
     return new;
   end;
-  $function$
-
+  $function$;
 
 -- Ao desligar a opcao, cancela os envios ainda aguardando.
 CREATE OR REPLACE FUNCTION agenda_private.cancel_thankyou_on_optout()
