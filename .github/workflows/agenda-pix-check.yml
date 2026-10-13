@@ -1,0 +1,45 @@
+name: Validar Agenda Pro PIX
+on:
+  pull_request:
+    paths:
+      - "agenda-nails/api/**"
+      - "agenda-nails/lib/**"
+      - "agenda-nails/index.html"
+      - "agenda-nails/migrations/**"
+      - ".github/workflows/agenda-pix-check.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  syntax:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Verificar JavaScript dos endpoints
+        run: |
+          node --check agenda-nails/api/mercadopago-pix.js
+          node --check agenda-nails/api/mercadopago-pix-status.js
+          node --check agenda-nails/api/mercadopago-webhook.js
+          node --check agenda-nails/lib/agenda-mp-pix.js
+      - name: Verificar JavaScript embutido na interface
+        run: |
+          node <<'NODE'
+          const fs=require('node:fs');
+          const vm=require('node:vm');
+          const html=fs.readFileSync('agenda-nails/index.html','utf8');
+          const pattern=/<script\b([^>]*)>([\s\S]*?)<\/script>/gi;
+          let total=0, m;
+          while((m=pattern.exec(html))){
+            const attrs=m[1]||'';
+            if(/\bsrc\s*=/.test(attrs)||/type\s*=\s*["']application\/(?:ld\+)?json["']/i.test(attrs))continue;
+            if(!m[2].trim())continue;
+            new vm.Script(m[2],{filename:'agenda-nails/index.html'});
+            total++;
+          }
+          if(total===0)throw Error('Nenhum script inline encontrado');
+          console.log('Scripts da interface verificados:',total);
+          NODE
