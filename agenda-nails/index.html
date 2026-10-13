@@ -2587,8 +2587,11 @@ async function installAgendaApp(){
   overlay.id='agendaPixPayment';
   overlay.setAttribute('role','presentation');
   overlay.style.cssText='position:fixed;inset:0;z-index:2147483000;background:rgba(15,23,42,.78);display:flex;align-items:center;justify-content:center;padding:16px;overflow-y:auto';
+  const planName=appModalEscape(String(details?.plan_name||'Plano'));
+  const amount=Number(details?.amount_cents);
+  const amountLabel=Number.isSafeInteger(amount)&&amount>0?moneyBR(amount/100):'consulte o valor';
   overlay.innerHTML='<section role="dialog" aria-modal="true" aria-label="Pagamento PIX" style="width:min(480px,100%);max-height:94vh;overflow:auto;padding:23px;background:#fff;color:#172436;border-radius:18px;box-shadow:0 22px 65px rgba(0,0,0,.25)">'+
-    '<div style="display:flex;justify-content:space-between;gap:12px;align-items:start"><div><h2 style="margin:0 0 5px;font-size:22px">Pagar com PIX</h2><p style="margin:0;color:#475569">Agenda Pro — Essencial · R$ 49,90</p></div><button type="button" id="agendaPixClose" aria-label="Fechar" style="font-size:23px;background:transparent;border:0;cursor:pointer">×</button></div>'+
+    '<div style="display:flex;justify-content:space-between;gap:12px;align-items:start"><div><h2 style="margin:0 0 5px;font-size:22px">Pagar com PIX</h2><p style="margin:0;color:#475569">Agenda Pro — '+planName+' · '+amountLabel+'</p></div><button type="button" id="agendaPixClose" aria-label="Fechar" style="font-size:23px;background:transparent;border:0;cursor:pointer">×</button></div>'+
     '<p style="margin:18px 0 12px">Use o app de qualquer banco. <b>Não precisa criar conta no Mercado Pago.</b></p>'+
     '<div id="agendaPixQrHolder" style="text-align:center"></div>'+
     '<label for="agendaPixCopy" style="display:block;font-weight:650;margin:10px 0 7px">PIX Copia e Cola</label>'+
@@ -2626,12 +2629,10 @@ async function installAgendaApp(){
   if(!plan)return toast('Plano indisponível para contratação.');
   const linked=companyCtx.subscription?.mp_preapproval_id;
   const pendingPlanId=companyCtx.subscription?.mp_pending_plan_id;
-  if(linked && method!=='pix' && pendingPlanId!==plan.id)
-    return toast('Já existe uma assinatura vinculada. Contate o suporte para trocar de plano.');
-  if(linked && method==='pix'){
-    // A cobrança no cartão só é cancelada após confirmação explícita do assinante.
-    // O plano e os pagamentos existentes não são alterados por esta ação.
-    const cancelled=await cancelAgendaSubscription(true);
+  const linkedPlanId=String(pendingPlanId||companyCtx.subscription?.plan_id||'');
+  if(linked && (method==='pix'||linkedPlanId!==plan.id)){
+    // Antes de criar outra cobrança, exigir autorização e confirmação do cancelamento.
+    const cancelled=await cancelAgendaSubscription(method==='pix'?'pix':'plan');
     if(!cancelled)return;
   }
   const session=await sb.auth.getSession();
@@ -2665,10 +2666,11 @@ async function installAgendaApp(){
       const reason=String(data.error||'').slice(0,90);
       console.warn('Checkout não iniciado',{http:response.status,reason:reason||'non_json_response'});
       if(reason==='checkout_not_enabled')return toast('Pagamento online ainda não liberado.');
-      if(reason==='checkout_limited_to_pilot')return toast('Teste autorizado somente para a Julli no plano Essencial.');
+      if(reason==='plan_not_available'||reason==='plan_amount_invalid')
+        return toast('Este plano não está disponível para contratação.');
       if(reason==='subscription_already_linked')return toast('Assinatura já vinculada. Contate o suporte.');
       if(reason==='cancel_recurring_first')return toast('Cancele a cobrança recorrente por cartão antes de gerar um PIX.');
-      if(reason==='already_paid_until_later')return toast('A mensalidade ainda está paga; gere um novo PIX perto do vencimento.');
+      if(reason==='already_paid_until_later')return toast('Seu mês já está pago. Escolha o plano desejado para a próxima renovação.');
       if(reason==='pix_already_processing'||reason==='multiple_pending_pix')return toast('Já existe uma cobrança PIX sendo gerada. Aguarde ou atualize a página.');
       if(reason==='pix_provider_rejected')return toast('Mercado Pago não conseguiu gerar o PIX. Confira se a conta recebedora tem chave PIX cadastrada.');
       if(reason==='pix_reservation_failed')return toast('Já existe um PIX em andamento. Aguarde alguns instantes e tente novamente.');
@@ -2705,6 +2707,38 @@ async function installAgendaApp(){
     window.location.assign(target.href);
   }catch(e){toast(e.message||'Falha ao iniciar o pagamento');}
 }
+async function chooseAgendaPlan(planId){
+  if(!sb||!companyCtx||!['owner','admin'].includes(companyRole()))
+    return toast('Somente administradores podem escolher planos.');
+  const plan=subscriptionCatalog.find(p=>p.id===planId&&p.active&&p.visible&&Number(p.monthly_price_cents)>0);
+  if(!plan)return toast('Plano indisponível.');
+  if(companyCtx.subscription?.mp_preapproval_id){
+    const cancelled=await cancelAgendaSubscription('plan');
+    if(!cancelled)return;
+  }
+  const session=await sb.auth.getSession();
+  const token=session?.data?.session?.access_token;
+  if(!token)return toast('Sua sessão expirou. Entre novamente.');
+  try{
+    const response=await fetch('/api/mercadopago-plan-choice',{
+      method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+token},
+      body:JSON.stringify({business_id:companyCtx.business.id,plan_id:plan.id})
+    });
+    const result=await response.json().catch(()=>({}));
+    if(!response.ok){
+      if(result.error==='pix_already_processing')return toast('Há um PIX pendente; aguarde ou confira a cobrança.');
+      if(result.error==='cancel_recurring_first')return toast('Cancele primeiro a assinatura recorrente do cartão.');
+      return toast('Não foi possível registrar sua escolha. Tente novamente.');
+    }
+    companyCtx.subscription.requested_plan_id=result.scheduled?plan.id:null;
+    render();
+    if(result.scheduled){
+      toast('Plano '+plan.name+' escolhido para a próxima renovação. Nenhuma nova cobrança foi gerada.');
+    }else{
+      toast('Plano selecionado. Escolha PIX ou cartão para pagar e ativar.');
+    }
+  }catch(e){toast('Não foi possível registrar o plano escolhido.');}
+}
 async function checkAgendaPixPayment(){
   if(!sb||!companyCtx||!['owner','admin'].includes(companyRole()))return toast('Somente administradores podem verificar pagamentos.');
   const session=await sb.auth.getSession();
@@ -2726,8 +2760,10 @@ async function checkAgendaPixPayment(){
 }
 async function cancelAgendaSubscription(toPix=false){
   if(!sb||!companyCtx?.subscription?.mp_preapproval_id||!['owner','admin'].includes(companyRole()))return false;
-  const question=toPix
-    ?'Para pagar por PIX, será necessário cancelar a cobrança recorrente por cartão no Mercado Pago. O período já pago será mantido. O PIX não renova automaticamente. Deseja cancelar o cartão e continuar com PIX?'
+  const question=toPix==='plan'
+    ?'Para escolher outro plano, precisamos cancelar a cobrança recorrente do cartão atual. O período já pago será preservado até o vencimento. Deseja continuar?'
+    :toPix==='pix'
+    ?'Para pagar por PIX, será necessário cancelar a cobrança recorrente por cartão. O período já pago será preservado. O PIX não renova automaticamente. Deseja continuar?'
     :'Cancelar as próximas cobranças do Mercado Pago? O período que já foi pago será mantido até o vencimento.';
   if(!window.confirm(question))return false;
   const session=await sb.auth.getSession();
@@ -2760,7 +2796,9 @@ async function cancelAgendaSubscription(toPix=false){
       mp_preapproval_id:null,mp_pending_plan_id:null,mp_checkout_url:null,mp_status:'cancelled'
     });
     render();
-    toast(toPix?'Cartão cancelado. Preparando o PIX...':'Cobranças futuras canceladas no Mercado Pago.');
+    toast(toPix==='pix'?'Cartão cancelado. Preparando o PIX...':
+      toPix==='plan'?'Cobrança recorrente cancelada. Escolha o próximo plano.':
+      'Cobranças futuras canceladas no Mercado Pago.');
     return true;
   }catch(e){toast('Não foi possível confirmar o cancelamento.');return false;}
 }
@@ -2783,35 +2821,43 @@ async function cancelAgendaSubscription(toPix=false){
       const linked=Boolean(sub?.mp_preapproval_id);
       const pendingId=String(sub?.mp_pending_plan_id||'');
       const isPaid=Number(current?.monthly_price_cents||0)>0;
+      const periodEnd=Date.parse(String(sub?.current_period_end||''));
+      const alreadyPaid=Boolean(sub?.mp_last_payment_at)&&sub?.status==='active'&&
+        Number.isFinite(periodEnd)&&periodEnd>Date.now()+7*86400000;
+      const requested=String(sub?.requested_plan_id||'');
       const cards=subscriptionCatalog.filter(p=>p.visible||p.id===current?.id).map(p=>{
         const currentPlan=p.id===current?.id;
+        const paidPlan=Number(p.monthly_price_cents||0)>0;
+        const offered=owner&&p.visible&&p.active&&paidPlan;
         const amount=moneyBR(Number(p.monthly_price_cents||0)/100);
         let action='<span class="status-badge status-active">Seu plano atual</span>';
-        // Pilot is restricted to Julli / Essencial to avoid advertising an
-        // unavailable charge button to every tenant or to higher-priced plans.
-        const pilotAllowed=owner&&
-          companyCtx.business?.id==='7f00c45b-b228-4ee8-b795-aadbdcfb9d45'&&
-          p.code==='essencial'&&Number(p.monthly_price_cents)===4990;
-        if(owner&&Number(p.monthly_price_cents||0)>0&&!pilotAllowed){
-          action='<span class="status-badge">Pagamento deste plano ainda em validação</span>'+
-            '<p style="font-size:12px;margin-top:8px">Nesta etapa, PIX e cartão estão em teste somente no Essencial da Julli.</p>';
-        }
-        if(pilotAllowed){
-          const methods='<div style="display:flex;flex-wrap:wrap;gap:9px;margin-top:14px">'+
-            '<button class="btn primary" onclick="startAgendaSubscriptionCheckout(\''+p.id+'\',\'pix\')">Pagar com PIX</button>'+
-            '<button class="btn" onclick="startAgendaSubscriptionCheckout(\''+p.id+'\',\'card\')">Pagar com cartão</button></div>';
-          if(linked){
-            action='<p style="font-size:13px;margin-top:10px">Já existe cobrança por cartão vinculada. Para pagar por PIX, você poderá confirmar o cancelamento das futuras cobranças no cartão antes de gerar o PIX.</p>'+
-              '<div style="display:flex;flex-wrap:wrap;gap:9px;margin-top:12px">'+
-              '<button class="btn primary" onclick="startAgendaSubscriptionCheckout(\''+p.id+'\',\'pix\')">Trocar para PIX</button>'+
-              (pendingId===p.id?'<button class="btn" onclick="startAgendaSubscriptionCheckout(\''+p.id+'\',\'card\')">Continuar no cartão</button>':'')+
-              '</div>';
+        if(offered){
+          if(alreadyPaid){
+            if(currentPlan){
+              action='<span class="status-badge status-active">Mês quitado até '+new Date(periodEnd).toLocaleDateString('pt-BR')+'</span>'+
+                (requested?'<div style="margin-top:12px"><button class="btn secondary" onclick="chooseAgendaPlan(\''+p.id+'\')">Manter este plano</button></div>':'');
+            }else if(requested===p.id){
+              action='<span class="status-badge status-active">Escolhido para a próxima renovação</span>'+
+                '<p style="font-size:12px">Não há cobrança agora. No vencimento, escolha PIX ou cartão para ativar este plano.</p>';
+            }else{
+              action='<p style="font-size:12px;margin-top:9px">Trocar na próxima renovação, sem perder o mês já pago.</p>'+
+                '<button class="btn primary" onclick="chooseAgendaPlan(\''+p.id+'\')">Escolher este plano</button>';
+            }
+          }else if(linked&&currentPlan&&!pendingId){
+            action='<span class="status-badge status-active">Cobrança automática no cartão vinculada</span>';
+          }else if(linked){
+            action='<p style="font-size:12px">Existe uma assinatura por cartão vinculada. Para mudar, autorize o cancelamento antes de contratar outro plano.</p>'+
+              '<button class="btn primary" onclick="startAgendaSubscriptionCheckout(\''+p.id+'\',\'pix\')">Escolher PIX</button>'+
+              (pendingId===p.id?'<button class="btn secondary" onclick="startAgendaSubscriptionCheckout(\''+p.id+'\',\'card\')">Continuar no cartão</button>':
+              '<button class="btn secondary" onclick="startAgendaSubscriptionCheckout(\''+p.id+'\',\'card\')">Escolher cartão</button>');
           }else{
-            action=methods;
+            action='<div style="display:flex;flex-wrap:wrap;gap:9px;margin-top:14px">'+
+              '<button class="btn primary" onclick="startAgendaSubscriptionCheckout(\''+p.id+'\',\'pix\')">Pagar com PIX</button>'+
+              '<button class="btn secondary" onclick="startAgendaSubscriptionCheckout(\''+p.id+'\',\'card\')">Pagar com cartão</button></div>';
           }
         }
         return '<article class="card" style="padding:20px;min-width:0">'+
-          '<span class="eyebrow">'+(currentPlan?'Seu plano atual':'Plano disponível')+'</span>'+
+          '<span class="eyebrow">'+(currentPlan?'Seu plano atual':requested===p.id?'Plano escolhido':'Plano disponível')+'</span>'+
           '<h3>'+appModalEscape(p.name||'Plano')+'</h3>'+
           '<p>'+appModalEscape(p.description||'')+'</p>'+
           '<h2>'+amount+'<small style="font-size:13px"> /mês</small></h2>'+
@@ -2819,12 +2865,12 @@ async function cancelAgendaSubscription(toPix=false){
           action+'</article>';
       }).join('');
       const end=sub?.current_period_end?new Date(sub.current_period_end).toLocaleDateString('pt-BR'):'Não definido';
-      const pilotEmailField=owner&&companyCtx.business?.id==='7f00c45b-b228-4ee8-b795-aadbdcfb9d45'&&!linked?
+      const pilotEmailField=owner&&!linked?
         '<div style="margin-top:14px;max-width:480px"><label for="mpPayerEmail"><b>E-mail para identificar o pagamento</b></label>'+
         '<input id="mpPayerEmail" type="email" inputmode="email" autocomplete="email" placeholder="seu@email.com" value="'+appModalEscape(authUser?.email||'')+'" style="width:100%;margin-top:8px">'+
         '<p style="font-size:13px;margin-top:8px">PIX: não precisa de conta Mercado Pago. Use o QR Code ou Copia e Cola no aplicativo de qualquer banco. Para assinatura recorrente no cartão, o Mercado Pago pode solicitar login. O plano só é liberado após a confirmação do pagamento.</p></div>':'';
       const cancelAction=owner&&linked?'<p style="margin-top:12px"><button class="btn" onclick="cancelAgendaSubscription()">Cancelar cobrança recorrente</button></p>':'';
-      const pixCheckAction=owner&&!linked&&companyCtx.business?.id==='7f00c45b-b228-4ee8-b795-aadbdcfb9d45'?'<p style="margin-top:12px"><button class="btn" onclick="checkAgendaPixPayment()">Já paguei via PIX — verificar</button></p>':'';
+      const pixCheckAction=owner&&!linked?'<p style="margin-top:12px"><button class="btn" onclick="checkAgendaPixPayment()">Já paguei via PIX — verificar</button></p>':'';
       const alert=linked&&pendingId?'<p style="margin-top:12px">Existe uma contratação aguardando confirmação. Seu plano atual será mantido até o pagamento aprovado.</p>':'';
       return shell('<div class="section-title"><span class="eyebrow">Minha empresa</span>'+
         '<h2>Planos e assinatura</h2><p>Escolha um plano e acompanhe sua mensalidade.</p></div>'+
@@ -2833,7 +2879,7 @@ async function cancelAgendaSubscription(toPix=false){
         '<p>Próximo vencimento: '+end+'</p>'+pilotEmailField+alert+cancelAction+pixCheckAction+'</section>'+
         '<div class="section-title" style="margin-top:24px"><h2>Conheça os planos</h2></div>'+
         '<div class="plans-grid">'+(cards||'<p>Carregando planos disponíveis...</p>')+'</div>'+
-        '<p style="margin-top:18px">PIX: o pagamento é mensal e exige um novo PIX no próximo vencimento; não é débito automático. Cartão: cobrança recorrente pelo Mercado Pago. Em ambos os casos, o plano só é liberado após a confirmação do pagamento.</p>');
+        '<p style="margin-top:18px">Você pode escolher qualquer plano disponível. Se o mês atual já estiver pago, a escolha fica registrada para a próxima renovação, sem nova cobrança agora. Na renovação, selecione PIX (não é débito automático) ou cartão recorrente. A mudança de plano ocorre somente após o pagamento confirmado.</p>');
     }
     function myProfile(){
   const profile=companyCtx?.profile||{};
