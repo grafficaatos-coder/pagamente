@@ -491,12 +491,12 @@ export class WhatsSession{
     if(this.pairRequests.length>=3)
       throw Object.assign(new Error("Muitos códigos solicitados. Aguarde 5 minutos antes de tentar novamente."),{status:429});
     this.pairBusy=true;
-    if(forceNew){
-      this.pairCode=null;this.pairPhone=null;this.pairExpires=0;
-      // Nao manter no banco um codigo obsoleto durante a troca.
-      await upsertSession(this.businessId,{pairing_code:null});
-    }
     try{
+      if(forceNew){
+        this.pairCode=null;this.pairPhone=null;this.pairExpires=0;
+        // Nao manter no banco um codigo obsoleto durante a troca.
+        await upsertSession(this.businessId,{pairing_code:null});
+      }
       if(!this.sock&&!this.connectBusy)await this.connectSocket();
       const start=Date.now();
       while(Date.now()-start<20000&&(!this.sock||!this.qrReady)){
