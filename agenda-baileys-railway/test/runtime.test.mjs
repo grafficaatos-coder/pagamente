@@ -75,3 +75,15 @@ test('force_new requests a fresh code instead of reusing a cached one',async()=>
     assert.equal(s.status().pairing_code,'WXYZ5678');
   }finally{globalThis.fetch=original}
 });
+
+test('agradecimento personalizado substitui apenas variáveis da empresa e da cliente',async()=>{
+  const {personalizeThankYouMessage}=await import('../server.mjs');
+  assert.equal(
+    personalizeThankYouMessage('Olá, {{cliente}}! Obrigada por visitar {{empresa}}. {{CLIENTE}}','Juliana','Julli'),
+    'Olá, Juliana! Obrigada por visitar Julli. Juliana'
+  );
+  assert.equal(personalizeThankYouMessage(null,'Juliana','Julli'),null);
+  assert.equal(personalizeThankYouMessage('   ','Juliana','Julli'),null);
+  assert.equal(personalizeThankYouMessage('X'.repeat(1601),'Juliana','Julli'),null);
+  assert.equal(personalizeThankYouMessage('{{telefone}} {{cliente}}','Ana','Julli'),'{{telefone}} Ana');
+});
