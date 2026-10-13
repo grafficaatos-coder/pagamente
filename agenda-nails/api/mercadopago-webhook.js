@@ -147,7 +147,9 @@ export default async function handler(req, res) {
       verifiedPlans=await check.json();
     }catch(_){return res.status(502).json({error:'plan_unavailable'})}
     const requiredCents=Number(verifiedPlans?.[0]?.monthly_price_cents);
-    if(verifiedPlans.length!==1||!verifiedPlans[0].active||!verifiedPlans[0].visible||
+    // Um plano ocultado depois da contratação ainda precisa reconhecer
+    // pagamentos reais de contratos existentes.
+    if(verifiedPlans.length!==1||
        !Number.isSafeInteger(requiredCents)||requiredCents<=0||
        Math.round(Number(invoice.transaction_amount)*100)!==requiredCents)
       return res.status(200).json({ok:true,processed:false,reason:'plan_not_verified'});
