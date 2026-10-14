@@ -135,6 +135,12 @@ function appointmentDisplayName(name){
   const publicName=publicBusinessName(name);
   return /^Juliana Garcia$/i.test(publicName)?"Juliana":publicName;
 }
+export function reminderBusinessPhrase(name){
+  const publicName=publicBusinessName(name);
+  return /^Juliana Garcia$/i.test(publicName)
+    ?"com a *"+publicName+"*"
+    :"na *"+publicName+"*";
+}
 function catalogText(business,customer,services){
   const first=String(customer?.name||"").trim().split(/\s+/)[0]||"Cliente";
   const terms=serviceTerms(business?.segment);
@@ -173,7 +179,7 @@ function messageText(kind,business,customer,service,appointment,thankYouTemplate
     : "";
   if(kind==="reminder"){
     const pendingConfirmation=!appointment.confirmed_by_customer_at&&appointment.status!=="cancelled";
-    return "Olá, "+first+"! 😊\n\nLembrando que seu horário na *"+publicBusinessName(business.name)+"* é amanhã."+
+    return "Olá, "+first+"! 😊\n\nLembrando que seu horário "+reminderBusinessPhrase(business.name)+" é amanhã."+
       "\n\n📅 Data: *"+when.date+"*\n🕐 Horário: *"+when.time+"*\n✨ "+terms.one+": *"+service.name+"*"+proLine+
       (pendingConfirmation?confirmationBlock:"");
   }
