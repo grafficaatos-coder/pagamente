@@ -100,3 +100,11 @@ test('confirmação editável altera somente o corpo e mantém variáveis autom�
   assert.equal(personalizeAppointmentConfirmation('   ',details),null);
   assert.equal(personalizeAppointmentConfirmation('x'.repeat(1601),details),null);
 });
+
+test('lembrete de Juliana Garcia usa com a e preserva outras empresas',async()=>{
+  const {reminderBusinessPhrase}=await import('../server.mjs');
+  assert.equal(reminderBusinessPhrase('By Juliana Garcia'),'com a *Juliana Garcia*');
+  assert.equal(reminderBusinessPhrase('Juliana Garcia'),'com a *Juliana Garcia*');
+  assert.equal(reminderBusinessPhrase('Julli'),'na *Julli*');
+  assert.equal(reminderBusinessPhrase('Metanoia Terapia de Resultados'),'na *Metanoia Terapia de Resultados*');
+});
