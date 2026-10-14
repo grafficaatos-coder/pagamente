@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <title>Agenda Pro — Gestão profissional para negócios de atendimento</title>
   <meta name="description" content="Profissionalize sua rotina com agenda, clientes, serviços, financeiro, equipe e confirmações pelo WhatsApp em uma única plataforma.">
-  <meta name="theme-color" content="#4f3041">
+  <meta name="theme-color" content="#093b69">
   <meta name="robots" content="index,follow">
   <meta property="og:title" content="Agenda Pro — Menos confusão. Mais controle sobre seus atendimentos.">
   <meta property="og:description" content="Agenda, clientes, financeiro, equipe e confirmações pelo WhatsApp em um só lugar.">
@@ -13,6 +13,9 @@
   <meta property="og:locale" content="pt_BR">
   <meta property="og:url" content="https://agenda-pro-iucw.vercel.app/apresentacao/">
   <link rel="canonical" href="https://agenda-pro-iucw.vercel.app/apresentacao/">
+  <link rel="icon" type="image/png" href="/icons/agenda-pro-192-new.png">
+  <meta property="og:image" content="https://agenda-pro-iucw.vercel.app/icons/agenda-pro-512-new.png">
+  <meta name="color-scheme" content="light">
   <style>
     *{box-sizing:border-box}
     html{scroll-behavior:smooth}
@@ -357,6 +360,94 @@
       .trial-hero-note{font-size:9px}
     }
 
+  
+    /* Identidade oficial Agenda Pro — azul-marinho e grafite */
+    :root{
+      --wine:#0b4d85;--wine2:#19669d;--wine3:#082e54;--wine-strong:#082d51;
+      --wine-soft:#668cae;--rose:#e8f3ff;--rose2:#dbeafa;--cream:#f8fbff;
+      --surface:#fff;--surface-soft:#f3f8fc;--line:#dfe8f3;
+      --ink:#122a44;--muted:#647992;--bg:#f8fbff;
+      --shadow:0 28px 75px rgba(16,64,108,.11);--shadow-soft:0 12px 32px rgba(16,64,108,.055)
+    }
+    html{scroll-padding-top:84px}
+    body{
+      background:radial-gradient(circle at 89% 3%,rgba(56,152,218,.09),transparent 26%),#f8fbff;
+      color:var(--ink)
+    }
+    .topbar{background:rgba(255,255,255,.93);border-color:#e2eaf4}
+    .brand-image{display:block;width:153px;height:61px;object-fit:contain;object-position:left center;max-width:none}
+    .brand{gap:0;flex:none}
+    .navlinks{color:#56718a}
+    .navlinks a:hover{color:#0d66ae}
+    .navlinks a:after{background:#187dcd}
+    .btn.primary,.btn.primary:hover{background:linear-gradient(135deg,#093b69,#156aaa);color:#fff;box-shadow:0 12px 26px rgba(11,76,133,.2)}
+    .btn.secondary{color:#1a507b;border-color:#d7e5f1}
+    .btn.light{color:#093b69}
+    .hero{
+      background:radial-gradient(circle at 78% 32%,rgba(42,139,205,.12),transparent 28%),
+        linear-gradient(155deg,#f4faff,#fff 68%)
+    }
+    .hero:before{background:radial-gradient(circle,rgba(45,138,208,.13),transparent 70%)}
+    .hero-badge{color:#215c8c;border-color:#d2e4f3;background:#fff}
+    .eyebrow{color:#2a6d9c}
+    .hero h1 em{background:linear-gradient(135deg,#0a4f87,#2d92d5);-webkit-background-clip:text;background-clip:text;color:transparent}
+    .hero p{color:#5c738b}
+    .mock-body{background:#f3f8fd}
+    .mock-side{background:linear-gradient(180deg,#0c355a,#072a49)}
+    .mock-side .m-logo{padding:0;background:#fff;box-shadow:none;overflow:hidden}
+    .mock-side .m-logo img{width:100%;height:100%;object-fit:contain}
+    .m-nav.on{color:#0d4e84;background:#f1f8ff}
+    .mock-main{background:#f5f9fd}
+    .mock-top{background:#fff}
+    .mock-panel,.mock-kpi{border-color:#e1ebf6}
+    .mock-line{background:#e6eef6}
+    .trial-hero-note{color:#166d44;border-color:#cce9da}
+    .section.alt{background:linear-gradient(180deg,#fff 0%,#f7fbff 100%)}
+    .section-kicker{background:#e7f2fe;color:#1766a5}
+    .feature-icon{background:linear-gradient(145deg,#e4f2ff,#ddecfa);color:#1267aa}
+    .tour-tab.active{background:#edf7ff;border-color:#74add9;color:#184e7c}
+    .tour-screen{background:#f1f7fd}
+    .plan{border-color:#dfe9f3}
+    .plan.featured{border-color:#237bb9;box-shadow:0 24px 60px rgba(13,86,146,.14)}
+    .plan.featured:before{background:linear-gradient(90deg,#0b497e,#2598d9)}
+    .popular-badge{background:#0b518c}
+    .cta-card{background:radial-gradient(circle at 90% 0%,rgba(255,255,255,.09),transparent 28%),linear-gradient(135deg,#072746,#0c4679 64%,#11629f);box-shadow:0 30px 80px rgba(9,51,87,.16)}
+    .product-shell:before{background:rgba(40,120,190,.1)}
+    .pain,.feature,.result{border-color:#e1eaf4}
+    .plan li{color:#4c657e}
+    .mobile-menu-button{display:none;background:#fff;border:1px solid #cbdff0;border-radius:10px;color:#123f68;height:40px;width:43px;align-items:center;justify-content:center;font-size:20px;line-height:1}
+    a:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid #71b7eb;outline-offset:3px}
+    .presentation-note{font-size:10px;color:#8ca0b3;text-align:right;margin-top:13px}
+    @media (max-width:980px){
+      .hero-grid{grid-template-columns:minmax(0,1fr);gap:48px}
+      .pricing{grid-template-columns:repeat(2,minmax(0,1fr));gap:17px}
+    }
+    @media (max-width:720px){
+      .container{width:calc(100% - 28px)}
+      .nav{height:70px}
+      .brand-image{width:115px;height:54px}
+      .brand{max-width:123px}
+      .nav-actions{gap:8px}
+      .nav-actions .primary{font-size:11px;min-height:39px;padding:8px 10px}
+      .mobile-menu-button{display:flex;flex:none}
+      .navlinks{
+        display:none;position:absolute;left:0;right:0;top:70px;
+        background:#fff;border-bottom:1px solid #e1edf6;
+        padding:10px 16px 17px;box-shadow:0 17px 30px rgba(10,52,93,.11);
+        flex-direction:column;align-items:stretch;gap:0;z-index:70
+      }
+      .navlinks.is-open{display:flex}
+      .navlinks a{padding:12px 10px;border-bottom:1px solid #edf3f8;font-size:14px}
+      .navlinks a:after{display:none}
+      .hero{padding:48px 0 56px}
+      .hero h1{font-size:clamp(34px,9vw,44px)}
+      .hero-actions{gap:10px}
+      .pricing{grid-template-columns:minmax(0,1fr)}
+      .plan.featured{transform:none}
+      .presentation-note{text-align:left}
+      .footer{align-items:center;text-align:center}
+    }
+
   </style>
   <script type="application/ld+json">
   {
@@ -373,8 +464,8 @@
 <body>
   <header class="topbar">
     <div class="container nav">
-      <a class="brand" href="#inicio"><span class="brand-logo">AP</span><span>Agenda Pro</span></a>
-      <nav class="navlinks">
+      <a class="brand" href="#inicio" aria-label="Agenda Pro — início"><img class="brand-image" src="/brand/agenda-pro-original.svg" alt="Agenda Pro" width="153" height="64"></a>
+      <nav class="navlinks" id="presentation-nav" aria-label="Navegação do site">
         <a href="#recursos">Recursos</a>
         <a href="#demonstracao">Demonstração</a>
         <a href="#whatsapp">WhatsApp</a>
@@ -383,7 +474,8 @@
       </nav>
       <div class="nav-actions">
         <a class="btn secondary" href="https://agenda-pro-iucw.vercel.app/?utm_source=site&utm_medium=landing&utm_campaign=agenda_pro">Entrar</a>
-        <a class="btn primary nav-cta" href="https://agenda-pro-iucw.vercel.app/?cadastro=1&utm_source=site&utm_medium=landing&utm_campaign=agenda_pro"><span>Começar agora</span><i>→</i></a>
+        <a class="btn primary nav-cta" href="/?cadastro=1&utm_source=site&utm_medium=landing&utm_campaign=agenda_pro"><span>Testar grátis</span><i>→</i></a>
+        <button type="button" class="mobile-menu-button" id="mobile-menu-button" aria-controls="presentation-nav" aria-expanded="false" aria-label="Abrir menu">☰</button>
       </div>
     </div>
   </header>
@@ -411,7 +503,7 @@
             <div class="mock-top"><span class="mock-dot"></span><span class="mock-dot"></span><span class="mock-dot"></span><span class="mock-brand">Agenda Pro</span></div>
             <div class="mock-body">
               <aside class="mock-side">
-    <div class="m-logo">AP</div>
+    <div class="m-logo"><img src="/icons/agenda-pro-192-new.png" alt="" width="34" height="34"></div>
     <div class="m-nav on"><span>⌂</span><b>Painel</b></div>
     <div class="m-nav"><span>◫</span><b>Agenda</b></div>
     <div class="m-nav"><span>◎</span><b>Clientes</b></div>
@@ -583,7 +675,7 @@
 
   <footer>
     <div class="container footer">
-      <div class="brand"><span class="brand-logo">AP</span><span>Agenda Pro</span></div>
+      <a class="brand" href="#inicio" aria-label="Voltar ao início"><img class="brand-image" src="/brand/agenda-pro-original.svg" alt="Agenda Pro" width="153" height="64"></a>
       <span>Agenda, clientes, serviços, financeiro e equipe para profissionais de atendimento.</span>
     </div>
   </footer>
@@ -658,6 +750,22 @@
       }
     }
     loadPlans();
+
+    (function(){
+      const button=document.getElementById('mobile-menu-button');
+      const menu=document.getElementById('presentation-nav');
+      if(!button||!menu)return;
+      function setOpen(value){
+        menu.classList.toggle('is-open',value);
+        button.setAttribute('aria-expanded',String(value));
+        button.setAttribute('aria-label',value?'Fechar menu':'Abrir menu');
+        button.textContent=value?'×':'☰';
+      }
+      button.addEventListener('click',()=>setOpen(!menu.classList.contains('is-open')));
+      menu.querySelectorAll('a').forEach(link=>link.addEventListener('click',()=>setOpen(false)));
+      window.addEventListener('resize',()=>{if(innerWidth>720)setOpen(false)});
+      document.addEventListener('keydown',event=>{if(event.key==='Escape')setOpen(false)});
+    })();
   </script>
 </body>
 </html>
