@@ -108,3 +108,28 @@ test('lembrete de Juliana Garcia usa com a e preserva outras empresas',async()=>
   assert.equal(reminderBusinessPhrase('Julli'),'na *Julli*');
   assert.equal(reminderBusinessPhrase('Metanoia Terapia de Resultados'),'na *Metanoia Terapia de Resultados*');
 });
+
+test('lembrete automático usa texto personalizado, mantém dados e link condicional',async()=>{
+  const {messageText}=await import('../server.mjs');
+  const business={name:'By Juliana Garcia',segment:'salon'};
+  const customer={name:'Jesiel Santos'};
+  const service={name:'Manicure'};
+  const appointment={starts_at:'2026-10-15T13:10:00.000Z',status:'pending',confirmation_code:'abc123',professional_name:''};
+  const standard=messageText('reminder',business,customer,service,appointment);
+  assert.ok(standard.includes('Lembrando que seu horário com a *Juliana Garcia* é amanhã.'));
+  assert.ok(standard.includes('Data: *15/10/2026*'));
+  assert.ok(standard.includes('Horário: *10:10*'));
+  assert.ok(standard.includes('https://agenda-pro-iucw.vercel.app/?c=abc123'));
+  const custom='Olá, {{cliente}}!\nSeu horário com a {{empresa}} é amanhã: {{data}} às {{horario}}. {{servico}}.\nProfissional: {{profissional}}';
+  const edited=messageText('reminder',business,customer,service,appointment,null,null,custom);
+  assert.ok(edited.includes('Olá, Jesiel!'));
+  assert.ok(edited.includes('Seu horário com a Juliana Garcia é amanhã: 15/10/2026 às 10:10. Manicure.'));
+  assert.ok(!edited.includes('Profissional:'));
+  assert.ok(edited.includes('*Confirme seu horário:*'));
+  assert.ok(edited.includes('?c=abc123'));
+  assert.equal(edited.split('?c=abc123').length,2);
+  const confirmed=messageText('reminder',business,customer,service,{...appointment,confirmed_by_customer_at:'2026-10-14T12:00:00Z'},null,null,custom);
+  assert.ok(!confirmed.includes('Confirme seu horário'));
+  const other=messageText('reminder',{name:'Julli',segment:'salon'},customer,service,appointment);
+  assert.ok(other.includes('horário na *Julli*'));
+});
