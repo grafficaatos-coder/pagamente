@@ -2242,6 +2242,45 @@
     .login-presentation-link:hover{background:#eaf4fe;border-color:#9dc9e9}
     .login-presentation-link:focus-visible{outline:3px solid #70b4eb;outline-offset:2px}
 
+
+    /* Canal interno de suporte ao assinante */
+    .support-page{display:grid;gap:15px}
+    .support-page h2{font-size:24px;margin:0 0 4px;color:#102f50}
+    .support-page p{color:#688096;margin:0;font-size:13px}
+    .support-info{border:1px solid #dbeafa;background:#f1f8ff;border-radius:12px;padding:12px 14px;font-size:12px;color:#426885}
+    .support-layout{display:grid;grid-template-columns:minmax(225px,.75fr) minmax(0,1.5fr);align-items:start;gap:13px}
+    .support-layout.single{grid-template-columns:minmax(0,1fr)}
+    .support-panel{background:#fff;border:1px solid #e0e9f3;border-radius:14px;box-shadow:0 6px 25px rgba(16,55,95,.04);min-width:0;overflow:hidden}
+    .support-panel-header{padding:15px;border-bottom:1px solid #e5eef6;display:flex;align-items:center;justify-content:space-between;gap:9px}
+    .support-panel-header h3{margin:0;font-size:15px;color:#133759}
+    .support-panel-header small{display:block;color:#7990a7;font-size:11px}
+    .support-inbox-list{max-height:600px;overflow-y:auto;padding:6px}
+    .support-thread{width:100%;border:1px solid transparent;background:transparent;border-radius:10px;padding:12px;display:flex;gap:10px;align-items:center;text-align:left}
+    .support-thread:hover{background:#f5faff}
+    .support-thread.active{background:#eaf5ff;border-color:#c2def4}
+    .support-avatar{display:grid;place-items:center;width:35px;height:35px;border-radius:10px;background:#e0effb;color:#165d96;font-size:12px;font-weight:800;flex:none}
+    .support-thread b{display:block;color:#1d4567;font-size:12px}
+    .support-thread small{font-size:10px;color:#7e94aa}
+    .support-history{display:flex;flex-direction:column;gap:10px;background:#f4f9fe;padding:18px;min-height:265px;max-height:520px;overflow-y:auto;overscroll-behavior:contain}
+    .support-bubble{max-width:min(86%,550px);align-self:flex-start;padding:11px 13px;background:#fff;border:1px solid #dce9f4;border-radius:13px 13px 13px 3px;white-space:pre-wrap;overflow-wrap:anywhere;font-size:13px;color:#21405d}
+    .support-bubble.own{align-self:flex-end;background:#dff0ff;border-color:#bfe0f9;border-radius:13px 13px 3px 13px}
+    .support-bubble strong{display:block;font-size:10px;color:#176da4;margin-bottom:5px}
+    .support-bubble small{display:block;text-align:right;color:#7b92a8;font-size:10px;margin-top:6px}
+    .support-empty{text-align:center;color:#7690a7;padding:36px 15px;font-size:13px;line-height:1.6}
+    .support-status{font-size:10px;font-weight:800;color:#147844;background:#e5f5eb;padding:6px 9px;border-radius:20px;white-space:nowrap}
+    .support-status.closed{color:#63778a;background:#eef2f5}
+    .support-composer{padding:14px;border-top:1px solid #e2edf6}
+    .support-composer label{display:block;font-size:12px;font-weight:800;margin-bottom:7px;color:#3d6080}
+    .support-composer textarea{width:100%;min-height:90px;max-height:200px;resize:vertical;border:1px solid #cddfed;border-radius:10px;padding:12px;font:inherit;font-size:13px;color:#183c5b}
+    .support-composer textarea:focus{outline:2px solid #a9d8fa}
+    .support-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:8px;flex-wrap:wrap}
+    .support-actions small{color:#7990a3;font-size:10px}
+    .support-actions .btn{min-height:40px;font-size:12px}
+    .support-status-actions{display:flex;justify-content:end;padding:11px 14px;border-top:1px solid #ebf1f6}
+    .support-status-actions button{border:1px solid #d3e4f1;background:#fff;border-radius:9px;padding:9px 12px;font-size:11px;font-weight:800;color:#28608d}
+    @media(max-width:900px){.support-layout{grid-template-columns:minmax(0,1fr)}.support-inbox-list{max-height:225px}.support-history{max-height:55vh}}
+    @media(max-width:720px){.support-page h2{font-size:21px}.support-history{min-height:250px;padding:11px}.support-bubble{max-width:92%;font-size:12px}.support-panel-header{padding:12px}.support-composer{padding:11px}}
+
 </style>
 </head>
 <body>
@@ -2465,7 +2504,7 @@
     function P(){return PROFILES[segment]}
     function resetData(){A=P().appts.map(x=>[...x])}
     resetData();
-    function titles(){return {overview:['Visão geral','Administração da plataforma'],clients:['Assinantes','Empresas cadastradas na plataforma'],plans:['Planos','Planos e valores mensais'],billing:['Cobranças','Mensalidades e situação de pagamento'],settings:['Configurações','Preferências da plataforma']}}
+    function titles(){return {overview:['Visão geral','Administração da plataforma'],clients:['Assinantes','Empresas cadastradas na plataforma'],plans:['Planos','Planos e valores mensais'],billing:['Cobranças','Mensalidades e situação de pagamento'],settings:['Configurações','Preferências da plataforma'],support:['Suporte','Conversas com os assinantes']}}
     function companyRole(){return companyCtx?.membership?.role||'viewer'}
     function canOperateCompany(){return ['owner','admin','professional'].includes(companyRole())}
     function canAdminCompany(){return ['owner','admin'].includes(companyRole())}
@@ -2478,6 +2517,7 @@
     services:[p.serviceLabel,p.catalog],
     cash:['Financeiro','Resumo do negócio'],
     wa:['WhatsApp','Lembretes e confirmações'],
+    support:['Suporte','Converse com a equipe do Agenda Pro'],
     team:['Equipe','Usuários e permissões'],
     profile:['Meu perfil','Dados pessoais e acesso'],
     subscription:['Planos e assinatura','Escolha e acompanhe sua assinatura'],
@@ -2576,13 +2616,13 @@ async function installAgendaApp(){
     if(hasFeature('agenda'))n.push(['agenda','calendar','Agenda'],['services','sparkle',p.serviceLabel]);
     if(hasFeature('clients'))n.push(['clients','users',p.people]);
     if(hasFeature('finance'))n.push(['cash','wallet','Financeiro']);
-    n.push(['wa','message','WhatsApp']);
+    n.push(['wa','message','WhatsApp'],['support','message','Suporte']);
     if(canAdminCompany())n.push(['team','userplus','Equipe']);
     n.push(['subscription','wallet','Planos e assinatura']);
     n.push(['profile','users','Meu perfil']);
     return `<aside class="side"><div class="brand"><img class="brand-logo-image" src="/brand/agenda-pro-original.svg" alt="Agenda Pro" loading="eager"><small class="brand-caption">${appModalEscape(displayBusinessName(companyCtx?.business?.name||p.brand))} · ${appModalEscape(companyCtx?.plan?.name||'Plano')}</small></div><nav class="nav">${n.map(x=>`<button class="${page===x[0]?'on':''}" onclick="go('${x[0]}')">${I[x[1]]}<span class="label">${x[2]}</span></button>`).join('')}${pwaInstallEntry()}<button class="mobile-side-logout" onclick="ownerLogout()"><svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M13 4h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/></svg><span class="label">Sair</span></button></nav><div class="side-foot"><small>Acesso da empresa</small><b>${subscriptionLabel()}</b></div></aside>`;
   }
-  const n=[['overview','home','Visão geral'],['clients','users','Assinantes'],['plans','sparkle','Planos'],['billing','wallet','Cobranças'],['settings','more','Configurações']];
+  const n=[['overview','home','Visão geral'],['clients','users','Assinantes'],['plans','sparkle','Planos'],['billing','wallet','Cobranças'],['support','message','Suporte'],['settings','more','Configurações']];
   return `<aside class="side"><div class="brand"><img class="brand-logo-image" src="/brand/agenda-pro-original.svg" alt="Agenda Pro" loading="eager"><small class="brand-caption">Administração da plataforma</small></div><nav class="nav">${n.map(x=>`<button class="${adminTab===x[0]?'on':''}" onclick="setAdminTab('${x[0]}')">${I[x[1]]}<span class="label">${x[2]}</span></button>`).join('')}${pwaInstallEntry()}<button class="mobile-side-logout" onclick="ownerLogout()"><svg viewBox="0 0 24 24"><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/><path d="M13 4h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/></svg><span class="label">Sair</span></button></nav><div class="side-foot"><small>Acesso</small><b>Administrador da plataforma</b></div></aside>`;
 }
     function bottom(){
@@ -2591,12 +2631,12 @@ async function installAgendaApp(){
     if(hasFeature('agenda'))n.push(['agenda','calendar','Agenda'],['services','sparkle',p.serviceLabel]);
     if(hasFeature('clients'))n.push(['clients','users',p.people]);
     if(hasFeature('finance'))n.push(['cash','wallet','Financeiro']);
-    n.push(['wa','message','WhatsApp']);
+    n.push(['wa','message','WhatsApp'],['support','message','Suporte']);
     if(canAdminCompany())n.push(['team','userplus','Equipe']);
     n.push(['profile','users','Perfil']);
     return `<nav class="bottom company-bottom">${n.map(x=>`<button class="${page===x[0]?'on':''}" onclick="go('${x[0]}')">${I[x[1]]}${x[2]}</button>`).join('')}</nav>${hasFeature('agenda')?`<button class="fab" onclick="book()" aria-label="Novo horário">${I.plus}</button>`:''}`;
   }
-  const n=[['overview','home','Visão geral'],['clients','users','Assinantes'],['plans','sparkle','Planos'],['billing','wallet','Cobranças'],['settings','more','Mais']];
+  const n=[['overview','home','Visão geral'],['clients','users','Assinantes'],['plans','sparkle','Planos'],['billing','wallet','Cobranças'],['support','message','Suporte'],['settings','more','Mais']];
   return `<nav class="bottom">${n.map(x=>`<button class="${adminTab===x[0]?'on':''}" onclick="setAdminTab('${x[0]}')">${I[x[1]]}${x[2]}</button>`).join('')}</nav>`;
 }
     function shell(content){
@@ -4260,7 +4300,7 @@ async function cancelAgendaSubscription(toPix=false){
 }
     function setup(){const p=P();return shell(`<div class="section-title"><span class="eyebrow">Personalização</span><h2>Profissão / área</h2><p>O sistema adapta automaticamente clientes ou pacientes, serviços ou sessões e o fluxo de agendamento.</p></div><div class="setup-grid">${Object.values(PROFILES).map(x=>`<button class="setup-card ${x.key===segment?'on':''}" onclick="setSegment('${x.key}')"><span class="big-emoji">${x.emoji}</span><b>${x.segment}</b><small>${x.key==='salon'?'Clientes, serviços, profissionais, agenda e caixa.':x.key==='esthetic'?'Clientes, procedimentos, sessões, profissionais e pacotes.':'Pacientes, consultas, médicos, convênio e teleconsulta.'}</small></button>`).join('')}</div><div class="profile-row"><div class="profile-box"><span>Empresa demonstrada</span><b>${p.business}</b></div><div class="profile-box"><span>Terminologia ativa</span><b>${p.people} · ${p.serviceLabel} · ${p.professionals}</b></div></div><div class="context-note"><b>Multiempresa:</b> na versão comercial, cada assinante terá seu próprio cadastro, logo, equipe, horários, serviços e dados isolados. Esta tela demonstra como um único produto pode atender segmentos diferentes.</div>`)}
     function more(){const p=P();return shell(`<div class="section-title"><span class="eyebrow">Configurações</span><h2>Mais opções</h2><p>Personalize o sistema para ${p.business}.</p></div><div class="more-list"><button class="more-btn" onclick="go('admin')"><div class="quick-ico">${I.wallet}</div><b>Administração da plataforma</b><small>Planos, mensalidades, assinantes e bloqueios</small></button><button class="more-btn" onclick="go('setup')"><div class="quick-ico"><span style="font-size:18px">${p.emoji}</span></div><b>Tipo de negócio</b><small>${p.segment} · alterar modo</small></button><button class="more-btn" onclick="go('services')"><div class="quick-ico">${I.sparkle}</div><b>${p.serviceLabel}</b><small>Duração, valores e catálogo</small></button><button class="more-btn" onclick="go('wa')"><div class="quick-ico">${I.message}</div><b>WhatsApp</b><small>Confirmações e lembretes</small></button><button class="more-btn" onclick="book()"><div class="quick-ico">${I.calendar}</div><b>Novo horário</b><small>Cadastre ${p.appointment.toLowerCase()}</small></button><button class="more-btn" onclick="toast('Relatórios em breve')"><div class="quick-ico">${I.chart}</div><b>Relatórios</b><small>Indicadores de ${p.business}</small></button></div>`)}
-    function admin(){const views={overview:adminOverview,clients:adminClients,plans:adminPlans,billing:adminBilling,settings:adminSettings};return shell((views[adminTab]||adminOverview)())}
+    function admin(){const views={overview:adminOverview,clients:adminClients,plans:adminPlans,billing:adminBilling,support:supportPage,settings:adminSettings};return shell((views[adminTab]||adminOverview)())}
     function parseBRDate(v){if(!v)return null;const a=v.split('/').map(Number),d=a[0],m=a[1],y=a[2];if(!d||!m||!y)return null;return new Date(y,m-1,d)}
     function formatBRDate(d){return new Intl.DateTimeFormat('pt-BR').format(d)}
     function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x}
@@ -4998,7 +5038,7 @@ async function cancelAgendaSubscription(toPix=false){
 }
     function moneyBR(v){return Number(v||0).toLocaleString('pt-BR',{style:'currency',currency:'BRL'})}
     function setAdminTab(v){
-  closeMobileMenu();adminTab=v;render();
+  closeMobileMenu();adminTab=v;render();if(v==='support')loadSupportData(false);else stopSupportWatch();
 }
     function togglePlanUnlimitedField(){
   const unlimited=!!document.getElementById('planUnlimited')?.checked;
@@ -5619,7 +5659,7 @@ async function cancelAgendaSubscription(toPix=false){
 
     function companyBlockedView(){
   const name=displayBusinessName(companyCtx?.business?.name||'Sua empresa');
-  return `<div class="blocked-screen"><div class="blocked-card"><div class="logo">AP</div><span class="eyebrow">Acesso suspenso</span><h2>${name}</h2><p>O acesso desta empresa está bloqueado ou a assinatura não está ativa. Entre em contato com o administrador da plataforma para regularizar.</p><div class="blocked-plan"><span>Plano</span><b>${companyCtx?.plan?.name||'—'}</b><span>Status</span><b>${subscriptionLabel()}</b></div><button class="btn primary" onclick="ownerLogout()">Sair</button></div></div>`;
+  return `<div class="blocked-screen"><div class="blocked-card"><div class="logo">AP</div><span class="eyebrow">Acesso suspenso</span><h2>${name}</h2><p>O acesso desta empresa está bloqueado ou a assinatura não está ativa. Entre em contato com o administrador da plataforma para regularizar.</p><div class="blocked-plan"><span>Plano</span><b>${companyCtx?.plan?.name||'—'}</b><span>Status</span><b>${subscriptionLabel()}</b></div><button class="btn primary" onclick="go('support')">Falar com suporte</button> <button class="btn secondary" onclick="ownerLogout()">Sair</button></div></div>`;
 }
     async function initSupabase(){
       try{
@@ -5886,11 +5926,12 @@ async function cancelAgendaSubscription(toPix=false){
     function go(p){
   closeMobileMenu();
   if(!appMode){render();return}
-  if(appMode==='owner'){page='admin';adminTab=['overview','clients','plans','billing','settings'].includes(p)?p:'overview';render();scrollTo(0,0);return}
-  const allowed={home:true,agenda:hasFeature('agenda'),services:hasFeature('agenda'),clients:hasFeature('clients'),cash:hasFeature('finance'),wa:true,team:canAdminCompany(),profile:true,subscription:true};
+  if(appMode==='owner'){page='admin';adminTab=['overview','clients','plans','billing','support','settings'].includes(p)?p:'overview';render();scrollTo(0,0);if(adminTab==='support')loadSupportData(false);else stopSupportWatch();return}
+  const allowed={home:true,agenda:hasFeature('agenda'),services:hasFeature('agenda'),clients:hasFeature('clients'),cash:hasFeature('finance'),wa:true,support:true,team:canAdminCompany(),profile:true,subscription:true};
   if(!allowed[p])return toast(p==='team'?'Seu perfil não permite gerenciar usuários':'Este recurso não está incluído no seu plano');
   page=p;render();scrollTo(0,0);
   if(p==='team')setTimeout(()=>loadTeamMembers(true),0);
+   if(p==='support')loadSupportData(false);else stopSupportWatch();
 }
     function book(){
   if(appMode!=='company')return toast('Agendamentos ficam no acesso das empresas');
@@ -5938,12 +5979,12 @@ async function cancelAgendaSubscription(toPix=false){
     return;
   }
   document.title=displayBusinessName(companyCtx?.business?.name||'Agenda Pro')+' · Agenda Pro';
-  if(companyAccessBlocked()){
+  if(companyAccessBlocked()&&page!=='support'){
     R.innerHTML=companyBlockedView();
     requestAnimationFrame(resetMobileHorizontalPosition);
     return;
   }
-  R.innerHTML=page==='book'?booking():({home,agenda,clients,services,cash,wa,team,profile:myProfile,subscription:companySubscriptionPage}[page]||home)();
+  R.innerHTML=page==='book'?booking():({home,agenda,clients,services,cash,wa,team,profile:myProfile,subscription:companySubscriptionPage,support:()=>shell(supportPage())}[page]||home)();
   requestAnimationFrame(resetMobileHorizontalPosition);
 }
     window.addEventListener('pageshow',resetMobileHorizontalPosition);
