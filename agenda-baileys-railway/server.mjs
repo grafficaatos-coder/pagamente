@@ -164,7 +164,7 @@ export function personalizeAppointmentConfirmation(template,variables={}){
     .map(line=>line.replace(/\{\{(cliente|empresa|data|horario|servico|profissional)\}\}/gi,(_,k)=>values[k.toLowerCase()]))
     .join("\n").trim();
 }
-function messageText(kind,business,customer,service,appointment,thankYouTemplate=null,confirmationTemplate=null){
+export function messageText(kind,business,customer,service,appointment,thankYouTemplate=null,confirmationTemplate=null,reminderTemplate=null){
   const first=String(customer.name||"").trim().split(/\s+/)[0]||"Cliente";
   const when=formatAppointment(appointment.starts_at);
   const professional=String(appointment.professional_name||"").trim();
@@ -179,6 +179,11 @@ function messageText(kind,business,customer,service,appointment,thankYouTemplate
     : "";
   if(kind==="reminder"){
     const pendingConfirmation=!appointment.confirmed_by_customer_at&&appointment.status!=="cancelled";
+    const custom=personalizeAppointmentConfirmation(reminderTemplate,{
+      cliente:first,empresa:publicBusinessName(business.name),
+      data:when.date,horario:when.time,servico:service.name,profissional:professional
+    });
+    if(custom)return custom+(pendingConfirmation?confirmationBlock:"");
     return "Olá, "+first+"! 😊\n\nLembrando que seu horário "+reminderBusinessPhrase(business.name)+" é amanhã."+
       "\n\n📅 Data: *"+when.date+"*\n🕐 Horário: *"+when.time+"*\n✨ "+terms.one+": *"+service.name+"*"+proLine+
       (pendingConfirmation?confirmationBlock:"");
@@ -229,6 +234,7 @@ async function claimAndValidate(businessId,leaseId){
     if(!job)return null;
     let thankYouTemplate=null;
     let confirmationTemplate=null;
+    let reminderTemplate=null;
 
     const appointment=await fetchOne(
       "/rest/v1/agenda_appointments?id=eq."+encodeURIComponent(job.appointment_id)+
@@ -253,6 +259,14 @@ async function claimAndValidate(businessId,leaseId){
         await cancelClaimed(businessId,job,"Agradecimento desativado pela empresa.");continue;
       }
       thankYouTemplate=prefs.thank_you_message;
+    }
+    if(job.message_type==="reminder"){
+      // A edição altera somente o conteúdo, não a agenda nem a fila automática.
+      const prefs=await fetchOne(
+        "/rest/v1/agenda_business_preferences?business_id=eq."+encodeURIComponent(businessId)+
+        "&select=reminder_message&limit=1"
+      );
+      reminderTemplate=prefs?.reminder_message||null;
     }
     if(job.message_type==="confirmation"){
       // Só o corpo da confirmação usa o modelo editado pela empresa.
@@ -286,7 +300,7 @@ async function claimAndValidate(businessId,leaseId){
       reservation_token:job.reservation_token,
       delivery_semantics:job.delivery_semantics||"AT_MOST_ONCE",
       phone:currentPhone,
-      text:messageText(job.message_type,business,customer,service,appointment,thankYouTemplate,confirmationTemplate)
+      text:messageText(job.message_type,business,customer,service,appointment,thankYouTemplate,confirmationTemplate,reminderTemplate)
     };
   }
   return null;
