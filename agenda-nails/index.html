@@ -9,8 +9,9 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Agenda Pro">
   <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/agenda-pro-192.png" type="image/png">
   <link rel="icon" href="/icons/app-icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="/icons/app-icon.svg">
+  <link rel="apple-touch-icon" sizes="192x192" href="/icons/agenda-pro-192.png">
   <title>Agenda Pro</title>
   <style>
     :root{
@@ -2084,6 +2085,25 @@
 
 
     .side .brand .brand-caption{display:block}
+    /* Botão disponível no menu lateral, inclusive no iPhone e Android */
+    .side .nav .pwa-install-entry{display:flex!important;align-items:center;gap:11px;background:#174d7b!important;border:1px solid #3f7099!important;color:#fff!important;margin-top:10px}
+    .side .nav .pwa-install-entry:hover{background:#23649c!important}
+    .side .nav .pwa-install-entry .label{display:inline!important}
+    .login-install-action{display:flex;gap:10px;align-items:center;justify-content:center;width:100%;margin:14px 0 2px;padding:13px 11px;border:1px solid #bed6eb;border-radius:11px;background:#eaf4ff;color:#0a467b;font-weight:800;font-size:13px}
+    .login-install-action img{width:26px;height:26px;object-fit:contain;border-radius:6px}
+    .dashboard-extra-details{border-top:1px solid #e3ebf4;margin-top:6px;padding-top:8px}
+    .dashboard-extra-details>summary{cursor:pointer;color:#1b609c;font-size:12px;font-weight:800;padding:10px 2px}
+    .dashboard-extra-details .dashboard-bottom-grid{margin-top:12px}
+    .company-app.dashboard-home .top-actions>.primary{display:none}
+    /* Sem espaços grandes na tela inicial: agenda e calendário lado a lado */
+    @media(min-width:1090px){
+      .company-app.dashboard-home .dashboard-main-grid{grid-template-columns:minmax(0,1.35fr) minmax(280px,.9fr)}
+      .company-app.dashboard-home .dashboard-side-stack{grid-column:1/-1;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start}
+    }
+    @media(max-width:720px){
+      .side .nav .pwa-install-entry{justify-content:flex-start}
+      .dashboard-extra-details{margin-top:0}
+    }
     .login-brand .logo{
       width:178px;height:134px;border-radius:12px;
       background:#fff url('/brand/agenda-pro-original.svg') center / contain no-repeat;
@@ -2726,7 +2746,7 @@ function home(){
         ${rows||'<div class="dashboard-empty">Nenhum horário para hoje.</div>'}
         <button class="dashboard-bottom-link" onclick="go('agenda')">Ver todos os agendamentos do dia →</button>
       </section>${cal}${side}</div>
-      <div class="dashboard-bottom-grid">${financePanel}${servicesPanel}</div></div>`);
+      <details class="dashboard-extra-details"><summary>Ver gráficos e serviços mais agendados</summary><div class="dashboard-bottom-grid">${financePanel}${servicesPanel}</div></details></div>`);
 }
     function agendaDateKey(value){
   const d=value instanceof Date?value:new Date(value);
@@ -5849,7 +5869,7 @@ async function cancelAgendaSubscription(toPix=false){
   render();
 }
     function loginView(){
-  return `<div class="login-screen"><section class="login-brand"><div class="logo">AP</div><h1>Agenda profissional para qualquer área.</h1><p>Médicos, psicólogos, terapeutas, manicures, esteticistas e outros profissionais podem criar a própria conta e adaptar o sistema ao seu tipo de atendimento.</p><div class="login-feature"><i>✓</i> Conta separada para cada empresa</div><div class="login-feature"><i>✓</i> Plano e limite de usuários controlados automaticamente</div><div class="login-feature"><i>✓</i> Dados protegidos por empresa</div></section><section class="login-panel"><form class="login-card" onsubmit="return doOwnerLogin(event)"><span class="eyebrow">Já tenho conta</span><h2>Entrar no Agenda Pro</h2><p>Use seu e-mail e senha.</p><div class="login-field"><label>E-mail</label><input id="ownerUser" type="email" autocomplete="username" placeholder="seuemail@empresa.com" autofocus></div><div class="login-field"><label>Senha</label><input id="ownerPassword" type="password" autocomplete="current-password" placeholder="Digite sua senha"></div><div id="loginError" class="login-error">${loginMessage||''}</div><button id="loginButton" class="btn primary" style="width:100%;min-height:48px" type="submit">Entrar</button><button class="signup-main-btn" type="button" onclick="openSignup()">Criar minha conta</button><button class="forgot-link" type="button" onclick="requestPasswordReset()">Esqueci minha senha</button><div class="login-help"><b>É assinante novo?</b> Clique em “Criar minha conta”, escolha o plano e faça seu cadastro sem precisar falar com o administrador.</div></form></section></div>`;
+  return `<div class="login-screen"><section class="login-brand"><div class="logo">AP</div><h1>Agenda profissional para qualquer área.</h1><p>Médicos, psicólogos, terapeutas, manicures, esteticistas e outros profissionais podem criar a própria conta e adaptar o sistema ao seu tipo de atendimento.</p><div class="login-feature"><i>✓</i> Conta separada para cada empresa</div><div class="login-feature"><i>✓</i> Plano e limite de usuários controlados automaticamente</div><div class="login-feature"><i>✓</i> Dados protegidos por empresa</div></section><section class="login-panel"><form class="login-card" onsubmit="return doOwnerLogin(event)"><span class="eyebrow">Já tenho conta</span><h2>Entrar no Agenda Pro</h2><p>Use seu e-mail e senha.</p><div class="login-field"><label>E-mail</label><input id="ownerUser" type="email" autocomplete="username" placeholder="seuemail@empresa.com" autofocus></div><div class="login-field"><label>Senha</label><input id="ownerPassword" type="password" autocomplete="current-password" placeholder="Digite sua senha"></div><div id="loginError" class="login-error">${loginMessage||''}</div><button id="loginButton" class="btn primary" style="width:100%;min-height:48px" type="submit">Entrar</button><button class="signup-main-btn" type="button" onclick="openSignup()">Criar minha conta</button><button class="forgot-link" type="button" onclick="requestPasswordReset()">Esqueci minha senha</button><div class="login-help"><b>É assinante novo?</b> Clique em “Criar minha conta”, escolha o plano e faça seu cadastro sem precisar falar com o administrador.</div>${isStandaloneApp()?'':'<button class="login-install-action" type="button" onclick="installAgendaApp()"><img src="/icons/agenda-pro-192.png" alt="">📲 Instalar Agenda Pro no celular</button>'}</form></section></div>`;
 }
     function doOwnerLogin(ev){ev?.preventDefault();signInAgendaPro();return false}
     function ownerLogout(){
@@ -5947,7 +5967,7 @@ async function cancelAgendaSubscription(toPix=false){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261013-mobile-dashboard-fix',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261013-pwa-logo-v1',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
