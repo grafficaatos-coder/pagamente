@@ -4479,6 +4479,7 @@ async function cancelAgendaSubscription(toPix=false){
     /* Suporte interno: leitura e envio sujeitos a RLS no Supabase. */
     const supportState={threads:[],messages:[],selected:null,exists:false,loaded:false,loading:false};
     let supportTimer=null,supportSending=false;
+    function resetSupportState(){stopSupportWatch();supportState.threads=[];supportState.messages=[];supportState.selected=null;supportState.exists=false;supportState.loaded=false;supportState.loading=false}
     function supportVisible(){return (appMode==='owner'&&adminTab==='support')||(appMode==='company'&&page==='support')}
     function stopSupportWatch(){if(supportTimer){clearInterval(supportTimer);supportTimer=null}}
     function supportWatch(){
@@ -5839,7 +5840,7 @@ async function cancelAgendaSubscription(toPix=false){
         sb=mod.createClient(SUPABASE_URL,SUPABASE_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
         sb.auth.onAuthStateChange(async(event,session)=>{
           if(event==='PASSWORD_RECOVERY'){passwordRecovery=true;authLoading=false;render();return}
-          if(event==='SIGNED_OUT'){authUser=null;appMode=null;ownerLogged=false;companyCtx=null;passwordRecovery=false;if(appointmentSyncTimer){clearInterval(appointmentSyncTimer);appointmentSyncTimer=null}render()}
+          if(event==='SIGNED_OUT'){resetSupportState();authUser=null;appMode=null;ownerLogged=false;companyCtx=null;passwordRecovery=false;if(appointmentSyncTimer){clearInterval(appointmentSyncTimer);appointmentSyncTimer=null}render()}
         });
         const {data}=await sb.auth.getSession();
         authLoading=false;
@@ -5877,6 +5878,7 @@ async function cancelAgendaSubscription(toPix=false){
   if(btn){btn.disabled=false;btn.textContent='Entrar'}
 }
     async function detectAgendaAccess(user){
+  resetSupportState();
   authUser=user;
   const {data:profile}=await sb.from('profiles').select('is_platform_admin,display_name,phone').eq('id',user.id).maybeSingle();
   if(profile?.is_platform_admin){
@@ -6093,7 +6095,7 @@ async function cancelAgendaSubscription(toPix=false){
   if(whatsappQueueTimer){clearInterval(whatsappQueueTimer);whatsappQueueTimer=null}
   if(baileysPollTimer){clearInterval(baileysPollTimer);baileysPollTimer=null}
   if(sb)sb.auth.signOut();
-  authUser=null;appMode=null;ownerLogged=false;companyCtx=null;companyData={customers:[],services:[],appointments:[],financialEntries:[]};teamState={members:[],count:0,maxUsers:null,loading:false,loaded:false};whatsappQueue=[];page='home';adminTab='overview';loginMessage='';render();
+  resetSupportState();authUser=null;appMode=null;ownerLogged=false;companyCtx=null;companyData={customers:[],services:[],appointments:[],financialEntries:[]};teamState={members:[],count:0,maxUsers:null,loading:false,loaded:false};whatsappQueue=[];page='home';adminTab='overview';loginMessage='';render();
 }
     function go(p){
   closeMobileMenu();
