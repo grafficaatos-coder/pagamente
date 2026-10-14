@@ -391,7 +391,11 @@ export class WhatsSession{
         shouldSyncHistoryMessage:()=>false,
         shouldIgnoreJid:jid=>typeof jid==="string"&&(jid.endsWith("@g.us")||jid.endsWith("@broadcast")),
         generateHighQualityLinkPreview:false,
-        maxMsgRetryCount:1,
+        // Outbound-only connector: failed inbound LID decryptions can cause
+        // retry-receipt storms and ghost notifications on the primary phone.
+        // Do not request WhatsApp to resend inbound ciphertext we never use.
+        // Keep explicit queued confirmation/reminder sends unchanged.
+        maxMsgRetryCount:0,
         connectTimeoutMs:30000,
         defaultQueryTimeoutMs:30000,
         keepAliveIntervalMs:15000
