@@ -87,3 +87,16 @@ test('agradecimento personalizado substitui apenas variáveis da empresa e da cl
   assert.equal(personalizeThankYouMessage('X'.repeat(1601),'Juliana','Julli'),null);
   assert.equal(personalizeThankYouMessage('{{telefone}} {{cliente}}','Ana','Julli'),'{{telefone}} Ana');
 });
+
+test('confirmação editável altera somente o corpo e mantém variáveis automáticas',async()=>{
+  const {personalizeAppointmentConfirmation}=await import('../server.mjs');
+  const details={cliente:'Juliana',empresa:'Julli',data:'15/10/2026',horario:'10:00',servico:'Coloração',profissional:'Jesiel'};
+  assert.equal(personalizeAppointmentConfirmation('Olá {{cliente}}, confirme seu horário na {{empresa}} em {{data}} às {{horario}} para {{servico}} com {{profissional}}.',details),
+    'Olá Juliana, confirme seu horário na Julli em 15/10/2026 às 10:00 para Coloração com Jesiel.');
+  assert.equal(personalizeAppointmentConfirmation('Olá {{CLIENTE}}!\n👤 Profissional: {{profissional}}\nAté logo', {...details,profissional:''}),
+    'Olá Juliana!\nAté logo');
+  assert.equal(personalizeAppointmentConfirmation('{{telefone}} {{cliente}}',details),'{{telefone}} Juliana');
+  assert.equal(personalizeAppointmentConfirmation(null,details),null);
+  assert.equal(personalizeAppointmentConfirmation('   ',details),null);
+  assert.equal(personalizeAppointmentConfirmation('x'.repeat(1601),details),null);
+});
