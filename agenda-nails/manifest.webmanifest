@@ -20,13 +20,13 @@
   ],
   "icons": [
     {
-      "src": "/icons/agenda-pro-192.png",
+      "src": "/icons/agenda-pro-192-new.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/icons/agenda-pro-512.png",
+      "src": "/icons/agenda-pro-512-new.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
