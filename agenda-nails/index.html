@@ -3970,6 +3970,14 @@ async function cancelAgendaSubscription(toPix=false){
   const service=item.service_name||'atendimento';
   const professional=item.professional_name||'';
   const E={smile:'\u{1F60A}',calendar:'\u{1F4C5}',clock:'\u{1F550}',sparkle:'\u2728',person:'\u{1F464}',heart:'\u{1F49B}'};
+  if(item.message_type==='confirmation'){
+    const custom=companyCtx?.preferences?.confirmation_message;
+    const message=formatAppointmentTemplate(custom,{
+      cliente:first||'Cliente',empresa:whatsappBookingName(companyCtx?.business?.name||'Agenda Pro'),
+      data:date,horario:time,servico:service,profissional:professional
+    });
+    if(message)return message;
+  }
   if(item.message_type==='reminder'){
     return `Olá${first?', '+first:''}! ${E.smile}\n\nPassando para lembrar do seu horário com *${business}*.\n\n${E.calendar} Data: *${date}*\n${E.clock} Horário: *${time}*\n${E.sparkle} ${P().service}: *${service}*${professional?`\n${E.person} ${P().professional}: *${professional}*`:''}\n\nSe precisar alterar, fale com a gente por aqui.`;
   }
@@ -4092,6 +4100,73 @@ async function cancelAgendaSubscription(toPix=false){
   if(baileysSession.status==='connected')toast('WhatsApp conectado com sucesso');
   else toast('Ainda aguardando. Conclua o código no WhatsApp.');
 }
+    function defaultAppointmentTemplate(){
+  return [
+    'Olá, {{cliente}}! 😊',
+    '',
+    'Seu horário com *{{empresa}}* foi agendado.',
+    '',
+    '📅 Data: *{{data}}*',
+    '🕐 Horário: *{{horario}}*',
+    '✨ Serviço: *{{servico}}*',
+    '👤 Profissional: *{{profissional}}*',
+    '',
+    'Se precisar alterar o horário, fale com a gente por aqui.'
+  ].join('\n');
+}
+    function formatAppointmentTemplate(template,values={}){
+  if(typeof template!=='string'||!template.trim()||template.length>1600)return null;
+  const allowed=['cliente','empresa','data','horario','servico','profissional'];
+  const vars=Object.fromEntries(allowed.map(k=>[k,String(values[k]??'')]));
+  return template.split('\n')
+    .filter(line=>vars.profissional.trim()||!/\{\{profissional\}\}/i.test(line))
+    .map(line=>line.replace(/\{\{(cliente|empresa|data|horario|servico|profissional)\}\}/gi,
+      (_,name)=>vars[name.toLowerCase()])).join('\n').trim();
+}
+    function updateAppointmentEditorPreview(){
+  const input=document.getElementById('appointmentMessageInput');
+  const preview=document.getElementById('appointmentEditorPreview');
+  if(!input||!preview)return;
+  preview.textContent=formatAppointmentTemplate(input.value,{
+    cliente:'Juliana',empresa:whatsappBookingName(companyCtx?.business?.name||'Agenda Pro'),
+    data:'15/10/2026',horario:'10:00',servico:'Atendimento',profissional:'Jesiel'
+  })||'Digite uma mensagem para visualizar a prévia.';
+}
+    function openAppointmentMessageEditor(){
+  if(!canAdminCompany()||!companyCtx||!sb)return toast('Somente o administrador pode editar a mensagem.');
+  const saved=companyCtx.preferences?.confirmation_message;
+  const original=typeof saved==='string'&&saved.trim()?saved:defaultAppointmentTemplate();
+  const content='<div class="field"><label for="appointmentMessageInput"><b>Corpo da mensagem de agendamento</b></label>'+
+    '<textarea id="appointmentMessageInput" rows="10" maxlength="1600" oninput="updateAppointmentEditorPreview()" style="box-sizing:border-box;width:100%;min-height:200px;resize:vertical;line-height:1.6">'+appModalEscape(original)+'</textarea>'+
+    '<small>Para inserir dados automaticamente: <b>{{cliente}}</b>, <b>{{empresa}}</b>, <b>{{data}}</b>, <b>{{horario}}</b>, <b>{{servico}}</b>, <b>{{profissional}}</b>. Se não houver profissional, a linha correspondente é ocultada. Máximo 1.600 caracteres.</small></div>'+
+    '<div style="margin-top:14px"><b>Prévia da mensagem ao cliente</b><p id="appointmentEditorPreview" style="white-space:pre-wrap;line-height:1.6;border:1px solid #e0e9f2;background:#f3f8fc;padding:12px;border-radius:10px"></p></div>'+
+    '<button type="button" class="btn secondary" style="margin-top:12px" onclick="restoreDefaultAppointmentMessage()">Restaurar mensagem padrão</button>'+
+    '<p style="font-size:12px;margin-top:12px">Salvar muda somente o texto dos novos agendamentos. O envio automático continua funcionando como antes. Lembretes e agradecimentos não serão alterados. A API oficial Meta usa seu próprio modelo aprovado.</p>';
+  openAppModal({
+    title:'Editar mensagem de agendamento',subtitle:'Personalize somente o corpo da mensagem da sua empresa.',
+    content,submitLabel:'Salvar mensagem',size:'wide',
+    onSubmit:async()=>{
+      const value=String(document.getElementById('appointmentMessageInput')?.value||'').trim();
+      if(!value||value.length>1600)throw new Error('Escreva uma mensagem de 1 a 1.600 caracteres.');
+      const {data,error}=await sb.from('agenda_business_preferences')
+        .upsert({business_id:companyCtx.business.id,confirmation_message:value,updated_at:new Date().toISOString()},
+          {onConflict:'business_id'}).select('*').single();
+      if(error){console.error(error);throw new Error('Não foi possível salvar a mensagem. Tente novamente.')}
+      companyCtx.preferences=data;closeAppModal();render();
+      toast('Texto de agendamento salvo. O envio automático continua ativo como antes.');
+    }
+  });
+  updateAppointmentEditorPreview();
+}
+    async function restoreDefaultAppointmentMessage(){
+  if(!canAdminCompany()||!companyCtx||!sb)return;
+  if(!window.confirm('Restaurar o texto padrão de agendamento para esta empresa?'))return;
+  const {data,error}=await sb.from('agenda_business_preferences')
+    .upsert({business_id:companyCtx.business.id,confirmation_message:null,updated_at:new Date().toISOString()},
+      {onConflict:'business_id'}).select('*').single();
+  if(error){console.error(error);return toast('Não foi possível restaurar a mensagem padrão.')}
+  companyCtx.preferences=data;closeAppModal();render();toast('Mensagem padrão de agendamento restaurada.');
+}
     function defaultThankYouMessage(){
   return [
     'Olá, {{cliente}}! 💖✨',
@@ -4200,6 +4275,16 @@ async function cancelAgendaSubscription(toPix=false){
     : `<b>💻 No computador</b><span>O Agenda Pro prepara tudo sozinho e avisa quando houver mensagem. Ao abrir, o WhatsApp Web já vem com o texto pronto.</span>`;
 
   const baileysEnabled=!!(companyCtx?.settings?.baileys_enabled&&companyCtx?.settings?.baileys_service_url);
+  const customAppointmentText=companyCtx?.preferences?.confirmation_message;
+  const appointmentPreviewText=customAppointmentText&&customAppointmentText.trim()?customAppointmentText:defaultAppointmentTemplate();
+  const appointmentCard=`<section class="panel" style="padding:20px;margin-top:18px">
+    <div class="head"><div><span class="eyebrow">Personalização por empresa</span><h3>Mensagem de agendamento</h3></div><span class="status-badge status-active">Envio automático mantido</span></div>
+    <p>Edite apenas o texto enviado aos clientes quando um novo horário é agendado. Cliente, serviço, data e hora podem ser preenchidos automaticamente.</p>
+    ${admin?'<button type="button" class="btn primary" onclick="openAppointmentMessageEditor()">✏️ Editar mensagem de agendamento</button>':''}
+    <details style="margin-top:13px"><summary>Ver mensagem ${customAppointmentText?'personalizada':'padrão'}</summary>
+      <p style="white-space:pre-wrap;line-height:1.65">${appModalEscape(formatAppointmentTemplate(appointmentPreviewText,{cliente:'Cliente',empresa:whatsappBookingName(companyCtx?.business?.name||'Agenda Pro'),data:'15/10/2026',horario:'10:00',servico:'Atendimento',profissional:'Profissional'})||'')}</p></details>
+    <p style="font-size:12px;margin-top:12px">O envio automático pelo servidor WhatsApp e o envio manual usam esta mensagem. A integração oficial Meta segue o template aprovado. A edição não muda lembretes nem agradecimentos.</p>
+  </section>`;
   const thankYouEnabled=companyCtx?.preferences?.send_thank_you_after_service===true;
   const customThanks=companyCtx?.preferences?.thank_you_message;
   const thankYouTemplate=typeof customThanks==='string'&&customThanks.trim()?customThanks:defaultThankYouMessage();
@@ -4295,6 +4380,7 @@ async function cancelAgendaSubscription(toPix=false){
 
   return shell(`<div class="section-title"><span class="eyebrow">WhatsApp</span><h2>Conexão do WhatsApp</h2><p>Conecte o número pelo próprio celular usando o servidor Servidor WhatsApp, sem depender de QR Code.</p></div>
 
+  ${appointmentCard}
   ${thankYouCard}
   ${baileysCard||'<section class="panel"><div class="empty-state">A conexão pelo servidor WhatsApp ainda não está habilitada para esta empresa.</div></section>'}`);
 }
@@ -5590,6 +5676,12 @@ async function cancelAgendaSubscription(toPix=false){
   const first=(customer?.name||'').trim().split(/\s+/)[0]||'';
   const dateBR=String(date||'').split('-').reverse().join('/');
   const link=includeConfirmation?confirmationLink(confirmationKey):'';
+  const custom=companyCtx?.preferences?.confirmation_message;
+  const body=formatAppointmentTemplate(custom,{
+    cliente:first||'Cliente',empresa:whatsappBookingName(companyCtx?.business?.name||'Agenda Pro'),
+    data:dateBR,horario:time,servico:service?.name||'Atendimento',profissional:professional||''
+  });
+  if(body)return body+(link?'\n\n*Confirme seu horário:*\n✅ '+link:'');
   const EMOJI={
     smile:'\u{1F60A}',
     calendar:'\u{1F4C5}',
