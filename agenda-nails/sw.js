@@ -1,5 +1,5 @@
-const CACHE_NAME='agenda-pro-shell-v47-install-logo';
-const SHELL=['/','/manifest.webmanifest','/icons/app-icon.svg','/icons/app-icon-maskable.svg','/brand/agenda-pro-original.svg','/icons/agenda-pro-192.png','/icons/agenda-pro-512.png'];
+const CACHE_NAME='agenda-pro-shell-v48-logo-oficial';
+const SHELL=['/','/manifest.webmanifest','/icons/app-icon.svg','/icons/app-icon-maskable.svg','/brand/agenda-pro-original.svg','/icons/agenda-pro-192-new.png','/icons/agenda-pro-512-new.png'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(
