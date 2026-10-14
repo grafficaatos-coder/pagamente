@@ -4475,6 +4475,178 @@ async function cancelAgendaSubscription(toPix=false){
     [hasFeature('finance')?'money':'chart',hasFeature('finance')?'A receber':'Plano',hasFeature('finance')?moneyBR(receivableRevenue):companyCtx.plan.name,hasFeature('finance')?'agendamentos confirmados':subscriptionLabel(),false,hasFeature('finance')?'receivable':'home']
   ];
 }
+
+    /* Suporte interno: leitura e envio sujeitos a RLS no Supabase. */
+    const supportState={threads:[],messages:[],selected:null,exists:false,loaded:false,loading:false};
+    let supportTimer=null,supportSending=false;
+    function supportVisible(){return (appMode==='owner'&&adminTab==='support')||(appMode==='company'&&page==='support')}
+    function stopSupportWatch(){if(supportTimer){clearInterval(supportTimer);supportTimer=null}}
+    function supportWatch(){
+      stopSupportWatch();
+      supportTimer=setInterval(()=>{
+        if(!supportVisible()||!authUser){stopSupportWatch();return}
+        if(!supportState.loading&&!supportSending)loadSupportData(true);
+      },12000);
+    }
+    function supportBusinessName(id){
+      return appMode==='owner'?(ADMIN.clients.find(c=>c.id===id)?.name||'Empresa assinante'):(companyCtx?.business?.name||'Sua empresa');
+    }
+    function supportDate(value){
+      const d=new Date(value);
+      return Number.isNaN(d.getTime())?'':d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    }
+    function supportStatus(){
+      const thread=supportState.threads.find(t=>t.business_id===supportState.selected);
+      return thread?.status||'open';
+    }
+    function supportThreadList(){
+      if(!supportState.threads.length)return '<div class="support-empty">Ainda não há conversas iniciadas pelas empresas.</div>';
+      return supportState.threads.map(t=>{
+        const name=supportBusinessName(t.business_id);
+        return '<button class="support-thread '+(supportState.selected===t.business_id?'active':'')+'" onclick="supportSelectThread(\''+appModalEscape(t.business_id)+'\')">'+
+          '<span class="support-avatar">'+appModalEscape(dashboardInitials(name))+'</span>'+
+          '<span style="min-width:0"><b style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+appModalEscape(name)+'</b>'+
+          '<small>'+appModalEscape(t.last_message_at?supportDate(t.last_message_at):'Conversa iniciada')+'</small>'+
+          (t.last_sender_kind==='customer'?'<small style="color:#1265a1;font-weight:800">Última mensagem: cliente</small>':'')+
+          '</span></button>';
+      }).join('');
+    }
+    function supportHistoryHTML(){
+      if(!supportState.messages.length)return '<div class="support-empty">Ainda não há mensagens nesta conversa.<br>Escreva abaixo para começar.</div>';
+      return supportState.messages.map(m=>{
+        const mine=m.sender_id===authUser?.id;
+        const who=m.sender_kind==='support'?'Equipe Agenda Pro':'Empresa assinante';
+        return '<div class="support-bubble '+(mine?'own':'')+'"><strong>'+who+'</strong>'+
+          appModalEscape(m.body)+'<small>'+appModalEscape(supportDate(m.created_at))+'</small></div>';
+      }).join('');
+    }
+    function supportChatHTML(){
+      if(!supportState.selected)return '<div class="support-empty">Selecione uma empresa para visualizar e responder à conversa.</div>';
+      const status=supportStatus(),closed=status==='closed',title=appMode==='owner'?supportBusinessName(supportState.selected):'Suporte Agenda Pro';
+      return '<div class="support-panel-header"><div><h3>'+appModalEscape(title)+'</h3><small>Conversa interna e privada</small></div>'+
+        '<span class="support-status '+(closed?'closed':'')+'">'+(closed?'Encerrada':'Em atendimento')+'</span></div>'+
+        '<div class="support-history" id="supportHistory" role="log" aria-live="polite" aria-label="Histórico de mensagens">'+supportHistoryHTML()+'</div>'+
+        '<form class="support-composer" onsubmit="event.preventDefault();supportSend()">'+
+        '<label for="supportMessageInput">Mensagem</label><textarea id="supportMessageInput" maxlength="2000" placeholder="Escreva sua mensagem..." required></textarea>'+
+        '<div class="support-actions"><small>Até 2.000 caracteres. Não compartilhe senhas ou informações bancárias.</small>'+
+        '<button class="btn primary" type="submit" id="supportSendButton">Enviar mensagem</button></div></form>'+
+        (appMode==='owner'?'<div class="support-status-actions"><button type="button" id="supportStatusButton" onclick="supportUpdateStatus(\''+(closed?'open':'closed')+'\')">'+(closed?'Reabrir atendimento':'Encerrar atendimento')+'</button></div>':'');
+    }
+    function supportPage(){
+      const owner=appMode==='owner';
+      return '<div class="support-page"><div><span class="eyebrow">Atendimento interno</span><h2>'+
+        (owner?'Central de suporte':'Fale com o suporte')+'</h2><p>'+
+        (owner?'Responda às dúvidas dos assinantes em um só lugar.':'Converse diretamente com a equipe responsável pelo Agenda Pro.')+'</p></div>'+
+        '<div class="support-info"><b>Conversa privada:</b> cada empresa visualiza apenas suas mensagens. Nesta página, novas respostas são verificadas automaticamente a cada 12 segundos.</div>'+
+        '<div class="support-layout '+(owner?'':'single')+'">'+
+        (owner?'<aside class="support-panel"><div class="support-panel-header"><h3>Conversas das empresas</h3></div><div class="support-inbox-list" id="supportInbox">'+supportThreadList()+'</div></aside>':'')+
+        '<section class="support-panel" id="supportChat">'+(supportState.loaded?supportChatHTML():'<div class="support-empty">Carregando atendimento...</div>')+'</section>'+
+        '</div></div>';
+    }
+    async function loadSupportData(silent=false){
+      if(!sb||!authUser||!supportVisible()||supportState.loading)return;
+      supportState.loading=true;
+      try{
+        if(appMode==='owner'){
+          const {data,error}=await sb.from('agenda_support_threads')
+            .select('business_id,status,last_message_at,last_sender_kind')
+            .order('last_message_at',{ascending:false,nullsFirst:false}).limit(200);
+          if(error)throw error;
+          supportState.threads=data||[];
+          if(!supportState.threads.some(t=>t.business_id===supportState.selected))
+            supportState.selected=supportState.threads[0]?.business_id||null;
+          supportState.exists=!!supportState.selected;
+        }else{
+          const bid=companyCtx?.business?.id;
+          if(!bid)return;
+          supportState.selected=bid;
+          const {data,error}=await sb.from('agenda_support_threads')
+            .select('business_id,status,last_message_at,last_sender_kind').eq('business_id',bid).maybeSingle();
+          if(error)throw error;
+          supportState.threads=data?[data]:[];
+          supportState.exists=!!data;
+        }
+        if(supportState.exists&&supportState.selected){
+          const {data,error}=await sb.from('agenda_support_messages')
+            .select('id,business_id,sender_id,sender_kind,body,created_at')
+            .eq('business_id',supportState.selected).order('created_at',{ascending:false}).limit(200);
+          if(error)throw error;
+          supportState.messages=(data||[]).reverse();
+        }else supportState.messages=[];
+        supportState.loaded=true;
+        if(!supportVisible())return;
+        if(!silent){
+          render();
+          const history=document.getElementById('supportHistory');if(history)history.scrollTop=history.scrollHeight;
+        }else{
+          const list=document.getElementById('supportInbox');
+          if(list)list.innerHTML=supportThreadList();
+          const chat=document.getElementById('supportChat');
+          const history=document.getElementById('supportHistory');
+          if(!history){if(chat)chat.innerHTML=supportChatHTML()}
+          else{
+            const bottom=history.scrollHeight-history.scrollTop-history.clientHeight<90;
+            const html=supportHistoryHTML();
+            if(history.dataset.messages!==String(supportState.messages.map(m=>m.id).join('|'))){
+              history.innerHTML=html;
+              history.dataset.messages=String(supportState.messages.map(m=>m.id).join('|'));
+              if(bottom)history.scrollTop=history.scrollHeight;
+            }
+            const badge=chat?.querySelector('.support-status');
+            const closed=supportStatus()==='closed';
+            if(badge){badge.textContent=closed?'Encerrada':'Em atendimento';badge.className='support-status '+(closed?'closed':'')}
+            const statusBtn=document.getElementById('supportStatusButton');
+            if(statusBtn){statusBtn.textContent=closed?'Reabrir atendimento':'Encerrar atendimento';statusBtn.setAttribute('onclick',"supportUpdateStatus('"+(closed?'open':'closed')+"')")}
+          }
+        }
+        supportWatch();
+      }catch(error){
+        console.error('Suporte Agenda Pro:',error);
+        if(!silent)toast('Não foi possível carregar o suporte. Tente novamente.');
+      }finally{supportState.loading=false}
+    }
+    async function supportSelectThread(id){
+      if(appMode!=='owner'||!supportState.threads.some(t=>t.business_id===id))return;
+      supportState.selected=id;
+      supportState.loaded=false;supportState.messages=[];supportState.exists=true;
+      render();
+      await loadSupportData(false);
+    }
+    async function supportSend(){
+      if(supportSending||!authUser||!supportState.selected)return;
+      const input=document.getElementById('supportMessageInput');
+      const text=String(input?.value||'').trim();
+      if(!text||text.length>2000){toast('Digite uma mensagem de até 2.000 caracteres.');return}
+      supportSending=true;
+      const button=document.getElementById('supportSendButton');if(button)button.disabled=true;
+      try{
+        if(!supportState.exists){
+          const {error}=await sb.from('agenda_support_threads')
+            .insert({business_id:supportState.selected,created_by:authUser.id});
+          if(error&&error.code!=='23505')throw error;
+          supportState.exists=true;
+        }
+        const {error}=await sb.from('agenda_support_messages').insert({
+          business_id:supportState.selected,sender_id:authUser.id,
+          sender_kind:appMode==='owner'?'support':'customer',body:text
+        });
+        if(error)throw error;
+        if(input)input.value='';
+        await loadSupportData(false);
+      }catch(error){
+        console.error('Envio de suporte:',error);
+        toast('Não foi possível enviar sua mensagem. Tente novamente.');
+      }finally{supportSending=false;if(button?.isConnected)button.disabled=false}
+    }
+    async function supportUpdateStatus(next){
+      if(appMode!=='owner'||!supportState.selected||!['open','closed'].includes(next))return;
+      try{
+        const {error}=await sb.from('agenda_support_threads').update({status:next}).eq('business_id',supportState.selected);
+        if(error)throw error;
+        await loadSupportData(false);
+      }catch(error){console.error(error);toast('Não foi possível alterar o atendimento.')}
+    }
+
     function appModalEscape(v){
   return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]));
 }
