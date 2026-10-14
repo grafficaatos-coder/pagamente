@@ -149,7 +149,16 @@ export function personalizeThankYouMessage(template,customerFirst,businessName){
     .replace(/\{\{cliente\}\}/gi,String(customerFirst||"Cliente"))
     .replace(/\{\{empresa\}\}/gi,String(businessName||"Agenda Pro"));
 }
-function messageText(kind,business,customer,service,appointment,thankYouTemplate=null){
+export function personalizeAppointmentConfirmation(template,variables={}){
+  if(typeof template!=="string"||!template.trim()||template.length>1600)return null;
+  const keys=["cliente","empresa","data","horario","servico","profissional"];
+  const values=Object.fromEntries(keys.map(k=>[k,String(variables[k]??"")]));
+  return template.split("\n")
+    .filter(line=>values.profissional.trim()||!/\{\{profissional\}\}/i.test(line))
+    .map(line=>line.replace(/\{\{(cliente|empresa|data|horario|servico|profissional)\}\}/gi,(_,k)=>values[k.toLowerCase()]))
+    .join("\n").trim();
+}
+function messageText(kind,business,customer,service,appointment,thankYouTemplate=null,confirmationTemplate=null){
   const first=String(customer.name||"").trim().split(/\s+/)[0]||"Cliente";
   const when=formatAppointment(appointment.starts_at);
   const professional=String(appointment.professional_name||"").trim();
@@ -179,6 +188,17 @@ function messageText(kind,business,customer,service,appointment,thankYouTemplate
       "\n\n🌷 *Esperamos te ver novamente em breve!*"+
       "\n\nCom carinho,\n*Equipe "+name+"* 💖";
   }
+  if(kind==="confirmation"){
+    const custom=personalizeAppointmentConfirmation(confirmationTemplate,{
+      cliente:first,
+      empresa:appointmentDisplayName(business.name),
+      data:when.date,
+      horario:when.time,
+      servico:service.name,
+      profissional:professional
+    });
+    if(custom)return custom;
+  }
   return "Olá, "+first+"! ✨"+
     "\nSeu horário com *"+appointmentDisplayName(business.name)+"* foi agendado."+
     "\n\n📅 *Data:* "+when.date+
@@ -202,6 +222,7 @@ async function claimAndValidate(businessId,leaseId){
     });
     if(!job)return null;
     let thankYouTemplate=null;
+    let confirmationTemplate=null;
 
     const appointment=await fetchOne(
       "/rest/v1/agenda_appointments?id=eq."+encodeURIComponent(job.appointment_id)+
@@ -227,6 +248,15 @@ async function claimAndValidate(businessId,leaseId){
       }
       thankYouTemplate=prefs.thank_you_message;
     }
+    if(job.message_type==="confirmation"){
+      // Só o corpo da confirmação usa o modelo editado pela empresa.
+      // Busca a preferência imediatamente antes do envio; fila e automatização permanecem iguais.
+      const prefs=await fetchOne(
+        "/rest/v1/agenda_business_preferences?business_id=eq."+encodeURIComponent(businessId)+
+        "&select=confirmation_message&limit=1"
+      );
+      confirmationTemplate=prefs?.confirmation_message||null;
+    }
     if(job.message_type!=="followup"&&new Date(appointment.starts_at).getTime()<=Date.now()){
       await cancelClaimed(businessId,job,"Lembrete expirou porque o horário já passou.");continue;
     }
@@ -250,7 +280,7 @@ async function claimAndValidate(businessId,leaseId){
       reservation_token:job.reservation_token,
       delivery_semantics:job.delivery_semantics||"AT_MOST_ONCE",
       phone:currentPhone,
-      text:messageText(job.message_type,business,customer,service,appointment,thankYouTemplate)
+      text:messageText(job.message_type,business,customer,service,appointment,thankYouTemplate,confirmationTemplate)
     };
   }
   return null;
