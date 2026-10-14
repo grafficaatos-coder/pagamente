@@ -3979,7 +3979,13 @@ async function cancelAgendaSubscription(toPix=false){
     if(message)return message;
   }
   if(item.message_type==='reminder'){
-    return `Olá${first?', '+first:''}! ${E.smile}\n\nPassando para lembrar do seu horário com *${business}*.\n\n${E.calendar} Data: *${date}*\n${E.clock} Horário: *${time}*\n${E.sparkle} ${P().service}: *${service}*${professional?`\n${E.person} ${P().professional}: *${professional}*`:''}\n\nSe precisar alterar, fale com a gente por aqui.`;
+    const saved=companyCtx?.preferences?.reminder_message;
+    const template=typeof saved==='string'&&saved.trim()?saved:defaultReminderTemplate();
+    const body=formatAppointmentTemplate(template,{
+      cliente:first||'Cliente',empresa:business,data:date,horario:time,servico:service,profissional:professional
+    });
+    const appointment=companyData.appointments?.find(a=>a.id===item.appointment_id);
+    return (body||'')+reminderConfirmationBlock(appointment);
   }
   if(item.message_type==='followup'){
     return `Olá${first?', '+first:''}! ${E.smile}\n\nObrigado pelo seu atendimento com *${business}*.\n\nEsperamos que tenha gostado. Quando quiser agendar novamente, é só chamar a gente por aqui. ${E.heart}`;
@@ -4167,6 +4173,69 @@ async function cancelAgendaSubscription(toPix=false){
   if(error){console.error(error);return toast('Não foi possível restaurar a mensagem padrão.')}
   companyCtx.preferences=data;closeAppModal();render();toast('Mensagem padrão de agendamento restaurada.');
 }
+    function defaultReminderTemplate(businessName=companyCtx?.business?.name){
+  const name=whatsappBusinessName(businessName||'Agenda Pro');
+  const phrase=/^Juliana Garcia$/i.test(name)?'com a *{{empresa}}*':'na *{{empresa}}*';
+  return [
+    'Olá, {{cliente}}! 😊','',
+    'Lembrando que seu horário '+phrase+' é amanhã.','',
+    '📅 Data: *{{data}}*','🕐 Horário: *{{horario}}*',
+    '✨ Serviço: *{{servico}}*','👤 Profissional: *{{profissional}}*'
+  ].join('\n');
+}
+    function reminderConfirmationBlock(appointment){
+  if(!appointment||appointment.confirmed_by_customer_at||appointment.status==='cancelled'||appointment.status==='no_show')return '';
+  const key=appointment.confirmation_code||appointment.confirmation_token;
+  const link=confirmationLink(key);
+  return link?'\n\n*Confirme seu horário:*\n✅ '+link:'';
+}
+    function updateReminderEditorPreview(){
+  const input=document.getElementById('reminderMessageInput');
+  const preview=document.getElementById('reminderEditorPreview');
+  if(!input||!preview)return;
+  const body=formatAppointmentTemplate(input.value,{
+    cliente:'Jesiel',empresa:whatsappBusinessName(companyCtx?.business?.name||'Agenda Pro'),
+    data:'15/10/2026',horario:'10:10',servico:'Manicure',profissional:'Profissional'
+  });
+  preview.textContent=body?body+'\n\n*Confirme seu horário:*\n✅ [link automático quando a confirmação estiver pendente]':'Digite uma mensagem para visualizar a prévia.';
+}
+    function openReminderMessageEditor(){
+  if(!canAdminCompany()||!companyCtx||!sb)return toast('Somente o administrador pode editar o lembrete.');
+  const saved=companyCtx.preferences?.reminder_message;
+  const initial=typeof saved==='string'&&saved.trim()?saved:defaultReminderTemplate();
+  const content='<div class="field"><label for="reminderMessageInput"><b>Mensagem de lembrete (antes do atendimento)</b></label>'+
+    '<textarea id="reminderMessageInput" rows="10" maxlength="1600" oninput="updateReminderEditorPreview()" style="width:100%;min-height:205px;resize:vertical;line-height:1.6;box-sizing:border-box">'+appModalEscape(initial)+'</textarea>'+
+    '<small>Variáveis automáticas: <b>{{cliente}}</b>, <b>{{empresa}}</b>, <b>{{data}}</b>, <b>{{horario}}</b>, <b>{{servico}}</b>, <b>{{profissional}}</b>. Se não houver profissional, essa linha será ocultada. Máximo de 1.600 caracteres.</small></div>'+
+    '<div style="margin-top:14px"><b>Prévia do lembrete</b><p id="reminderEditorPreview" style="white-space:pre-wrap;line-height:1.6;border:1px solid #dfe9f3;background:#f3f8fc;padding:12px;border-radius:10px"></p></div>'+
+    '<button type="button" class="btn secondary" style="margin-top:12px" onclick="restoreDefaultReminderMessage()">Restaurar mensagem padrão</button>'+
+    '<p style="font-size:12px;margin-top:12px">O link de confirmação é inserido automaticamente quando o cliente ainda não confirmou. Salvar altera apenas o texto dos próximos lembretes; não muda o horário ou a frequência do envio automático, nem as mensagens de agendamento e agradecimento.</p>';
+  openAppModal({
+    title:'Editar mensagem de lembrete',
+    subtitle:'Personalize o texto que seus clientes recebem antes do atendimento.',
+    content,submitLabel:'Salvar lembrete',size:'wide',
+    onSubmit:async()=>{
+      const value=String(document.getElementById('reminderMessageInput')?.value||'').trim();
+      if(!value||value.length>1600)throw new Error('A mensagem precisa ter entre 1 e 1.600 caracteres.');
+      const {data,error}=await sb.from('agenda_business_preferences')
+        .upsert({business_id:companyCtx.business.id,reminder_message:value,updated_at:new Date().toISOString()},
+          {onConflict:'business_id'}).select('*').single();
+      if(error){console.error(error);throw new Error('Não foi possível salvar o lembrete. Tente novamente.')}
+      companyCtx.preferences=data;closeAppModal();render();
+      toast('Lembrete personalizado salvo. A automação continua como antes.');
+    }
+  });
+  updateReminderEditorPreview();
+}
+    async function restoreDefaultReminderMessage(){
+  if(!canAdminCompany()||!companyCtx||!sb)return;
+  if(!window.confirm('Restaurar a mensagem padrão dos lembretes desta empresa?'))return;
+  const {data,error}=await sb.from('agenda_business_preferences')
+    .upsert({business_id:companyCtx.business.id,reminder_message:null,updated_at:new Date().toISOString()},
+      {onConflict:'business_id'}).select('*').single();
+  if(error){console.error(error);return toast('Não foi possível restaurar o lembrete padrão.')}
+  companyCtx.preferences=data;closeAppModal();render();
+  toast('Lembrete padrão restaurado.');
+}
     function defaultThankYouMessage(){
   return [
     'Olá, {{cliente}}! 💖✨',
@@ -4285,6 +4354,18 @@ async function cancelAgendaSubscription(toPix=false){
       <p style="white-space:pre-wrap;line-height:1.65">${appModalEscape(formatAppointmentTemplate(appointmentPreviewText,{cliente:'Cliente',empresa:whatsappBookingName(companyCtx?.business?.name||'Agenda Pro'),data:'15/10/2026',horario:'10:00',servico:'Atendimento',profissional:'Profissional'})||'')}</p></details>
     <p style="font-size:12px;margin-top:12px">O envio automático pelo servidor WhatsApp e o envio manual usam esta mensagem. A integração oficial Meta segue o template aprovado. A edição não muda lembretes nem agradecimentos.</p>
   </section>`;
+  const customReminderText=companyCtx?.preferences?.reminder_message;
+  const reminderPreviewText=customReminderText&&customReminderText.trim()?customReminderText:defaultReminderTemplate();
+  const reminderCard=`<section class="panel" style="padding:20px;margin-top:18px">
+    <div class="head"><div><span class="eyebrow">Lembrete automático</span><h3>Mensagem de lembrete</h3></div><span class="status-badge status-active">Programação mantida</span></div>
+    <p>Personalize o texto enviado antes do atendimento. Nome, data, horário e serviço serão preenchidos automaticamente.</p>
+    ${admin?'<button type="button" class="btn secondary" onclick="openReminderMessageEditor()">✏️ Editar mensagem de lembrete</button>':''}
+    <details style="margin-top:13px"><summary>Ver lembrete ${customReminderText?'personalizado':'padrão'}</summary>
+      <p style="white-space:pre-wrap;line-height:1.65">${appModalEscape(formatAppointmentTemplate(reminderPreviewText,{cliente:'Jesiel',empresa:whatsappBusinessName(companyCtx?.business?.name||'Agenda Pro'),data:'15/10/2026',horario:'10:10',servico:'Manicure',profissional:'Profissional'})||'')}</p>
+      <small>O link de confirmação será anexado automaticamente se o cliente ainda não confirmou.</small>
+    </details>
+    <p style="font-size:12px;margin-top:12px">A edição não altera o horário ou a frequência dos lembretes nem afeta as mensagens de confirmação e agradecimento.</p>
+  </section>`;
   const thankYouEnabled=companyCtx?.preferences?.send_thank_you_after_service===true;
   const customThanks=companyCtx?.preferences?.thank_you_message;
   const thankYouTemplate=typeof customThanks==='string'&&customThanks.trim()?customThanks:defaultThankYouMessage();
@@ -4381,6 +4462,7 @@ async function cancelAgendaSubscription(toPix=false){
   return shell(`<div class="section-title"><span class="eyebrow">WhatsApp</span><h2>Conexão do WhatsApp</h2><p>Conecte o número pelo próprio celular usando o servidor Servidor WhatsApp, sem depender de QR Code.</p></div>
 
   ${appointmentCard}
+  ${reminderCard}
   ${thankYouCard}
   ${baileysCard||'<section class="panel"><div class="empty-state">A conexão pelo servidor WhatsApp ainda não está habilitada para esta empresa.</div></section>'}`);
 }
