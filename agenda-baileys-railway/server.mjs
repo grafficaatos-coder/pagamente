@@ -242,7 +242,7 @@ async function claimAndValidate(businessId,leaseId){
       "&select=id,business_id,customer_id,service_id,professional_name,starts_at,status,confirmation_code,confirmation_token,confirmed_by_customer_at,customer_cancelled_at&limit=1"
     );
     if(!appointment){await cancelClaimed(businessId,job,"Agendamento não existe mais.");continue}
-    if(appointment.status==="cancelled"||appointment.status==="no_show"){
+    if((appointment.status==="cancelled"&&job.message_type!=="cancellation")||appointment.status==="no_show"){
       await cancelClaimed(businessId,job,"Agendamento cancelado ou marcado como falta.");continue;
     }
     if(job.message_type==="followup"){
@@ -277,7 +277,7 @@ async function claimAndValidate(businessId,leaseId){
       );
       confirmationTemplate=prefs?.confirmation_message||null;
     }
-    if(job.message_type!=="followup"&&new Date(appointment.starts_at).getTime()<=Date.now()){
+    if(!["followup","cancellation"].includes(job.message_type)&&new Date(appointment.starts_at).getTime()<=Date.now()){
       await cancelClaimed(businessId,job,"Lembrete expirou porque o horário já passou.");continue;
     }
 
@@ -300,7 +300,7 @@ async function claimAndValidate(businessId,leaseId){
       reservation_token:job.reservation_token,
       delivery_semantics:job.delivery_semantics||"AT_MOST_ONCE",
       phone:currentPhone,
-      text:messageText(job.message_type,business,customer,service,appointment,thankYouTemplate,confirmationTemplate,reminderTemplate)
+      text:["cancellation","rescheduled"].includes(job.message_type)?String(job.notification_text||"").trim():messageText(job.message_type,business,customer,service,appointment,thankYouTemplate,confirmationTemplate,reminderTemplate)
     };
   }
   return null;
@@ -471,6 +471,7 @@ export class WhatsSession{
     try{
       const message=await claimAndValidate(this.businessId,this.leaseId);
       if(!message)return;
+       if(!message.text){await cancelClaimed(this.businessId,message,"Aviso sem conteúdo; envio bloqueado.");return}
       let started=false;
       try{
         const found=await this.sock.onWhatsApp(message.phone).catch(()=>[]);
