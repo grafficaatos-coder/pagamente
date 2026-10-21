@@ -4981,7 +4981,7 @@ async function cancelAgendaSubscription(toPix=false){
   const business=whatsappBookingName(companyCtx?.business?.name||'');
   const fmt=value=>new Date(value).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
   if(type==='cancelled')return 'Olá, '+name+'! Seu horário com *'+business+'* para *'+fmt(a.starts_at)+'* foi cancelado. Se precisar de outro horário, entre em contato conosco.';
-  return 'Olá, '+name+'! Seu horário com *'+business+'* foi reagendado.\\n\\nHorário anterior: *'+fmt(previousDate)+'*\\nNovo horário: *'+fmt(a.starts_at)+'*\\nServiço: *'+(service?.name||'Atendimento')+'*.\\n\\nAguardamos você!';
+  return 'Olá, '+name+'! Seu horário com *'+business+'* foi reagendado.\n\nHorário anterior: *'+fmt(previousDate)+'*\nNovo horário: *'+fmt(a.starts_at)+'*\nServiço: *'+(service?.name||'Atendimento')+'*.\n\nAguardamos você!';
 }
     function sendAppointmentNotice(a,type,previousDate){
   const customer=companyData.customers.find(x=>x.id===a.customer_id);
