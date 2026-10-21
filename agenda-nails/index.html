@@ -6271,6 +6271,34 @@ async function cancelAgendaSubscription(toPix=false){
   if(sb)sb.auth.signOut();
   resetSupportState();authUser=null;appMode=null;ownerLogged=false;companyCtx=null;companyData={customers:[],services:[],appointments:[],financialEntries:[]};teamState={members:[],count:0,maxUsers:null,loading:false,loaded:false};whatsappQueue=[];page='home';adminTab='overview';loginMessage='';render();
 }
+    // Boas-vindas ao WhatsApp para empresas cadastradas a partir desta versão.
+    // Exibir uma única vez por usuário/dispositivo e nunca para o dono da plataforma.
+    function whatsappWelcomeKey(){
+      return 'agendaProWhatsWelcomeV1:'+String(companyCtx?.business?.id||'')+':'+String(authUser?.id||'');
+    }
+    function shouldShowWhatsappWelcome(){
+      if(appMode!=='company'||page!=='home'||!companyCtx?.business||!canAdminCompany())return false;
+      if(baileysSession?.status==='connected'||whatsappState?.connection?.status==='connected')return false;
+      const created=Date.parse(companyCtx.business.created_at||'');
+      if(!Number.isFinite(created)||created<Date.parse('2026-10-21T00:00:00-03:00'))return false;
+      try{return localStorage.getItem(whatsappWelcomeKey())!=='seen'}catch(e){return false}
+    }
+    function dismissWhatsappWelcome(openSettings=false){
+      try{localStorage.setItem(whatsappWelcomeKey(),'seen')}catch(e){}
+      document.getElementById('whatsapp-welcome')?.remove();
+      if(openSettings)go('wa');
+    }
+    function whatsappWelcomeBanner(){
+      return `<section id="whatsapp-welcome" role="region" aria-label="Configuração inicial do WhatsApp" style="position:fixed;z-index:80;top:78px;right:16px;left:auto;width:min(390px,calc(100vw - 32px));padding:18px;background:#fff;color:#17334f;border:1px solid #caddec;border-left:4px solid #15865b;box-shadow:0 12px 36px #10263f26;border-radius:16px;box-sizing:border-box">
+        <button onclick="dismissWhatsappWelcome()" aria-label="Fechar orientação" style="position:absolute;right:10px;top:8px;border:0;background:transparent;color:#57718b;font-size:23px;cursor:pointer">×</button>
+        <strong style="display:block;font-size:16px;margin:0 26px 8px 0">Conecte o WhatsApp da sua empresa</strong>
+        <p style="font-size:13px;line-height:1.5;margin:0 0 13px">Configure seu número para enviar confirmações e lembretes automáticos de agendamento. Você pode fazer isso agora ou depois no menu WhatsApp.</p>
+        <div style="display:flex;gap:9px;flex-wrap:wrap">
+          <button onclick="dismissWhatsappWelcome(true)" style="border:0;border-radius:9px;background:#0d416a;color:white;padding:11px 14px;font-weight:700;cursor:pointer">Conectar WhatsApp</button>
+          <button onclick="dismissWhatsappWelcome()" style="border:1px solid #cbd5e1;border-radius:9px;background:white;color:#24415a;padding:11px 14px;cursor:pointer">Agora não</button>
+        </div>
+      </section>`;
+    }
     function go(p){
   closeMobileMenu();
   if(!appMode){render();return}
@@ -6333,6 +6361,7 @@ async function cancelAgendaSubscription(toPix=false){
     return;
   }
   R.innerHTML=page==='book'?booking():({home,agenda,clients,services,cash,wa,team,profile:myProfile,subscription:companySubscriptionPage,support:()=>shell(supportPage())}[page]||home)();
+  if(shouldShowWhatsappWelcome())R.insertAdjacentHTML('beforeend',whatsappWelcomeBanner());
   requestAnimationFrame(resetMobileHorizontalPosition);
 }
     window.addEventListener('pageshow',resetMobileHorizontalPosition);
