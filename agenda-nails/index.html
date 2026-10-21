@@ -4984,34 +4984,15 @@ async function cancelAgendaSubscription(toPix=false){
   return 'Olá, '+name+'! Seu horário com *'+business+'* foi reagendado.\n\nHorário anterior: *'+fmt(previousDate)+'*\nNovo horário: *'+fmt(a.starts_at)+'*\nServiço: *'+(service?.name||'Atendimento')+'*.\n\nAguardamos você!';
 }
     function sendAppointmentNotice(a,type,previousDate){
-  const customer=companyData.customers.find(x=>x.id===a.customer_id);
-  const phone=normalizeWhatsPhone(customer?.phone);
-  if(!phone){toast('Alteração salva. Cliente sem WhatsApp cadastrado.');return}
-  const message=appointmentNoticeMessage(a,type,previousDate);
-  const title=type==='cancelled'?'Aviso de cancelamento':'Aviso de reagendamento';
-  openAppModal({
-    title,
-    subtitle:'Agendamento salvo. A mensagem ainda não foi enviada. Copie para enviar pelo WhatsApp do seu celular ou abra o WhatsApp manualmente.',
-    submitLabel:'Copiar mensagem',
-    content:`<div class="app-modal-grid">
-      <div class="app-modal-field full"><label>Mensagem para ${appModalEscape(customer?.name||'Cliente')}</label><textarea id="appointmentNoticeText" rows="7" readonly>${appModalEscape(message)}</textarea></div>
-      <div class="app-modal-field full"><button type="button" class="btn secondary" id="appointmentNoticeOpen">Abrir WhatsApp para envio manual ↗</button><small>Ao abrir no computador, o WhatsApp poderá pedir login se não estiver conectado. Copiar não envia automaticamente.</small></div>
-    </div>`,
-    onSubmit:async()=>{
-      const text=document.getElementById('appointmentNoticeText')?.value||message;
-      try{await navigator.clipboard.writeText(text);closeAppModal();toast('Mensagem copiada. Cole na conversa do cliente para enviar.')}
-      catch(e){const field=document.getElementById('appointmentNoticeText');field?.focus();field?.select();toast('Selecione e copie a mensagem.')}
-    }
-  });
-  document.getElementById('appointmentNoticeOpen')?.addEventListener('click',()=>{
-    window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(message),'_blank','noopener,noreferrer');
-  });
+  // A fila é criada pelo banco quando a automação estiver habilitada.
+  // Nunca informar entrega ao WhatsApp antes de confirmação do servidor.
+  toast('Alteração salva. Envio automático aguardando ativação do servidor WhatsApp.');
 }
     async function cancelAppointmentWithNotice(id){
   if(!canOperateCompany())return toast('Seu perfil não permite cancelar');
   const a=companyData.appointments.find(x=>x.id===id);if(!a)return;
   if(a.status==='cancelled')return toast('Agendamento já cancelado');
-  const ok=await askAppConfirm({title:'Cancelar e avisar o cliente?',message:'O horário será marcado como cancelado, sem apagar o histórico. Depois será aberto o WhatsApp para você enviar o aviso de cancelamento.',confirmLabel:'Cancelar horário'});
+  const ok=await askAppConfirm({title:'Cancelar e avisar o cliente?',message:'O horário será marcado como cancelado, sem apagar o histórico. O aviso será processado pela fila automática quando o serviço estiver ativado.',confirmLabel:'Cancelar horário'});
   if(!ok)return;
   const {data,error}=await sb.from('agenda_appointments').update({status:'cancelled',updated_at:new Date().toISOString()}).eq('id',id).eq('business_id',companyCtx.business.id).select('id');
   if(error||!data?.length){console.error(error);return toast('Não foi possível cancelar')}
@@ -5031,7 +5012,7 @@ async function cancelAgendaSubscription(toPix=false){
   const p=P();
   openAppModal({
     title:isReschedule?'Reagendar atendimento':'Editar agendamento',
-    subtitle:isReschedule?'Escolha nova data e horário; após salvar, abra o aviso de reagendamento no WhatsApp.':'Atualize horário, cliente, serviço, profissional e status.',
+    subtitle:isReschedule?'Escolha nova data e horário; o aviso será processado automaticamente quando o serviço estiver ativado.':'Atualize horário, cliente, serviço, profissional e status.',
     submitLabel:'Salvar alterações',
     size:'wide',
     content:`${canAdminCompany()?`<div class="appointment-delete-toolbar"><span>Precisa remover este horário? A exclusão também cancela os envios automáticos pendentes.</span><button type="button" class="appointment-delete-button" onclick="deleteAppointment('${a.id}')">Excluir horário</button></div>`:''}<div class="app-modal-grid">
