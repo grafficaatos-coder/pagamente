@@ -2830,7 +2830,7 @@ function home(){
   return status==='pending'?'Pendente':status==='cancelled'?'Cancelado':status==='completed'?'Concluído':status==='no_show'?'Faltou':'Confirmado';
 }
     function agendaActions(a){
-  return canOperateCompany()?`<div class="agenda-actions"><select onchange="updateAppointmentStatus('${a.id}',this.value)"><option value="pending" ${a.status==='pending'?'selected':''}>Pendente</option><option value="confirmed" ${a.status==='confirmed'?'selected':''}>Confirmado</option><option value="completed" ${a.status==='completed'?'selected':''}>Concluído</option><option value="no_show" ${a.status==='no_show'?'selected':''}>Faltou</option><option value="cancelled" ${a.status==='cancelled'?'selected':''}>Cancelado</option></select><button class="mini-btn whats-mini" onclick="sendAppointmentConfirmationLink('${a.id}')">Enviar confirmação</button><button class="mini-btn" onclick="editAppointment('${a.id}')">Editar</button>${canAdminCompany()?`<button class="mini-btn danger" type="button" onclick="deleteAppointment('${a.id}')">Excluir horário</button>`:''}</div>`:'';
+  return canOperateCompany()?`<div class="agenda-actions"><select onchange="updateAppointmentStatus('${a.id}',this.value)"><option value="pending" ${a.status==='pending'?'selected':''}>Pendente</option><option value="confirmed" ${a.status==='confirmed'?'selected':''}>Confirmado</option><option value="completed" ${a.status==='completed'?'selected':''}>Concluído</option><option value="no_show" ${a.status==='no_show'?'selected':''}>Faltou</option><option value="cancelled" ${a.status==='cancelled'?'selected':''}>Cancelado</option></select><button class="mini-btn whats-mini" onclick="sendAppointmentConfirmationLink('${a.id}')">Enviar confirmação</button><button class="mini-btn" onclick="editAppointment('${a.id}')">Editar</button><button class="mini-btn" onclick="rescheduleAppointment('${a.id}')">Reagendar</button>${a.status!=='cancelled'?`<button class="mini-btn danger" onclick="cancelAppointmentWithNotice('${a.id}')">Cancelar e avisar</button>`:''}${canAdminCompany()?`<button class="mini-btn danger" type="button" onclick="deleteAppointment('${a.id}')">Excluir horário</button>`:''}</div>`:'';
 }
     function agendaRow(a,showDate=false){
   const d=new Date(a.starts_at),cu=companyData.customers.find(x=>x.id===a.customer_id),se=companyData.services.find(x=>x.id===a.service_id);
@@ -4974,7 +4974,38 @@ async function cancelAgendaSubscription(toPix=false){
     }
   });
 }
-    function openAppointmentEditModal(id){
+    function appointmentNoticeMessage(a,type,previousDate){
+  const customer=companyData.customers.find(x=>x.id===a.customer_id);
+  const service=companyData.services.find(x=>x.id===a.service_id);
+  const name=String(customer?.name||'Cliente').trim().split(/\s+/)[0];
+  const business=whatsappBookingName(companyCtx?.business?.name||'');
+  const fmt=value=>new Date(value).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  if(type==='cancelled')return 'Olá, '+name+'! Seu horário com *'+business+'* para *'+fmt(a.starts_at)+'* foi cancelado. Se precisar de outro horário, entre em contato conosco.';
+  return 'Olá, '+name+'! Seu horário com *'+business+'* foi reagendado.\\n\\nHorário anterior: *'+fmt(previousDate)+'*\\nNovo horário: *'+fmt(a.starts_at)+'*\\nServiço: *'+(service?.name||'Atendimento')+'*.\\n\\nAguardamos você!';
+}
+    function sendAppointmentNotice(a,type,previousDate){
+  const customer=companyData.customers.find(x=>x.id===a.customer_id);
+  const phone=normalizeWhatsPhone(customer?.phone);
+  if(!phone){toast('Alteração salva. Cliente sem WhatsApp cadastrado.');return}
+  openWhatsAppDirect(phone,appointmentNoticeMessage(a,type,previousDate));
+  toast('Aviso preparado no WhatsApp. Confirme o envio.');
+}
+    async function cancelAppointmentWithNotice(id){
+  if(!canOperateCompany())return toast('Seu perfil não permite cancelar');
+  const a=companyData.appointments.find(x=>x.id===id);if(!a)return;
+  if(a.status==='cancelled')return toast('Agendamento já cancelado');
+  const ok=await askAppConfirm({title:'Cancelar e avisar o cliente?',message:'O horário será marcado como cancelado, sem apagar o histórico. Depois será aberto o WhatsApp para você enviar o aviso de cancelamento.',confirmLabel:'Cancelar horário'});
+  if(!ok)return;
+  const {data,error}=await sb.from('agenda_appointments').update({status:'cancelled',updated_at:new Date().toISOString()}).eq('id',id).eq('business_id',companyCtx.business.id).select('id');
+  if(error||!data?.length){console.error(error);return toast('Não foi possível cancelar')}
+  await loadCompanyData();render();
+  sendAppointmentNotice(a,'cancelled');
+}
+    function rescheduleAppointment(id){
+  if(!canOperateCompany())return toast('Seu perfil não permite reagendar');
+  openAppointmentEditModal(id,true);
+}
+    function openAppointmentEditModal(id,isReschedule=false){
   if(!canOperateCompany())return toast('Seu perfil não permite editar');
   const a=companyData.appointments.find(x=>x.id===id);if(!a)return;
   const d=new Date(a.starts_at);
@@ -4982,8 +5013,8 @@ async function cancelAgendaSubscription(toPix=false){
   const localTime=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   const p=P();
   openAppModal({
-    title:'Editar agendamento',
-    subtitle:'Atualize horário, cliente, serviço, profissional e status.',
+    title:isReschedule?'Reagendar atendimento':'Editar agendamento',
+    subtitle:isReschedule?'Escolha nova data e horário; após salvar, abra o aviso de reagendamento no WhatsApp.':'Atualize horário, cliente, serviço, profissional e status.',
     submitLabel:'Salvar alterações',
     size:'wide',
     content:`${canAdminCompany()?`<div class="appointment-delete-toolbar"><span>Precisa remover este horário? A exclusão também cancela os envios automáticos pendentes.</span><button type="button" class="appointment-delete-button" onclick="deleteAppointment('${a.id}')">Excluir horário</button></div>`:''}<div class="app-modal-grid">
@@ -5003,13 +5034,18 @@ async function cancelAgendaSubscription(toPix=false){
       const date=document.getElementById('modalAppointmentDate')?.value;
       const time=document.getElementById('modalAppointmentTime')?.value;
       const professional_name=(document.getElementById('modalAppointmentProfessional')?.value||'').trim();
-      const status=document.getElementById('modalAppointmentStatus')?.value||'confirmed';
+      const status=isReschedule?'pending':(document.getElementById('modalAppointmentStatus')?.value||'confirmed');
       const notes=(document.getElementById('modalAppointmentNotes')?.value||'').trim();
       if(!customer_id||!service_id||!date||!time){toast('Preencha cliente, serviço, data e horário');return}
       const starts=new Date(date+'T'+time+':00');if(Number.isNaN(starts.getTime())){toast('Data ou horário inválido');return}
-      const {error}=await sb.from('agenda_appointments').update({customer_id,service_id,starts_at:starts.toISOString(),professional_name:professional_name||null,status,notes:notes||null,updated_at:new Date().toISOString()}).eq('id',id).eq('business_id',companyCtx.business.id);
-      if(error){console.error(error);toast('Não foi possível editar');return}
-      closeAppModal();await loadCompanyData();render();toast('Agendamento atualizado');
+      if(isReschedule&&starts.getTime()<=Date.now()){toast('Escolha um horário futuro para reagendar');return}
+      const changedTime=starts.getTime()!==d.getTime();
+      if(isReschedule&&!changedTime){toast('Informe uma nova data ou horário');return}
+      const {data:updated,error}=await sb.from('agenda_appointments').update({customer_id,service_id,starts_at:starts.toISOString(),professional_name:professional_name||null,status,notes:notes||null,updated_at:new Date().toISOString()}).eq('id',id).eq('business_id',companyCtx.business.id).select('id');
+      if(error||!updated?.length){console.error(error);toast('Não foi possível editar');return}
+      closeAppModal();await loadCompanyData();render();
+      if(isReschedule){sendAppointmentNotice({...a,customer_id,service_id,starts_at:starts.toISOString()},'rescheduled',a.starts_at)}
+      else toast('Agendamento atualizado');
     }
   });
 }
