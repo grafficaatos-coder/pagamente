@@ -1,0 +1,29 @@
+# Agenda Pro - teste local. Não executar simultaneamente com o mesmo WhatsApp no Railway.
+services:
+  agenda-whatsapp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: agenda-pro-whatsapp:local
+    container_name: agenda-pro-whatsapp
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    env_file:
+      - .env
+    environment:
+      PORT: "8080"
+      DATA_DIR: /data
+      DISPATCH_ENABLED: "false"
+      ALLOW_ALL_BUSINESSES: "false"
+    volumes:
+      - agenda_whatsapp_sessions:/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:8080/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+
+volumes:
+  agenda_whatsapp_sessions:
