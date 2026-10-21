@@ -4987,8 +4987,25 @@ async function cancelAgendaSubscription(toPix=false){
   const customer=companyData.customers.find(x=>x.id===a.customer_id);
   const phone=normalizeWhatsPhone(customer?.phone);
   if(!phone){toast('Alteração salva. Cliente sem WhatsApp cadastrado.');return}
-  openWhatsAppDirect(phone,appointmentNoticeMessage(a,type,previousDate));
-  toast('Aviso preparado no WhatsApp. Confirme o envio.');
+  const message=appointmentNoticeMessage(a,type,previousDate);
+  const title=type==='cancelled'?'Aviso de cancelamento':'Aviso de reagendamento';
+  openAppModal({
+    title,
+    subtitle:'Agendamento salvo. A mensagem ainda não foi enviada. Copie para enviar pelo WhatsApp do seu celular ou abra o WhatsApp manualmente.',
+    submitLabel:'Copiar mensagem',
+    content:`<div class="app-modal-grid">
+      <div class="app-modal-field full"><label>Mensagem para ${appModalEscape(customer?.name||'Cliente')}</label><textarea id="appointmentNoticeText" rows="7" readonly>${appModalEscape(message)}</textarea></div>
+      <div class="app-modal-field full"><button type="button" class="btn secondary" id="appointmentNoticeOpen">Abrir WhatsApp para envio manual ↗</button><small>Ao abrir no computador, o WhatsApp poderá pedir login se não estiver conectado. Copiar não envia automaticamente.</small></div>
+    </div>`,
+    onSubmit:async()=>{
+      const text=document.getElementById('appointmentNoticeText')?.value||message;
+      try{await navigator.clipboard.writeText(text);closeAppModal();toast('Mensagem copiada. Cole na conversa do cliente para enviar.')}
+      catch(e){const field=document.getElementById('appointmentNoticeText');field?.focus();field?.select();toast('Selecione e copie a mensagem.')}
+    }
+  });
+  document.getElementById('appointmentNoticeOpen')?.addEventListener('click',()=>{
+    window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(message),'_blank','noopener,noreferrer');
+  });
 }
     async function cancelAppointmentWithNotice(id){
   if(!canOperateCompany())return toast('Seu perfil não permite cancelar');
