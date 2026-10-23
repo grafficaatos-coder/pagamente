@@ -1,4 +1,4 @@
-const CACHE_NAME='agenpro-shell-v52-mensagens-20261023';
+const CACHE_NAME='agenpro-shell-v53-push-confirmations-20261023';
 const SHELL=['/','/manifest.webmanifest','/icons/app-icon.svg','/icons/app-icon-maskable.svg','/brand/agenda-pro-original.svg','/icons/agenda-pro-192-new.png','/icons/agenda-pro-512-new.png'];
 
 self.addEventListener('install',event=>{
@@ -48,4 +48,38 @@ self.addEventListener('fetch',event=>{
       })
       .catch(()=>caches.match(req))
   );
+});
+
+
+self.addEventListener('push',event=>{
+  let data={};
+  try { data=event.data?.json()||{}; }
+  catch (_) { data={title:'AgenPro · Resposta de agendamento',body:'Você recebeu uma nova resposta.'}; }
+  const title=String(data.title||'AgenPro · Nova resposta').slice(0,80);
+  const options={
+    body:String(data.body||'Uma cliente respondeu ao seu horário.').slice(0,160),
+    icon:'/icons/agenda-pro-192-new.png',
+    badge:'/icons/agenda-pro-192-new.png',
+    tag:String(data.tag||'agenpro-customer-response'),
+    data:{url:'/?avisos=1'},
+    renotify:true
+  };
+  event.waitUntil(self.registration.showNotification(title,options));
+});
+
+self.addEventListener('notificationclick',event=>{
+  event.notification.close();
+  const target=new URL('/?avisos=1',self.location.origin).href;
+  event.waitUntil(self.clients.matchAll({type:'window',includeUncontrolled:true}).then(async clients=>{
+    for(const client of clients){
+      try{
+        if(new URL(client.url).origin===self.location.origin){
+          await client.navigate(target);
+          await client.focus();
+          return;
+        }
+      }catch(_){}
+    }
+    if(self.clients.openWindow)await self.clients.openWindow(target);
+  }));
 });
