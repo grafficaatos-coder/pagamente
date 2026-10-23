@@ -675,6 +675,10 @@ export class WhatsSession{
       pairing_code:this.qrReady&&Date.now()<this.pairExpires?this.pairCode:null,
       phone:this.phone,qr_svg:this.state==="waiting_qr"?this.qrSvg:null,
       last_error:this.error||null,
+      // Visible on the internal Supabase status heartbeat: confirms that the
+      // Windows auto-updater installed the production-safe pilot code.
+      dispatch_mode:julliAutoDispatchEnabled&&this.businessId===JULLI_BUSINESS_ID
+        ?"julli-fresh-pilot":"paused",
       catalog_broadcast:this.catalogBroadcast
     };
   }
