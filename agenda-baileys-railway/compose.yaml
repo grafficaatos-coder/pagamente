@@ -19,6 +19,8 @@ services:
       TEST_AUTO_DISPATCH_ENABLED: "${TEST_AUTO_DISPATCH_ENABLED:-false}"
       LOCAL_POLL_ENABLED: "${LOCAL_POLL_ENABLED:-false}"
       ALLOW_ALL_BUSINESSES: "false"
+      # Allow-listed WhatsApps for controlled repa​iring; dispatch remains OFF.
+      ALLOWED_BUSINESS_IDS: "270de0ad-2013-4afb-b8ba-2e21175b3f01,afa8a4ed-f57a-49d4-9f7b-63a33eb4e2ae,7f00c45b-b228-4ee8-b795-aadbdcfb9d45,9f97ef4d-78e9-4251-bdfc-66f26497f06b"
     volumes:
       - agenda_whatsapp_sessions:/data
     healthcheck:
