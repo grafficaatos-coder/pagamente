@@ -77,11 +77,12 @@ try {
   $stagePath = $stage.FullName
   $composeText = Get-Content (Join-Path $stagePath "compose.yaml") -Raw
   if ($composeText -notmatch 'DISPATCH_ENABLED:\s*["'']false["'']' -or
-      $composeText -notmatch 'ALLOW_ALL_BUSINESSES:\s*["'']false["'']') {
+      $composeText -notmatch 'ALLOW_ALL_BUSINESSES:\s*["'']false["'']' -or
+      $composeText -notmatch 'TEST_AUTO_DISPATCH_ENABLED:') {
     throw "Bloqueio: esta versao nao preserva a seguranca dos envios"
   }
   $tag = "agenda-pro-whatsapp:teste-"+$sha.Substring(0,12)
-  RunDocker @("build","--tag",$tag,"--file",(Join-Path $stagePath "Dockerfile"),$stagePath)
+  RunDocker -ArgsList @("build","--tag",$tag,"--file",(Join-Path $stagePath "Dockerfile"),$stagePath)
   $now = Get-Date -Format "yyyyMMdd-HHmmss"
   $backupDir = Join-Path $stateDir ("backup-codigo-"+$now)
   New-Item -ItemType Directory -Path $backupDir | Out-Null
@@ -99,8 +100,8 @@ try {
       Copy-Item -LiteralPath $updated -Destination (Join-Path $workDir $file) -Force
     }
   }
-  RunDocker @("tag",$tag,"agenda-pro-whatsapp:local")
-  RunDocker @("compose","--project-name",$project,"--file",(Join-Path $workDir "compose.yaml"),"up","-d","--no-build","--force-recreate")
+  RunDocker -ArgsList @("tag",$tag,"agenda-pro-whatsapp:local")
+  RunDocker -ArgsList @("compose","--project-name",$project,"--project-directory",$workDir,"--file",(Join-Path $workDir "compose.yaml"),"up","-d","--no-build","--force-recreate")
   $ready = $false
   for ($i=0; $i -lt 25; $i++) {
     Start-Sleep -Seconds 2
@@ -127,8 +128,8 @@ try {
     try {
       $files = Get-ChildItem -LiteralPath $backupDir -File
       foreach ($file in $files) { Copy-Item -LiteralPath $file.FullName -Destination (Join-Path $workDir $file.Name) -Force }
-      RunDocker @("tag",$oldImage,"agenda-pro-whatsapp:local")
-      RunDocker @("compose","--project-name",$project,"--file",(Join-Path $workDir "compose.yaml"),"up","-d","--no-build","--force-recreate")
+      RunDocker -ArgsList @("tag",$oldImage,"agenda-pro-whatsapp:local")
+      RunDocker -ArgsList @("compose","--project-name",$project,"--project-directory",$workDir,"--file",(Join-Path $workDir "compose.yaml"),"up","-d","--no-build","--force-recreate")
       Log "Versao anterior restaurada. Verifique a saude do Docker."
     } catch { Log ("Falha ao restaurar; intervencao necessaria: "+$_.Exception.Message) }
   }
