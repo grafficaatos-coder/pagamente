@@ -35,6 +35,16 @@ export function startLocalPollBridge({
       const code=await s.pairingCode(job.payload?.phone||"",{forceNew:job.payload?.force_new===true});
       return {status:200,body:{ok:true,status:"qr",pairing_code:code}};
     }
+    if(job.action==="send-test"){
+      // Never enable bulk dispatch; only the isolated technical test company.
+      if(id!=="270de0ad-2013-4afb-b8ba-2e21175b3f01")
+        throw Object.assign(new Error("Empresa não autorizada para mensagem de teste"),{status:403});
+      const s=sessions.get(id);
+      if(!s||s.stopped||typeof s.sendSingleTestMessage!=="function")
+        throw Object.assign(new Error("WhatsApp de teste desconectado"),{status:409});
+      const body=await s.sendSingleTestMessage(job.payload?.phone||"");
+      return {status:200,body};
+    }
     if(job.action==="disconnect"){
       const s=sessions.get(id);
       if(s)await s.disconnect();
