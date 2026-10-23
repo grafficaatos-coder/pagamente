@@ -2637,6 +2637,7 @@
     }
 
   </style>
+  <link rel="stylesheet" href="/mobile-redesign.css?v=20261023-5">
 </head>
 <body>
   <div id="root"></div>
@@ -2968,16 +2969,19 @@
   if(!side)return;
   const opening=!side.classList.contains('mobile-open');
   side.classList.toggle('mobile-open',opening);
+  document.querySelectorAll('.mobile-menu-toggle,.company-bottom button[aria-label="Abrir mais opções"]').forEach(btn=>btn.setAttribute('aria-expanded',String(opening)));
   overlay?.classList.toggle('open',opening);
   document.body.classList.toggle('mobile-menu-active',opening);
   if(!opening)requestAnimationFrame(resetMobileHorizontalPosition);
 }
 function closeMobileMenu(){
   document.querySelector('.side')?.classList.remove('mobile-open');
+  document.querySelectorAll('.mobile-menu-toggle,.company-bottom button[aria-label="Abrir mais opções"]').forEach(btn=>btn.setAttribute('aria-expanded','false'));
   document.querySelector('.mobile-menu-overlay')?.classList.remove('open');
   document.body.classList.remove('mobile-menu-active');
   requestAnimationFrame(resetMobileHorizontalPosition);
 }
+    document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.body.classList.contains('mobile-menu-active'))closeMobileMenu()});
     function isStandaloneApp(){
   return window.matchMedia?.('(display-mode: standalone)').matches===true||window.navigator.standalone===true;
 }
@@ -3016,7 +3020,7 @@ async function installAgendaApp(){
     const account=appModalEscape(displayBusinessName(companyCtx?.business?.name||p.brand));
     const status=appModalEscape(subscriptionLabel());
     return `<aside class="side company-premium-side">
-      <div class="brand premium-brand"><span class="premium-brand-symbol">${I.calendar}</span><span class="premium-brand-title">Agenda Pro</span></div>
+      <div class="brand premium-brand"><span class="premium-brand-symbol">${I.calendar}</span><span class="premium-brand-title">AgenPro</span></div><button class="mobile-side-close" type="button" onclick="closeMobileMenu()" aria-label="Fechar menu">×</button><button class="mobile-side-account" type="button" onclick="go('profile')" aria-label="Meu perfil"><span class="mobile-side-avatar">${appModalEscape(dashboardInitials(account))}</span><span class="mobile-side-person"><strong>${account}</strong><small>${status}</small></span></button>
       <nav class="nav" aria-label="Menu da empresa">${n.map(x=>`<button class="${page===x[0]?'on':''}" onclick="go('${x[0]}')">${I[x[1]]}<span class="label">${appModalEscape(x[2])}</span></button>`).join('')}
       <button class="mobile-side-logout" onclick="ownerLogout()">${I.more}<span class="label">Sair</span></button></nav>
       <div class="side-foot premium-side-foot">
@@ -3031,14 +3035,12 @@ async function installAgendaApp(){
 }
     function bottom(){
   if(appMode==='company'){
-    // Máximo de cinco destinos; o restante continua no menu lateral.
-    const links=[['home','home','Início']];
-    if(hasFeature('agenda'))links.push(['agenda','calendar','Agenda']);
-    if(hasFeature('clients'))links.push(['clients','users',P().people]);
-    links.push(['wa','message','WhatsApp']);
-    if(hasFeature('finance') && links.length<4)links.push(['cash','wallet','Financeiro']);
-    const rows=links.slice(0,4).map(x=>`<button type="button" class="${page===x[0]?'on':''}" onclick="go('${x[0]}')" aria-label="${appModalEscape(x[2])}">${I[x[1]]}<span>${appModalEscape(x[2])}</span></button>`).join('');
-    return `<nav class="bottom company-bottom" aria-label="Navegação principal">${rows}<button type="button" onclick="toggleMobileMenu()" aria-label="Abrir mais opções">${I.more}<span>Mais</span></button></nav>${hasFeature('agenda')&&canOperateCompany()? `<button class="fab" onclick="book()" aria-label="Novo agendamento">${I.plus}</button>`:''}`;
+    const homeLink=['home','home','Início'];
+    const agendaLink=hasFeature('agenda')?['agenda','calendar','Agenda']:hasFeature('finance')?['cash','wallet','Financeiro']:['wa','message','WhatsApp'];
+    const peopleLink=hasFeature('clients')?['clients','users',P().people]:['wa','message','WhatsApp'];
+    const item=x=>`<button type="button" class="${page===x[0]?'on':''}" onclick="go('${x[0]}')" aria-label="${appModalEscape(x[2])}">${I[x[1]]}<span>${appModalEscape(x[2])}</span></button>`;
+    const create=hasFeature('agenda')&&canOperateCompany()?`<button class="mobile-nav-create" type="button" onclick="book()" aria-label="Novo agendamento"><span class="nav-plus">${I.plus}</span><span>Novo</span></button>`:`<button class="mobile-nav-create" type="button" onclick="go('wa')" aria-label="WhatsApp"><span class="nav-plus">${I.message}</span><span>WhatsApp</span></button>`;
+    return `<nav class="bottom company-bottom" aria-label="Navegação principal">${item(homeLink)}${item(agendaLink)}${create}${item(peopleLink)}<button type="button" onclick="toggleMobileMenu()" aria-label="Abrir mais opções" aria-expanded="false">${I.more}<span>Mais</span></button></nav>`;
   }
   const n=[['overview','home','Início'],['clients','users','Assinantes'],['plans','sparkle','Planos'],['billing','wallet','Cobranças']];
   return `<nav class="bottom" aria-label="Navegação do administrador">${n.map(x=>`<button type="button" class="${adminTab===x[0]?'on':''}" onclick="setAdminTab('${x[0]}')">${I[x[1]]}<span>${x[2]}</span></button>`).join('')}<button type="button" onclick="toggleMobileMenu()" aria-label="Abrir mais opções">${I.more}<span>Mais</span></button></nav>`;
@@ -3046,10 +3048,10 @@ async function installAgendaApp(){
     function shell(content){
   if(appMode==='company'){
     const p=P(),t=companyTitles()[page]||companyTitles().home;
-    return `<div class="app company-app ${page==='home'?'dashboard-home':''}">${nav()}<div class="mobile-menu-overlay" onclick="closeMobileMenu()" aria-hidden="true"></div><main class="main"><header class="top"><div class="top-left"><button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Abrir menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="menu-label">Menu</span></button><div class="logo mini-logo">${p.initials}</div><div><h1>${page==='home'?'Olá, '+appModalEscape(displayBusinessName(companyCtx?.business?.name||'Agenda Pro'))+'! 👋':appModalEscape(t[0])}</h1><small>${page==='home'?'Aqui está um resumo da sua agenda hoje.':appModalEscape(t[1])}</small></div></div><div class="top-actions"><button type="button" class="agenda-update-button" onclick="refreshAgendaPro()" title="Verificar atualizações da Agenda Pro" aria-label="Verificar novas atualizações">${I.refresh}<span>Atualizar</span></button><label class="agenda-global-search">${I.search}<input type="search" aria-label="Pesquisar clientes" placeholder="Buscar clientes..." onkeydown="if(event.key==='Enter')dashboardQuickSearch(this.value)"></label><span class="owner-session"><i class="owner-dot"></i> ${appModalEscape(companyCtx?.plan?.name||'Plano')} · ${companyRole()}</span><button type="button" class="dashboard-notification-button" title="Ver agendamentos pendentes" aria-label="Ver agendamentos pendentes" onclick="go('agenda')">${I.bell}</button><button class="agenda-profile-button" onclick="go('profile')"><span class="agenda-profile-avatar">${appModalEscape(dashboardInitials(companyCtx?.business?.name||'Agenda Pro'))}</span><span class="premium-top-profile">${appModalEscape(displayBusinessName(companyCtx?.business?.name||'Agenda Pro'))}<small>${appModalEscape(subscriptionLabel())}</small></span></button>${hasFeature('agenda')&&canOperateCompany()?'<button class="btn primary" onclick="book()">+ Novo horário</button>':''}<button class="logout-btn mobile-password-btn" onclick="changeMyPassword()">Senha</button><button class="logout-btn mobile-top-logout" onclick="ownerLogout()">Sair</button></div></header><div class="content">${content}</div></main>${bottom()}</div>`;
+    return `<div class="app company-app ${page==='home'?'dashboard-home':''}">${nav()}<div class="mobile-menu-overlay" onclick="closeMobileMenu()" aria-hidden="true"></div><main class="main"><header class="top"><div class="top-left"><button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Abrir menu" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="menu-label">Menu</span></button><div class="logo mini-logo">${p.initials}</div><span class="mobile-brand-name">AgenPro</span><div><h1>${page==='home'?'Olá, '+appModalEscape(displayBusinessName(companyCtx?.business?.name||'Agenda Pro'))+'! 👋':appModalEscape(t[0])}</h1><small>${page==='home'?'Aqui está um resumo da sua agenda hoje.':appModalEscape(t[1])}</small></div></div><div class="top-actions"><button type="button" class="agenda-update-button" onclick="refreshAgendaPro()" title="Verificar atualizações da Agenda Pro" aria-label="Verificar novas atualizações">${I.refresh}<span>Atualizar</span></button><label class="agenda-global-search">${I.search}<input type="search" aria-label="Pesquisar clientes" placeholder="Buscar clientes..." onkeydown="if(event.key==='Enter')dashboardQuickSearch(this.value)"></label><span class="owner-session"><i class="owner-dot"></i> ${appModalEscape(companyCtx?.plan?.name||'Plano')} · ${companyRole()}</span><button type="button" class="dashboard-notification-button" title="Ver agendamentos pendentes" aria-label="Ver agendamentos pendentes" onclick="go('agenda')">${I.bell}</button><button class="agenda-profile-button" onclick="go('profile')"><span class="agenda-profile-avatar">${appModalEscape(dashboardInitials(companyCtx?.business?.name||'Agenda Pro'))}</span><span class="premium-top-profile">${appModalEscape(displayBusinessName(companyCtx?.business?.name||'Agenda Pro'))}<small>${appModalEscape(subscriptionLabel())}</small></span></button>${hasFeature('agenda')&&canOperateCompany()?'<button class="btn primary" onclick="book()">+ Novo horário</button>':''}<button class="logout-btn mobile-password-btn" onclick="changeMyPassword()">Senha</button><button class="logout-btn mobile-top-logout" onclick="ownerLogout()">Sair</button></div></header><div class="content">${content}</div></main>${bottom()}</div>`;
   }
   const t=titles()[adminTab]||titles().overview;
-  return `<div class="app admin-owner-app">${nav()}<div class="mobile-menu-overlay" onclick="closeMobileMenu()" aria-hidden="true"></div><main class="main"><header class="top"><div class="top-left"><button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Abrir menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="menu-label">Menu</span></button><div class="logo mini-logo">AP</div><div><h1>${t[0]}</h1><small>${t[1]}</small></div></div><div class="top-actions"><button type="button" class="agenda-update-button" onclick="refreshAgendaPro()" title="Verificar atualizações da Agenda Pro" aria-label="Verificar novas atualizações">${I.refresh}<span>Atualizar</span></button><span class="owner-session"><i class="owner-dot"></i> Proprietário</span><button class="logout-btn mobile-password-btn" onclick="changeMyPassword()">Senha</button><button class="logout-btn mobile-top-logout" onclick="ownerLogout()">Sair</button></div></header><div class="content">${content}</div></main>${bottom()}</div>`;
+  return `<div class="app admin-owner-app">${nav()}<div class="mobile-menu-overlay" onclick="closeMobileMenu()" aria-hidden="true"></div><main class="main"><header class="top"><div class="top-left"><button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Abrir menu" aria-expanded="false"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="menu-label">Menu</span></button><div class="logo mini-logo">AP</div><div><h1>${t[0]}</h1><small>${t[1]}</small></div></div><div class="top-actions"><button type="button" class="agenda-update-button" onclick="refreshAgendaPro()" title="Verificar atualizações da Agenda Pro" aria-label="Verificar novas atualizações">${I.refresh}<span>Atualizar</span></button><span class="owner-session"><i class="owner-dot"></i> Proprietário</span><button class="logout-btn mobile-password-btn" onclick="changeMyPassword()">Senha</button><button class="logout-btn mobile-top-logout" onclick="ownerLogout()">Sair</button></div></header><div class="content">${content}</div></main>${bottom()}</div>`;
 }
     function segmentSwitch(){return `<div class="segment-switch"><button class="${segment==='salon'?'on':''}" onclick="setSegment('salon')">✂️ Salão</button><button class="${segment==='esthetic'?'on':''}" onclick="setSegment('esthetic')">✨ Estética</button><button class="${segment==='doctor'?'on':''}" onclick="setSegment('doctor')">🩺 Consultório</button></div>`}
     function setSegment(s){segment=s;localStorage.setItem('agendaProSegment',s);resetData();page='home';render();toast(`Modo alterado para ${P().segment}`)}
@@ -3260,6 +3262,7 @@ function home(){
     </div>
   </div>`;
   return shell(`<div class="agenda-dashboard premium-dashboard">
+    <section class="mobile-welcome" aria-label="Resumo do dia"><div class="mobile-welcome-main"><span class="welcome-eyebrow">Bem-vindo de volta</span><h2>Olá, ${appModalEscape(displayBusinessName(companyCtx?.business?.name||'AgenPro'))}!</h2><p>Confira seus agendamentos de hoje.</p></div><span class="mobile-welcome-date">${I.calendar} Hoje</span></section>
     <div class="dashboard-kpis">${metrics}</div>
     <div class="dashboard-main-grid">
       <section class="dashboard-panel dashboard-day-panel">
