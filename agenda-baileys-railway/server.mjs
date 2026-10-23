@@ -29,6 +29,10 @@ const AUTO_TEST_BUSINESS="270de0ad-2013-4afb-b8ba-2e21175b3f01";
 const testAutoDispatchEnabled=process.env.TEST_AUTO_DISPATCH_ENABLED==="true" &&
   localPollEnabled && !dispatchEnabled && !allowAll &&
   allowedBusinesses.size===1 && allowedBusinesses.has(AUTO_TEST_BUSINESS);
+const JULLI_BUSINESS_ID="7f00c45b-b228-4ee8-b795-aadbdcfb9d45";
+const julliAutoDispatchEnabled=process.env.JULLI_AUTO_DISPATCH_ENABLED==="true" &&
+  localPollEnabled && !dispatchEnabled && !allowAll &&
+  allowedBusinesses.has(JULLI_BUSINESS_ID);
 const configured=Boolean(SUPABASE_URL&&SERVICE_KEY&&PUBLISHABLE_KEY);
 let databaseReady=false;
 let shuttingDown=false;
@@ -232,9 +236,9 @@ async function cancelClaimed(businessId,job,reason){
     p_reason:reason
   });
 }
-async function claimAndValidate(businessId,leaseId){
+async function claimAndValidate(businessId,leaseId,claimRpc="agenda_baileys_claim_next"){
   for(let pass=0;pass<5;pass++){
-    const job=await rpc("agenda_baileys_claim_next",{
+    const job=await rpc(claimRpc,{
       p_business_id:businessId,
       p_lease_id:leaseId
     });
@@ -474,12 +478,22 @@ export class WhatsSession{
     });
   }
   async dispatchCycle(){
-    if(!(dispatchEnabled||testAutoDispatchEnabled)||this.dispatchBusy||this.state!=="online"||!this.sock||!this.hasLease())return;
+    const technicalTest=testAutoDispatchEnabled&&this.businessId===AUTO_TEST_BUSINESS;
+    const julliPilot=julliAutoDispatchEnabled&&this.businessId===JULLI_BUSINESS_ID;
+    if(!(dispatchEnabled||technicalTest||julliPilot)||this.dispatchBusy||
+      this.state!=="online"||!this.sock||!this.hasLease())return;
     this.dispatchBusy=true;
     try{
-      const message=await claimAndValidate(this.businessId,this.leaseId);
+      // The pilot DB function refuses other tenants, old jobs, retries, bulk
+      // campaigns and any unapproved runtime. No legacy backlog is claimed.
+      const message=await claimAndValidate(this.businessId,this.leaseId,
+        julliPilot?"agenda_baileys_claim_next_pilot":"agenda_baileys_claim_next");
       if(!message)return;
-      if(testAutoDispatchEnabled){
+      if(julliPilot&&!["confirmation","reminder"].includes(message.message_type)){
+        await cancelClaimed(this.businessId,message,"Somente confirmação e lembrete no piloto Julli.");
+        return;
+      }
+      if(technicalTest){
         // The test automation may ONLY deliver confirmation/reminder to the
         // previously user-approved number from the one-off successful test.
         // Do not send any other job type, tenant, or recipient.
