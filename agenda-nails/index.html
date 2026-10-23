@@ -3959,9 +3959,11 @@ async function cancelAgendaSubscription(toPix=false){
   }
 }
     function queueTypeLabel(type){
-  return type==='confirmation'?'Confirmação':type==='reminder'?'Lembrete':'Pós-atendimento';
+  return type==='confirmation'?'Confirmação':type==='reminder'?'Lembrete':type==='cancellation'?'Cancelamento':type==='rescheduled'?'Reagendamento':'Pós-atendimento';
 }
     function queueMessage(item){
+  if((item.message_type==='cancellation'||item.message_type==='rescheduled')&&item.notification_text)
+    return item.notification_text;
   const first=(item.customer_name||'').trim().split(/\s+/)[0]||'';
   const d=new Date(item.starts_at);
   const date=d.toLocaleDateString('pt-BR');
@@ -4172,6 +4174,72 @@ async function cancelAgendaSubscription(toPix=false){
       {onConflict:'business_id'}).select('*').single();
   if(error){console.error(error);return toast('Não foi possível restaurar a mensagem padrão.')}
   companyCtx.preferences=data;closeAppModal();render();toast('Mensagem padrão de agendamento restaurada.');
+}
+    function defaultCancellationTemplate(){
+  return 'Olá, {{cliente}}!\n\nSeu horário com *{{empresa}}* para *{{data}} às {{horario}}* foi cancelado.\n\nSe precisar de outro horário, entre em contato conosco.';
+}
+    function defaultRescheduledTemplate(){
+  return 'Olá, {{cliente}}!\n\nSeu horário com *{{empresa}}* foi reagendado.\n\n📅 Horário anterior: *{{data_anterior}} às {{horario_anterior}}*\n✅ Novo horário: *{{data_nova}} às {{horario_novo}}*\n✨ Serviço: *{{servico}}*\n\nTe esperamos!';
+}
+    function changeMessageVars(){
+  return {cliente:'Juliana',empresa:whatsappBookingName(companyCtx?.business?.name||'Agenda Pro'),
+    data:'29/10/2026',horario:'15:30',data_anterior:'28/10/2026',horario_anterior:'10:00',
+    data_nova:'29/10/2026',horario_novo:'15:30',servico:'Atendimento',profissional:'Jesiel'};
+}
+    function formatChangeMessageTemplate(template){
+  const vars=changeMessageVars();
+  return String(template||'').replace(/\{\{(cliente|empresa|data|horario|data_anterior|horario_anterior|data_nova|horario_novo|servico|profissional)\}\}/gi,
+    (_,key)=>String(vars[key.toLowerCase()]||'')).trim();
+}
+    function updateChangeMessagePreview(){
+  const inp=document.getElementById('changeMessageInput'),out=document.getElementById('changeMessagePreview');
+  if(inp&&out)out.textContent=formatChangeMessageTemplate(inp.value)||'Digite a mensagem para visualizar a prévia.';
+}
+    function openChangeMessageEditor(kind){
+  if(!canAdminCompany()||!companyCtx||!sb)return toast('Somente o administrador pode editar.');
+  if(!['cancellation','rescheduled'].includes(kind))return;
+  const cancellation=kind==='cancellation',field=cancellation?'cancellation_message':'rescheduled_message';
+  const label=cancellation?'cancelamento':'reagendamento';
+  const saved=companyCtx.preferences?.[field];
+  const initial=typeof saved==='string'&&saved.trim()?saved:(cancellation?defaultCancellationTemplate():defaultRescheduledTemplate());
+  const variables=cancellation?
+    '{{cliente}}, {{empresa}}, {{data}}, {{horario}}, {{servico}}, {{profissional}}':
+    '{{cliente}}, {{empresa}}, {{data_anterior}}, {{horario_anterior}}, {{data_nova}}, {{horario_novo}}, {{servico}}, {{profissional}}';
+  const html='<div class="field"><label for="changeMessageInput"><b>Mensagem de '+label+'</b></label>'+
+    '<textarea id="changeMessageInput" rows="10" maxlength="1600" oninput="updateChangeMessagePreview()" style="width:100%;min-height:200px;resize:vertical;box-sizing:border-box;line-height:1.6">'+appModalEscape(initial)+'</textarea>'+
+    '<small>Variáveis automáticas: '+appModalEscape(variables)+'. Máximo 1.600 caracteres.</small></div>'+
+    '<div style="margin-top:14px"><b>Prévia para o cliente</b><p id="changeMessagePreview" style="white-space:pre-wrap;line-height:1.6;border:1px solid #dfe9f3;background:#f3f8fc;padding:12px;border-radius:10px"></p></div>'+
+    '<button type="button" class="btn secondary" onclick="restoreDefaultChangeMessage(\''+kind+'\')" style="margin-top:12px">Restaurar texto padrão</button>'+
+    '<p style="font-size:12px;margin-top:12px">Salvar muda somente os próximos avisos desta empresa. Mensagens já enviadas ou na fila não serão alteradas.</p>';
+  openAppModal({title:'Editar mensagem de '+label,
+    subtitle:'Personalize o texto enviado automaticamente aos seus clientes.',
+    content:html,submitLabel:'Salvar mensagem',size:'wide',
+    onSubmit:async()=>{
+      const val=String(document.getElementById('changeMessageInput')?.value||'').trim();
+      if(!val||val.length>1600)throw new Error('Digite uma mensagem de até 1.600 caracteres.');
+      const allowed=new Set(['cliente','empresa','data','horario','data_anterior','horario_anterior','data_nova','horario_novo','servico','profissional']);
+      for(const m of val.matchAll(/\{\{([^{}]+)\}\}/g))
+        if(!allowed.has(m[1].toLowerCase()))throw new Error('Variável não reconhecida: '+m[0]);
+      const {data,error}=await sb.from('agenda_business_preferences')
+        .upsert({business_id:companyCtx.business.id,[field]:val,updated_at:new Date().toISOString()},
+          {onConflict:'business_id'}).select('*').single();
+      if(error){console.error(error);throw new Error('Não foi possível salvar a mensagem.');}
+      companyCtx.preferences=data;closeAppModal();render();
+      toast('Mensagem de '+label+' salva para os próximos avisos.');
+    }
+  });
+  updateChangeMessagePreview();
+}
+    async function restoreDefaultChangeMessage(kind){
+  if(!canAdminCompany()||!companyCtx||!sb||!['cancellation','rescheduled'].includes(kind))return;
+  const label=kind==='cancellation'?'cancelamento':'reagendamento';
+  if(!window.confirm('Restaurar a mensagem padrão de '+label+'?'))return;
+  const field=kind==='cancellation'?'cancellation_message':'rescheduled_message';
+  const {data,error}=await sb.from('agenda_business_preferences')
+    .upsert({business_id:companyCtx.business.id,[field]:null,updated_at:new Date().toISOString()},
+      {onConflict:'business_id'}).select('*').single();
+  if(error){console.error(error);return toast('Não foi possível restaurar a mensagem.')}
+  companyCtx.preferences=data;closeAppModal();render();toast('Mensagem padrão restaurada.');
 }
     function defaultReminderTemplate(businessName=companyCtx?.business?.name){
   const name=whatsappBusinessName(businessName||'Agenda Pro');
