@@ -29,6 +29,16 @@ const AUTO_TEST_BUSINESS="270de0ad-2013-4afb-b8ba-2e21175b3f01";
 const testAutoDispatchEnabled=process.env.TEST_AUTO_DISPATCH_ENABLED==="true" &&
   localPollEnabled && !dispatchEnabled && !allowAll &&
   allowedBusinesses.size===1 && allowedBusinesses.has(AUTO_TEST_BUSINESS);
+// A real company cannot be dispatched simply by being in ALLOWED_BUSINESS_IDS.
+// A second approval gate is checked against Supabase *before every queue claim*.
+// Explicitly OFF by default, even after applying this source change.
+const PILOT_BUSINESS_ID=String(process.env.PILOT_DISPATCH_BUSINESS_ID||"").trim();
+const pilotAllowlistIsolated=allowedBusinesses.size===1 ||
+  (allowedBusinesses.size===2 && allowedBusinesses.has(AUTO_TEST_BUSINESS));
+const pilotDispatchEnabled=process.env.PILOT_DISPATCH_ENABLED==="true" &&
+  localPollEnabled && !dispatchEnabled && !allowAll &&
+  pilotAllowlistIsolated && PILOT_BUSINESS_ID!==AUTO_TEST_BUSINESS &&
+  /^[0-9a-f-]{36}$/i.test(PILOT_BUSINESS_ID) && allowedBusinesses.has(PILOT_BUSINESS_ID);
 const configured=Boolean(SUPABASE_URL&&SERVICE_KEY&&PUBLISHABLE_KEY);
 let databaseReady=false;
 let shuttingDown=false;
@@ -304,6 +314,7 @@ async function claimAndValidate(businessId,leaseId){
     }
     return {
       id:job.id,
+      scheduled_for:job.scheduled_for,
       message_type:job.message_type,
       reservation_token:job.reservation_token,
       delivery_semantics:job.delivery_semantics||"AT_MOST_ONCE",
@@ -474,12 +485,33 @@ export class WhatsSession{
     });
   }
   async dispatchCycle(){
-    if(!(dispatchEnabled||testAutoDispatchEnabled)||this.dispatchBusy||this.state!=="online"||!this.sock||!this.hasLease())return;
+    const technicalTest=testAutoDispatchEnabled && this.businessId===AUTO_TEST_BUSINESS;
+    const approvedPilot=pilotDispatchEnabled && this.businessId===PILOT_BUSINESS_ID;
+    if(!(dispatchEnabled||technicalTest||approvedPilot)||this.dispatchBusy||
+       this.state!=="online"||!this.sock||!this.hasLease())return;
     this.dispatchBusy=true;
     try{
+      if(approvedPilot){
+        // Private approval, one local lease, no stale backlog or overlapping pilot.
+        // This is a read-only authorization check. A negative value leaves the queue untouched.
+        const authorized=await rpc("agenda_whatsapp_pilot_dispatch_allowed",{
+          p_business_id:this.businessId,p_lease_id:this.leaseId
+        });
+        if(authorized!==true)return;
+      }
       const message=await claimAndValidate(this.businessId,this.leaseId);
       if(!message)return;
-      if(testAutoDispatchEnabled){
+      if(approvedPilot){
+        // Pilot starts with confirmation and reminder ONLY, no bulk campaigns.
+        // Jobs older than 30 min are quarantined after claim and never sent late.
+        const due=Date.parse(message.scheduled_for||"");
+        if(!["confirmation","reminder"].includes(message.message_type) ||
+           !Number.isFinite(due) || due<Date.now()-30*60*1000){
+          await cancelClaimed(this.businessId,message,"Piloto: tipo de aviso não autorizado ou mensagem vencida.");
+          return;
+        }
+      }
+      if(technicalTest){
         // The test automation may ONLY deliver confirmation/reminder to the
         // previously user-approved number from the one-off successful test.
         // Do not send any other job type, tenant, or recipient.
