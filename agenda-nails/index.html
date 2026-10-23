@@ -2567,14 +2567,15 @@
           const reg=await navigator.serviceWorker.getRegistration('/');
           if(reg)await reg.update();
         }
-        if(remoteVersion!==AGENDA_UI_VERSION){
-          toast('Nova versão encontrada. Atualizando...');
-          const target=new URL(window.location.href);
-          target.searchParams.set('agenda_atualizada',remoteVersion);
-          window.location.replace(target.toString());
-        }else{
-          toast('Você já está usando a versão mais recente.');
-        }
+        // Always fetch a fresh page: later GitHub deployments may not bump
+        // the descriptive version number. This does NOT clear login or data.
+        toast(remoteVersion!==AGENDA_UI_VERSION
+          ?'Nova versão encontrada. Atualizando...'
+          :'Buscando a versão mais recente...');
+        const target=new URL(window.location.href);
+        target.searchParams.set('agenda_atualizada',remoteVersion);
+        target.searchParams.set('agenda_refresh',String(Date.now()));
+        window.location.replace(target.toString());
       }catch(error){
         console.warn('Verificação de atualizações:',error);
         toast('Sem acesso às atualizações. Verifique a internet e tente novamente.');
