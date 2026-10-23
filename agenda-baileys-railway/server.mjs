@@ -12,6 +12,7 @@ import makeWASocket, {
 } from "@whiskeysockets/baileys";
 
 import { persistentAuthState } from "./auth-state.mjs";
+import { startLocalPollBridge } from "./local-poll-bridge.mjs";
 
 const SUPABASE_URL=String(process.env.SUPABASE_URL||"").replace(/\/$/,"");
 const SERVICE_KEY=process.env.SUPABASE_SERVICE_ROLE_KEY||"";
@@ -23,9 +24,11 @@ const logger=P({level:process.env.LOG_LEVEL||"warn"});
 const allowedBusinesses=new Set(String(process.env.ALLOWED_BUSINESS_IDS||"").split(",").map(x=>x.trim()).filter(Boolean));
 const allowAll=process.env.ALLOW_ALL_BUSINESSES==="true";
 const dispatchEnabled=process.env.DISPATCH_ENABLED==="true";
+const localPollEnabled=process.env.LOCAL_POLL_ENABLED==="true";
 const configured=Boolean(SUPABASE_URL&&SERVICE_KEY&&PUBLISHABLE_KEY);
 let databaseReady=false;
 let shuttingDown=false;
+let stopLocalBridge=null;
 const allowed=id=>allowAll||allowedBusinesses.has(id);
 
 if(!configured)logger.warn("Configuração pendente: defina as variáveis SUPABASE no Railway.");
@@ -717,6 +720,18 @@ export async function startServer(){
 await mkdir(path.join(DATA_DIR,"sessions"),{recursive:true});
 await restoreDesiredSessions().catch(e=>{databaseReady=false;logger.warn({error:String(e)},"Banco indisponível")});
 setInterval(()=>restoreDesiredSessions().catch(e=>{databaseReady=false;logger.warn(e)}),30000).unref?.();
+// Outbound polling is opt-in and strictly scoped to explicit test-company UUIDs.
+if(localPollEnabled){
+  if(allowAll||allowedBusinesses.size===0){
+    logger.error("LOCAL_POLL_ENABLED requires ALLOWED_BUSINESS_IDS and ALLOW_ALL_BUSINESSES=false; bridge blocked.");
+  }else{
+    stopLocalBridge=startLocalPollBridge({
+      db,rpc,sessions,ensureSession,allowedBusinesses,logger,
+      isShuttingDown:()=>shuttingDown
+    });
+    logger.info({tenants:allowedBusinesses.size},"Local Supabase bridge enabled for allow-listed tenants");
+  }
+}
 
 server.listen(PORT,"0.0.0.0",()=>logger.info({port:PORT},"Agenda Pro Baileys Railway ready"));
 }
@@ -724,6 +739,7 @@ server.listen(PORT,"0.0.0.0",()=>logger.info({port:PORT},"Agenda Pro Baileys Rai
 async function shutdown(signal){
   logger.info({signal},"shutdown");
   shuttingDown=true;
+  stopLocalBridge?.();
   const all=[...sessions.values()];
   await Promise.allSettled(all.map(async s=>{
     for(const t of s.timers)clearInterval(t);
