@@ -2867,21 +2867,46 @@ function home(){
   const humanDate=x=>x?new Date(x).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'Nenhum registro recente';
   const status=baileysSession?.status==='connected'?'Conectado':'Não conectado';
   const recent=[...customers].sort((a,b)=>(Date.parse(b.created_at)||0)-(Date.parse(a.created_at)||0)).slice(0,4)
-    .map(c=>{const name=String(c.name||'Cliente');
-      const last=appts.filter(a=>a.customer_id===c.id).sort((a,b)=>Date.parse(b.starts_at)-Date.parse(a.starts_at))[0];
-      return `<div class="dashboard-client-row" onclick="go('clients')" role="button" tabindex="0" onkeydown="if(event.key==='Enter')go('clients')">
-        <span class="dashboard-initials">${appModalEscape(dashboardInitials(name))}</span><div style="min-width:0">
-        <strong>${appModalEscape(name)}</strong><small>${last?'Último horário: '+new Date(last.starts_at).toLocaleDateString('pt-BR'):'Sem agendamento'}</small>
-        </div></div>`;}).join('');
+    .map(c=>{
+      const name=String(c.name||'Cliente'),history=appts.filter(a=>a.customer_id===c.id);
+      const past=history.filter(a=>Date.parse(a.starts_at)<=now.getTime()).sort((a,b)=>Date.parse(b.starts_at)-Date.parse(a.starts_at))[0];
+      const upcoming=history.filter(a=>Date.parse(a.starts_at)>now.getTime()&&!['cancelled','no_show'].includes(a.status))
+        .sort((a,b)=>Date.parse(a.starts_at)-Date.parse(b.starts_at))[0];
+      const record=past?'Último horário: '+new Date(past.starts_at).toLocaleDateString('pt-BR'):
+        upcoming?'Próximo horário: '+new Date(upcoming.starts_at).toLocaleDateString('pt-BR'):'Sem agendamento';
+      const freq=history.length>=2?'Cliente recorrente':history.length===1?'Novo cliente':'Sem histórico';
+      return `<div class="dashboard-client-row" onclick="go('clients')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();go('clients')}">
+        <span class="dashboard-initials">${appModalEscape(dashboardInitials(name))}</span>
+        <div class="dashboard-client-info"><strong>${appModalEscape(name)}</strong><small>${appModalEscape(record)}</small></div>
+        <span class="dashboard-client-badge ${history.length>=2?'recurring':history.length===1?'new':'empty'}">${freq}</span>
+        <span class="dashboard-client-more" aria-hidden="true">⋯</span>
+      </div>`;
+    }).join('');
   const side=`<div class="dashboard-side-stack">
-    <section class="dashboard-panel"><div class="dashboard-heading"><div class="dashboard-heading-main">
-      <span class="dashboard-heading-icon">${I.message}</span><h3>WhatsApp</h3></div>
-      <span class="dashboard-wa-status ${status==='Conectado'?'connected':''}">${status}</span></div>
-      <p class="dashboard-wa-hint">${status==='Conectado'?'Número conectado. Confira os avisos e o estado dos envios na área WhatsApp.':'Conecte o número da empresa e ative os avisos automáticos disponíveis.'}</p>
-      <button class="dashboard-wa-button" onclick="go('wa')">${status==='Conectado'?'Gerenciar WhatsApp':'Configurar WhatsApp'} ↗</button></section>
-    <section class="dashboard-panel"><div class="dashboard-heading"><h3>Últimos clientes</h3>
+    <section class="dashboard-panel dashboard-whatsapp-panel">
+      <div class="dashboard-heading"><div class="dashboard-heading-main">
+        <span class="dashboard-whatsapp-logo">${I.message}</span>
+        <div><h3>WhatsApp</h3><small>Confirmações e lembretes dos seus clientes</small></div></div>
+        <span class="dashboard-wa-status ${status==='Conectado'?'connected':''}">${status}</span></div>
+      <div class="dashboard-whatsapp-stats">
+        <div class="dashboard-whatsapp-stat"><span class="dashboard-whatsapp-stat-icon">${I.message}</span>
+          <div><small>Último envio registrado</small><strong>${appModalEscape(humanDate(lastSendDate))}</strong>
+          <small>${lastSend?appModalEscape(queueTypeLabel(lastSend.message_type)):'Sem histórico disponível'}</small></div></div>
+        <div class="dashboard-whatsapp-stat"><span class="dashboard-whatsapp-stat-icon">${I.clock}</span>
+          <div><small>Próximo lembrete</small><strong>${appModalEscape(nextReminder?humanDate(nextReminder.scheduled_for):'Nenhum programado')}</strong>
+          <small>${nextReminderCount} ${nextReminderCount===1?'lembrete programado':'lembretes programados'}</small></div></div>
+      </div>
+      <div class="dashboard-wa-actions">
+        <button class="dashboard-wa-button" onclick="go('wa')">Gerenciar WhatsApp</button>
+        <button class="dashboard-outline-action" onclick="go('wa');toast('Escolha um número autorizado para testar o envio no painel WhatsApp.')">Testar envio</button>
+      </div>
+    </section>
+    <section class="dashboard-panel dashboard-customers-panel"><div class="dashboard-heading">
+      <div class="dashboard-heading-main"><span class="dashboard-heading-icon">${I.users}</span><h3>Últimos clientes</h3></div>
       <button class="dashboard-outline-action" onclick="go('clients')">Ver todos ›</button></div>
-      ${recent||'<div class="dashboard-empty">Nenhum cliente cadastrado.</div>'}</section></div>`;
+      ${recent||'<div class="dashboard-empty">Nenhum cliente cadastrado.</div>'}
+    </section>
+  </div>`;
   const months=Array.from({length:6},(_,i)=>{
     const date=new Date(now.getFullYear(),now.getMonth()-5+i,1);
     return {key:agendaDateKey(date).slice(0,7),label:date.toLocaleDateString('pt-BR',{month:'short'})};
