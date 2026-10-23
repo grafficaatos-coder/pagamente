@@ -289,3 +289,151 @@
     padding:10px 11px!important;font-size:13px!important;
   }
 }
+
+
+/* agenpro-mobile-logo-adjustment-20261023 — identidades e área segura iPhone */
+.agenpro-mobile-logo{display:none}
+.company-app .agenpro-side-logo{
+  display:block;width:43px;height:43px;max-width:43px;object-fit:contain;
+  flex:0 0 43px;background:#fff;border:1px solid #ebe8f6;
+  border-radius:12px
+}
+@media(max-width:720px){
+  /*
+   * Safari/PWA usa viewport-fit=cover: a barra de status fica sobre a página.
+   * Reserva ao menos 64px para impedir sobreposição com relógio/câmera.
+   */
+  .company-app .side{
+    width:min(88vw,316px)!important;
+    max-width:min(88vw,316px)!important;
+    height:100dvh!important;
+    max-height:100dvh!important;
+    padding-top:max(64px,calc(env(safe-area-inset-top) + 16px))!important;
+    padding-right:12px!important;
+    padding-left:12px!important;
+    padding-bottom:max(14px,calc(env(safe-area-inset-bottom) + 12px))!important;
+    box-sizing:border-box!important;
+    overflow:hidden!important;
+  }
+  .company-app .premium-brand{
+    display:flex!important;
+    align-items:center!important;
+    gap:9px!important;
+    min-width:0!important;
+    min-height:47px!important;
+    padding:0 52px 12px 6px!important;
+    margin:0 0 4px!important;
+  }
+  .company-app .agenpro-side-logo{
+    display:block!important;
+    width:43px!important;height:43px!important;
+    max-width:43px!important;min-width:43px!important;
+    flex:0 0 43px!important;
+    object-fit:contain!important;
+    border-radius:12px!important;
+    background:#fff!important;
+  }
+  .company-app .premium-brand-title{
+    display:block!important;
+    font-size:20px!important;
+    line-height:1.1!important;
+    font-weight:900!important;
+    color:#24213b!important;
+    min-width:0!important;
+    white-space:nowrap!important;
+  }
+  .company-app .mobile-side-close{
+    position:absolute!important;
+    top:max(64px,calc(env(safe-area-inset-top) + 16px))!important;
+    right:13px!important;
+    left:auto!important;bottom:auto!important;
+    width:43px!important;height:43px!important;
+    min-width:43px!important;
+    padding:0!important;
+    display:grid!important;place-items:center!important;
+    z-index:25!important;
+    border:0!important;
+    border-radius:12px!important;
+    background:#f3efff!important;
+    color:#674dcc!important;
+    font-size:27px!important;
+    line-height:1!important;
+    cursor:pointer!important;
+  }
+  .company-app .side .nav{
+    flex:1 1 auto!important;
+    min-height:0!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    overscroll-behavior:contain;
+    -webkit-overflow-scrolling:touch;
+  }
+  .company-app .premium-side-foot{
+    flex:0 0 auto!important;
+    min-height:0!important;
+    margin-top:0!important;
+  }
+
+  /* Logotipo real AP + nome AgenPro, sem repetir a marca dentro da imagem. */
+  .company-app .top-left .agenpro-mobile-logo{
+    display:block!important;
+    width:33px!important;height:33px!important;
+    max-width:33px!important;min-width:33px!important;
+    flex:0 0 33px!important;
+    object-fit:contain!important;
+    background:#fff!important;
+    border:1px solid #ebe8f6!important;
+    border-radius:9px!important;
+  }
+  .company-app .top-left .mobile-brand-name{
+    display:inline-block!important;
+    max-width:calc(100vw - 247px)!important;
+    min-width:0!important;
+    font-size:16px!important;
+    font-weight:900!important;
+    line-height:1.15!important;
+    white-space:nowrap!important;
+    letter-spacing:-.65px!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+  .company-app .top-left{
+    flex:0 1 auto!important;
+    gap:6px!important;
+    min-width:0!important;
+    max-width:calc(100% - 111px)!important;
+  }
+  .company-app .top .mobile-menu-toggle{
+    min-width:57px!important;
+    max-width:59px!important;
+    padding:0 5px!important;
+    gap:3px!important;
+  }
+  .company-app .top .top-actions{
+    margin-left:auto!important;
+    flex:0 0 auto!important;
+    min-width:0!important;
+    gap:3px!important;
+  }
+  .company-app .top .dashboard-notification-button,
+  .company-app .top .agenda-update-button{
+    width:32px!important;min-width:32px!important;
+    flex-basis:32px!important;
+  }
+  .company-app .top .agenda-profile-button{
+    width:34px!important;min-width:34px!important;
+  }
+}
+@media(max-width:370px){
+  .company-app .top-left{gap:3px!important}
+  .company-app .top-left .agenpro-mobile-logo{
+    width:29px!important;height:29px!important;
+    min-width:29px!important;flex-basis:29px!important;
+  }
+  .company-app .top-left .mobile-brand-name{
+    font-size:14px!important;
+    max-width:calc(100vw - 237px)!important;
+  }
+  .company-app .top .top-actions{gap:1px!important}
+  .company-app .top .mobile-menu-toggle{min-width:52px!important;max-width:53px!important}
+}
