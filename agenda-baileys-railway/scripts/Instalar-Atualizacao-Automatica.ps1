@@ -11,7 +11,36 @@ if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
   if(Test-Path $dockerExe){$env:PATH=(Split-Path $dockerExe)+";"+$env:PATH}
 }
 if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {throw "Abra o Docker Desktop e tente novamente (docker nao encontrado)"}
+# Se o motor Linux do Docker Desktop nao estiver ativo, tente iniciar o aplicativo.
+# Nunca reinstala Docker, apaga volumes ou inicia outra instancia de WhatsApp.
+$engineRunning=$false
+try {
+  $dockerVersion = & docker info --format '{{.ServerVersion}}' 2>$null
+  $engineRunning=($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace([string]$dockerVersion))
+} catch {}
+if(-not $engineRunning){
+  $desktopExe=Join-Path $env:ProgramFiles 'Docker\Docker\Docker Desktop.exe'
+  if(-not (Test-Path -LiteralPath $desktopExe)){
+    throw 'Docker Desktop nao esta instalado no local padrao. Abra o Docker Desktop manualmente antes de executar o instalador.'
+  }
+  Write-Host 'Iniciando Docker Desktop para ativar o motor Linux...' -ForegroundColor Yellow
+  Start-Process -FilePath $desktopExe
+  for($try=0;$try -lt 90;$try++){
+    Start-Sleep -Seconds 2
+    try {
+      $dockerVersion = & docker info --format '{{.ServerVersion}}' 2>$null
+      if($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace([string]$dockerVersion)){
+        $engineRunning=$true
+        break
+      }
+    } catch {}
+  }
+}
+if(-not $engineRunning){
+  throw 'Docker Desktop abriu, mas o motor Linux nao iniciou. Abra Docker Desktop e veja se aparece Engine running.'
+}
 $container=@((docker inspect agenda-pro-whatsapp | ConvertFrom-Json))[0]
+
 if (-not $container -or $LASTEXITCODE -ne 0 -or -not $container.State.Running) {
   throw "O container agenda-pro-whatsapp precisa estar executando"
 }
