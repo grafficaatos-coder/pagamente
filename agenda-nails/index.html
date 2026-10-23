@@ -2830,7 +2830,7 @@ function home(){
   return status==='pending'?'Pendente':status==='cancelled'?'Cancelado':status==='completed'?'Concluído':status==='no_show'?'Faltou':'Confirmado';
 }
     function agendaActions(a){
-  return canOperateCompany()?`<div class="agenda-actions"><select onchange="updateAppointmentStatus('${a.id}',this.value)"><option value="pending" ${a.status==='pending'?'selected':''}>Pendente</option><option value="confirmed" ${a.status==='confirmed'?'selected':''}>Confirmado</option><option value="completed" ${a.status==='completed'?'selected':''}>Concluído</option><option value="no_show" ${a.status==='no_show'?'selected':''}>Faltou</option><option value="cancelled" ${a.status==='cancelled'?'selected':''}>Cancelado</option></select><button class="mini-btn whats-mini" onclick="sendAppointmentConfirmationLink('${a.id}')">Enviar confirmação</button><button class="mini-btn" onclick="editAppointment('${a.id}')">Editar</button><button class="mini-btn" onclick="rescheduleAppointment('${a.id}')">Reagendar</button>${a.status!=='cancelled'?`<button class="mini-btn danger" onclick="cancelAppointmentWithNotice('${a.id}')">Cancelar e avisar</button>`:''}${canAdminCompany()?`<button class="mini-btn danger" type="button" onclick="deleteAppointment('${a.id}')">Excluir horário</button>`:''}</div>`:'';
+  return canOperateCompany()?`<div class="agenda-actions"><select onchange="updateAppointmentStatus('${a.id}',this.value)"><option value="pending" ${a.status==='pending'?'selected':''}>Pendente</option><option value="confirmed" ${a.status==='confirmed'?'selected':''}>Confirmado</option><option value="completed" ${a.status==='completed'?'selected':''}>Concluído</option><option value="no_show" ${a.status==='no_show'?'selected':''}>Faltou</option><option value="cancelled" ${a.status==='cancelled'?'selected':''}>Cancelado</option></select><button class="mini-btn whats-mini" onclick="sendAppointmentConfirmationLink('${a.id}')">Enviar confirmação</button><button class="mini-btn" onclick="editAppointment('${a.id}')">Editar</button><button class="mini-btn ${a.status==='cancelled'?'':'danger'}" onclick="chooseAppointmentChange('${a.id}')">${a.status==='cancelled'?'Reagendar':'Cancelar / reagendar'}</button>${canAdminCompany()?`<button class="mini-btn danger" type="button" onclick="deleteAppointment('${a.id}')">Excluir horário</button>`:''}</div>`:'';
 }
     function agendaRow(a,showDate=false){
   const d=new Date(a.starts_at),cu=companyData.customers.find(x=>x.id===a.customer_id),se=companyData.services.find(x=>x.id===a.service_id);
@@ -4983,24 +4983,61 @@ async function cancelAgendaSubscription(toPix=false){
   if(type==='cancelled')return 'Olá, '+name+'! Seu horário com *'+business+'* para *'+fmt(a.starts_at)+'* foi cancelado. Se precisar de outro horário, entre em contato conosco.';
   return 'Olá, '+name+'! Seu horário com *'+business+'* foi reagendado.\n\nHorário anterior: *'+fmt(previousDate)+'*\nNovo horário: *'+fmt(a.starts_at)+'*\nServiço: *'+(service?.name||'Atendimento')+'*.\n\nAguardamos você!';
 }
-    function sendAppointmentNotice(a,type,previousDate){
-  // A fila é criada pelo banco quando a automação estiver habilitada.
-  // Nunca informar entrega ao WhatsApp antes de confirmação do servidor.
-  toast('Alteração salva. Envio automático aguardando ativação do servidor WhatsApp.');
+    async function sendAppointmentNotice(a,type,previousDate){
+  // A mensagem é enfileirada pelo gatilho do Supabase, não pelo navegador.
+  // Não confundir horário salvo com WhatsApp efetivamente entregue.
+  try{
+    const kind=type==='cancelled'?'cancellation':type;
+    const {data}=await sb.from('agenda_whatsapp_queue').select('status,created_at')
+      .eq('business_id',companyCtx.business.id)
+      .eq('appointment_id',a.id)
+      .eq('message_type',kind).maybeSingle();
+    const lastUpdate=Date.parse(a.updated_at||'');
+    if(data&&(!Number.isFinite(lastUpdate)||Date.parse(data.created_at)>=lastUpdate-120000)){
+      toast(data.status==='done'?'Aviso enviado ao WhatsApp.':
+        'Alteração salva. Aviso aguardando envio automático no WhatsApp.');
+      return;
+    }
+  }catch(ex){console.warn('Não foi possível consultar a fila:',ex)}
+  toast('Alteração salva. Não foi possível confirmar o aviso na fila; confira a seção WhatsApp.');
+}
+    function chooseAppointmentChange(id){
+  if(!canOperateCompany())return toast('Seu perfil não permite alterar horários');
+  const a=companyData.appointments.find(x=>x.id===id);
+  if(!a)return toast('Agendamento não encontrado. Atualize a agenda.');
+  if(a.status==='completed'||a.status==='no_show')return toast('Atendimento concluído ou falta registrada não pode ser cancelado ou reagendado.');
+  if(a.status==='cancelled')return openAppointmentEditModal(id,true);
+  const cu=companyData.customers.find(x=>x.id===a.customer_id);
+  const when=new Date(a.starts_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+  openAppModal({
+    title:'Cancelar ou reagendar?',
+    subtitle:(cu?.name||'Cliente')+' · '+when,
+    submitLabel:'Voltar à agenda',
+    content:`<div class="app-modal-grid">
+      <div class="app-modal-note full">Escolha uma das ações. O cliente receberá somente o aviso correspondente à sua escolha, quando o WhatsApp automático desta empresa estiver ativo.</div>
+      <div class="app-modal-field full"><button class="btn secondary" style="width:100%;min-height:52px" type="button" onclick="cancelAppointmentWithNotice('${a.id}')">Cancelar horário e enviar somente cancelamento</button></div>
+      <div class="app-modal-field full"><button class="btn primary" style="width:100%;min-height:52px" type="button" onclick="rescheduleAppointment('${a.id}')">Cancelar horário anterior e reagendar</button></div>
+      <div class="app-modal-note full">No reagendamento você escolherá a nova data e hora. O histórico continua no mesmo agendamento e não será enviada uma mensagem separada de cancelamento.</div>
+    </div>`,
+    onSubmit:()=>closeAppModal()
+  });
 }
     async function cancelAppointmentWithNotice(id){
   if(!canOperateCompany())return toast('Seu perfil não permite cancelar');
   const a=companyData.appointments.find(x=>x.id===id);if(!a)return;
   if(a.status==='cancelled')return toast('Agendamento já cancelado');
-  const ok=await askAppConfirm({title:'Cancelar e avisar o cliente?',message:'O horário será marcado como cancelado, sem apagar o histórico. O aviso será processado pela fila automática quando o serviço estiver ativado.',confirmLabel:'Cancelar horário'});
+  if(a.status==='completed'||a.status==='no_show')return toast('Este atendimento não pode ser cancelado.');
+  const ok=await askAppConfirm({title:'Cancelar e enviar somente o cancelamento?',message:'O horário será marcado como cancelado e o cliente receberá apenas o aviso de cancelamento. Para reagendar, volte e escolha a segunda opção.',confirmLabel:'Sim, cancelar horário'});
   if(!ok)return;
   const {data,error}=await sb.from('agenda_appointments').update({status:'cancelled',updated_at:new Date().toISOString()}).eq('id',id).eq('business_id',companyCtx.business.id).select('id');
   if(error||!data?.length){console.error(error);return toast('Não foi possível cancelar')}
   await loadCompanyData();render();
-  sendAppointmentNotice(a,'cancelled');
+  await sendAppointmentNotice({...a,updated_at:new Date().toISOString()},'cancelled');
 }
     function rescheduleAppointment(id){
   if(!canOperateCompany())return toast('Seu perfil não permite reagendar');
+  const appointment=companyData.appointments.find(x=>x.id===id);
+  if(!appointment||['completed','no_show'].includes(appointment.status))return toast('Não é possível reagendar este atendimento.');
   openAppointmentEditModal(id,true);
 }
     function openAppointmentEditModal(id,isReschedule=false){
@@ -5011,8 +5048,8 @@ async function cancelAgendaSubscription(toPix=false){
   const localTime=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   const p=P();
   openAppModal({
-    title:isReschedule?'Reagendar atendimento':'Editar agendamento',
-    subtitle:isReschedule?'Escolha nova data e horário; o aviso será processado automaticamente quando o serviço estiver ativado.':'Atualize horário, cliente, serviço, profissional e status.',
+    title:isReschedule?'Cancelar horário anterior e reagendar':'Editar agendamento',
+    subtitle:isReschedule?'Escolha a nova data e o novo horário. A cliente receberá somente o aviso de reagendamento; o horário antigo será liberado.':'Atualize horário, cliente, serviço, profissional e status.',
     submitLabel:'Salvar alterações',
     size:'wide',
     content:`${canAdminCompany()?`<div class="appointment-delete-toolbar"><span>Precisa remover este horário? A exclusão também cancela os envios automáticos pendentes.</span><button type="button" class="appointment-delete-button" onclick="deleteAppointment('${a.id}')">Excluir horário</button></div>`:''}<div class="app-modal-grid">
@@ -5033,6 +5070,10 @@ async function cancelAgendaSubscription(toPix=false){
       const time=document.getElementById('modalAppointmentTime')?.value;
       const professional_name=(document.getElementById('modalAppointmentProfessional')?.value||'').trim();
       const status=isReschedule?'pending':(document.getElementById('modalAppointmentStatus')?.value||'confirmed');
+      if(!isReschedule && status==='cancelled' && a.status!=='cancelled'){
+        closeAppModal();
+        return chooseAppointmentChange(id);
+      }
       const notes=(document.getElementById('modalAppointmentNotes')?.value||'').trim();
       if(!customer_id||!service_id||!date||!time){toast('Preencha cliente, serviço, data e horário');return}
       const starts=new Date(date+'T'+time+':00');if(Number.isNaN(starts.getTime())){toast('Data ou horário inválido');return}
@@ -5042,7 +5083,7 @@ async function cancelAgendaSubscription(toPix=false){
       const {data:updated,error}=await sb.from('agenda_appointments').update({customer_id,service_id,starts_at:starts.toISOString(),professional_name:professional_name||null,status,notes:notes||null,updated_at:new Date().toISOString()}).eq('id',id).eq('business_id',companyCtx.business.id).select('id');
       if(error||!updated?.length){console.error(error);toast('Não foi possível editar');return}
       closeAppModal();await loadCompanyData();render();
-      if(isReschedule){sendAppointmentNotice({...a,customer_id,service_id,starts_at:starts.toISOString()},'rescheduled',a.starts_at)}
+      if(isReschedule){await sendAppointmentNotice({...a,customer_id,service_id,starts_at:starts.toISOString(),updated_at:new Date().toISOString()},'rescheduled',a.starts_at)}
       else toast('Agendamento atualizado');
     }
   });
@@ -5109,6 +5150,8 @@ async function cancelAgendaSubscription(toPix=false){
     async function updateAppointmentStatus(id,status){
       if(!canOperateCompany())return;
       const allowed=['pending','confirmed','completed','cancelled','no_show'];if(!allowed.includes(status))return;
+      // Selecting Cancelado should open the choice; never silently cancel a booking.
+      if(status==='cancelled'){render();return chooseAppointmentChange(id)}
       const {error}=await sb.from('agenda_appointments').update({status,updated_at:new Date().toISOString()}).eq('id',id).eq('business_id',companyCtx.business.id);
       if(error){console.error(error);return toast('Não foi possível alterar o status')}
       await loadCompanyData();render();toast('Status atualizado');
