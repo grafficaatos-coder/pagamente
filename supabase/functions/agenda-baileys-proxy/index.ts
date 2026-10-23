@@ -47,7 +47,7 @@ Deno.serve(async(req)=>{
 
     const {data:member,error:memberError}=await admin
       .from("agenda_members")
-      .select("business_id")
+      .select("business_id,role")
       .eq("user_id",authData.user.id)
       .limit(1)
       .maybeSingle();
@@ -71,6 +71,51 @@ Deno.serve(async(req)=>{
       .eq("business_id",member.business_id)
       .maybeSingle();
     if(routeError)throw routeError;
+
+    // Outbound-only Supabase channel: no public Docker URL or Cloudflare token.
+    // Requires an EXPLICIT tenant route and a recent allow-listed worker heartbeat.
+    const localRoute=route?.runtime_prefix==="local-poll:"&&
+      route?.service_url==="supabase-poll://local";
+    if(localRoute){
+      if(!["status","connect","disconnect","pair-code"].includes(action))
+        return json({error:"Esta ação ainda não está liberada no Docker local",code:"local_action_disabled"},409);
+      if(action!=="status"&&(!["owner","admin"].includes(String(member.role))))
+        return json({error:"Somente o administrador pode gerenciar o WhatsApp"},403);
+
+      const {data:heartbeat,error:heartbeatError}=await admin.from("agenda_whatsapp_local_status")
+        .select("snapshot,updated_at").eq("business_id",member.business_id).maybeSingle();
+      if(heartbeatError)throw heartbeatError;
+      const fresh=heartbeat&&Date.now()-new Date(heartbeat.updated_at).getTime()<20000;
+      if(!fresh)return json({error:"O Docker do WhatsApp está desligado ou não autorizou esta empresa",code:"local_worker_offline"},503);
+      if(action==="status")return json(heartbeat.snapshot??{status:"disconnected"});
+
+      const commandPayload=action==="pair-code"?
+        {phone:String(payload?.phone??"").replace(/\\D/g,"").slice(0,15),force_new:payload?.force_new===true}:{};
+      if(action==="pair-code"&&commandPayload.phone.length<10)
+        return json({error:"Informe um celular com DDD"},400);
+
+      const {data:command,error:enqueueError}=await admin.from("agenda_whatsapp_local_commands")
+        .insert({business_id:member.business_id,action,payload:commandPayload,
+          expires_at:new Date(Date.now()+12000).toISOString()})
+        .select("id").single();
+      if(enqueueError)throw enqueueError;
+
+      // Wait for the local poller to pick up and answer. Never retry automatically.
+      const deadline=Date.now()+37000;
+      while(Date.now()<deadline){
+        await new Promise(resolve=>setTimeout(resolve,750));
+        const {data:state,error:stateError}=await admin.from("agenda_whatsapp_local_commands")
+          .select("status,result,http_status")
+          .eq("id",command.id).eq("business_id",member.business_id).maybeSingle();
+        if(stateError)throw stateError;
+        if(state?.status==="completed"||state?.status==="failed")
+          return json(state.result??{error:"Resposta vazia"},Number(state.http_status)||500);
+      }
+      return json({ok:false,pending:true,
+        error:"O comando está em processamento. Consulte o status antes de solicitar novamente.",
+        code:"local_poll_pending"},202);
+    }
+
     if(route?.service_url)base=String(route.service_url).replace(/\/$/,"");
     // A rota padrao tambem pode apontar para Railway, mesmo sem uma linha por empresa.
     // Nesse caso, nao executar o warmup legado da Oracle.
