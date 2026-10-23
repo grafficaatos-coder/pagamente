@@ -2622,6 +2622,20 @@
       .company-app .premium-side-foot{flex:0 0 auto!important;display:grid!important;position:static!important}
     }
 
+  
+    /* Menu lateral sempre legível ao abrir pelo celular. */
+    .company-app .side .nav button .label{display:inline!important;overflow:hidden;text-overflow:ellipsis}
+    .company-app .side .nav button:focus-visible,
+    .company-app .premium-side-foot button:focus-visible,
+    .company-app.dashboard-home .dashboard-day-empty button:focus-visible{
+      outline:3px solid #77b9ff;outline-offset:2px
+    }
+    @media(max-width:720px){
+      .company-app .premium-brand-title{display:inline!important}
+      .company-app .premium-side-refresh.agenda-update-button{width:100%;height:auto}
+      .company-app .premium-side-refresh.agenda-update-button span{display:inline!important}
+    }
+
   </style>
 </head>
 <body>
@@ -3293,6 +3307,7 @@ function home(){
   if(parts.length!==3||!parts[0]||!parts[1]||!parts[2])return;
   agendaAnchorDate=new Date(parts[0],parts[1]-1,parts[2],12,0,0);
   agendaView='day';
+  page='agenda';
   render();
   scrollTo(0,0);
 }
