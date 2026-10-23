@@ -1,6 +1,6 @@
 {
-  "version": "2026.10.23.7",
+  "version": "2026.10.23.8",
   "released_at": "2026-10-23",
   "name": "AgenPro",
-  "notes": "Avisos PWA quando a cliente confirma ou recusa o agendamento; central de notificações e opção de ativar no celular."
+  "notes": "Correções para telas pequenas e PWA: campos com 16px para evitar zoom automático no iPhone, ajuste de formulários, modais, menu, agenda e rolagem lateral."
 }
