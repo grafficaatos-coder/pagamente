@@ -2640,6 +2640,7 @@
   <link rel="stylesheet" href="/mobile-redesign.css?v=20261023-5">
   <link rel="stylesheet" href="/messages-layout.css?v=20261023-6">
   <link rel="stylesheet" href="/appointment-push.css?v=20261023-7">
+  <link rel="stylesheet" href="/mobile-fit.css?v=20261023-8">
   <script defer src="/appointment-push.js?v=20261023-7"></script>
 </head>
 <body>
@@ -2863,7 +2864,7 @@
     // Atualizar manualmente o PWA sem limpar sessão ou dados locais.
     I.refresh='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.3 9A7.8 7.8 0 0 1 19 7l1 5M4 12l1 5a7.8 7.8 0 0 0 13.7-2"/></svg>';
     I.cancel='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></svg>';
-    const AGENDA_UI_VERSION='2026.10.23.7';
+    const AGENDA_UI_VERSION='2026.10.23.8';
     let agendaUpdateInProgress=false;
     async function refreshAgendaPro(){
       if(agendaUpdateInProgress)return;
@@ -7080,7 +7081,7 @@ async function cancelAgendaSubscription(toPix=false){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261023-push-v1',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261023-mobile-fit-v1',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
