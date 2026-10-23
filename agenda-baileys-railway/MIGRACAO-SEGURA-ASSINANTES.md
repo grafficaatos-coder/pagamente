@@ -1,5 +1,11 @@
 # Agenda Pro — migração segura do WhatsApp (Railway → Docker / Supabase)
 
+## Atualização do responsável pela plataforma — 23/10/2026
+
+O responsável pela plataforma informou no chat que **todos os clientes já confirmaram a autorização para migrar**. Trata-se de confirmação relatada pelo operador; não são identidades autenticadas pelo login dos clientes. A migração não exige nova solicitação verbal, mas o titular de cada WhatsApp deverá acompanhar o pareamento seguro de seu próprio aparelho.
+
+**Situação de segurança:** Nenhum cliente real foi redirecionado, nenhum WhatsApp do Railway foi encerrado e nenhuma fila antiga foi disparada. O banco continua exigindo aprovação autenticada para a habilitação automática do primeiro piloto. Foi preparado um campo de auditoria separado no GitHub, ainda não aplicado devido a bloqueio da ferramenta de migração. Não confundir o relatório do operador com `consent_confirmed_by`.
+
 ## Preparação executada em 23/10/2026
 
 Esta é uma **avaliação**, não uma migração. O Supabase foi atualizado com:
