@@ -568,9 +568,9 @@ footer small,footer .footer-links{color:#76708a}
   <section class="section pricing" id="planos">
     <div class="container">
       <div class="section-heading">
-        <span class="section-label">Planos e assinatura</span>
-        <h2>Escolha seu plano e comece grátis.</h2>
-        <p>Consulte os preços e recursos atualizados. Experimente antes de continuar sua assinatura.</p>
+        <span class="section-label">Sua assinatura AgenPro</span>
+        <h2>Comece grátis com o AgenPro.</h2>
+        <p>Conheça tudo o que está incluído na assinatura e aproveite o período de teste grátis.</p>
       </div>
       <div style="text-align:center"><span class="trial-tag" id="trial-tag" hidden>✓ Teste grátis disponível</span></div>
       <div class="trial-details"><span>✓ Cadastro online</span><span>✓ Sem cartão no cadastro</span><span>✓ Acesse pelo celular ou computador</span></div>
@@ -690,7 +690,7 @@ footer small,footer .footer-links{color:#76708a}
           '<h3>'+esc(plan.name||'Plano')+'</h3>'+
           '<p class="description">'+esc(plan.description||'Organize sua rotina de atendimentos com o Agenda Pro.')+'</p>'+
           '<div class="plan-price">'+esc(brl(plan.monthly_price_cents))+' <small>/mês</small></div>'+
-          '<a class="btn '+(featured?'btn-primary':'btn-outline')+'" href="/?cadastro=1&amp;plano='+encodeURIComponent(String(plan.code||''))+'">Escolher '+esc(plan.name||'plano')+' <svg><use href="#i-arrow"></use></svg></a>'+
+          '<a class="btn '+(featured?'btn-primary':'btn-outline')+'" href="/?cadastro=1&amp;plano='+encodeURIComponent(String(plan.code||''))+'">Começar agora <svg><use href="#i-arrow"></use></svg></a>'+
           '<ul>'+unique.map(text=>'<li>'+esc(text)+'</li>').join('')+'</ul>'+
           '</article>';
       }).join('');
