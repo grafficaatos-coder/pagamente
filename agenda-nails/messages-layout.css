@@ -1,0 +1,43 @@
+/* AgenPro - aba Mensagens independente da conexão WhatsApp. */
+.company-app .message-settings-intro{
+  display:flex;justify-content:space-between;align-items:center;gap:16px;
+  margin:0 0 17px;padding:15px 17px;background:linear-gradient(135deg,#eff4ff,#f8f7ff);
+  border:1px solid #dce7f7;border-radius:15px
+}
+.company-app .message-settings-intro strong{display:block;color:#18375c;font-size:14px}
+.company-app .message-settings-intro p{margin:5px 0 0;color:#61758f;line-height:1.55;font-size:12px}
+.company-app .message-settings-intro .btn{white-space:nowrap}
+.company-app .message-settings-grid{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px;
+  align-items:start;width:100%;min-width:0
+}
+.company-app .message-settings-grid>.panel{
+  min-width:0;max-width:100%;margin:0!important;padding:19px!important;
+  border:1px solid #dee7f3!important;border-radius:16px!important;
+  box-shadow:0 5px 17px rgba(19,46,86,.04)!important;background:#fff!important
+}
+.company-app .message-settings-grid .head{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start}
+.company-app .message-settings-grid .head h3{margin-top:5px}
+.company-app .message-settings-grid p{line-height:1.55;overflow-wrap:anywhere}
+.company-app .message-settings-grid .btn{white-space:normal;max-width:100%;min-height:41px}
+.company-app .message-settings-grid details{border-top:1px solid #edf1f7;padding-top:9px}
+.company-app .message-settings-grid details summary{cursor:pointer;color:#17558f;font-weight:750}
+.company-app .message-settings-grid details p{white-space:pre-wrap;overflow-wrap:anywhere}
+.company-app .message-settings-grid .status-badge{font-size:10px;white-space:normal;text-align:center}
+.company-app .message-settings-confirmation{border-left:4px solid #7860d8!important}
+.company-app .message-settings-confirmation .message-linked-info{
+  color:#526781;background:#f4f7fc;border:1px solid #e4ebf5;
+  border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.5
+}
+@media(max-width:950px){
+ .company-app .message-settings-grid{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:720px){
+ .company-app .message-settings-intro{flex-direction:column;align-items:stretch;padding:13px;gap:11px}
+ .company-app .message-settings-intro .btn{width:100%}
+ .company-app .message-settings-grid{grid-template-columns:minmax(0,1fr);gap:12px}
+ .company-app .message-settings-grid>.panel{padding:14px!important}
+ .company-app .message-settings-grid .head{align-items:start}
+ .company-app .message-settings-grid .head h3{font-size:15px}
+ .company-app .message-settings-grid .btn{width:100%}
+}
