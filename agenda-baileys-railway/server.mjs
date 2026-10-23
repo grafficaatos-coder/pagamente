@@ -25,6 +25,10 @@ const allowedBusinesses=new Set(String(process.env.ALLOWED_BUSINESS_IDS||"").spl
 const allowAll=process.env.ALLOW_ALL_BUSINESSES==="true";
 const dispatchEnabled=process.env.DISPATCH_ENABLED==="true";
 const localPollEnabled=process.env.LOCAL_POLL_ENABLED==="true";
+const AUTO_TEST_BUSINESS="270de0ad-2013-4afb-b8ba-2e21175b3f01";
+const testAutoDispatchEnabled=process.env.TEST_AUTO_DISPATCH_ENABLED==="true" &&
+  localPollEnabled && !dispatchEnabled && !allowAll &&
+  allowedBusinesses.size===1 && allowedBusinesses.has(AUTO_TEST_BUSINESS);
 const configured=Boolean(SUPABASE_URL&&SERVICE_KEY&&PUBLISHABLE_KEY);
 let databaseReady=false;
 let shuttingDown=false;
@@ -300,6 +304,7 @@ async function claimAndValidate(businessId,leaseId){
     }
     return {
       id:job.id,
+      message_type:job.message_type,
       reservation_token:job.reservation_token,
       delivery_semantics:job.delivery_semantics||"AT_MOST_ONCE",
       phone:currentPhone,
@@ -469,11 +474,29 @@ export class WhatsSession{
     });
   }
   async dispatchCycle(){
-    if(!dispatchEnabled||this.dispatchBusy||this.state!=="online"||!this.sock||!this.hasLease())return;
+    if(!(dispatchEnabled||testAutoDispatchEnabled)||this.dispatchBusy||this.state!=="online"||!this.sock||!this.hasLease())return;
     this.dispatchBusy=true;
     try{
       const message=await claimAndValidate(this.businessId,this.leaseId);
       if(!message)return;
+      if(testAutoDispatchEnabled){
+        // The test automation may ONLY deliver confirmation/reminder to the
+        // previously user-approved number from the one-off successful test.
+        // Do not send any other job type, tenant, or recipient.
+        if(this.businessId!==AUTO_TEST_BUSINESS || !["confirmation","reminder"].includes(message.message_type)){
+          await cancelClaimed(this.businessId,message,"Envio não permitido no teste automático isolado.");
+          return;
+        }
+        const authorized=await fetchOne(
+          "/rest/v1/agenda_whatsapp_local_commands?business_id=eq."+encodeURIComponent(AUTO_TEST_BUSINESS)+
+          "&action=eq.send-test&status=eq.completed&http_status=eq.200&select=payload,result&order=created_at.desc&limit=1"
+        );
+        const approvedPhone=normalizePhone(authorized?.payload?.phone);
+        if(authorized?.result?.status!=="submitted"||!approvedPhone||message.phone!==approvedPhone){
+          await cancelClaimed(this.businessId,message,"Destinatário não corresponde ao número aprovado para teste.");
+          return;
+        }
+      }
        if(!message.text){await cancelClaimed(this.businessId,message,"Aviso sem conteúdo; envio bloqueado.");return}
       let started=false;
       try{
