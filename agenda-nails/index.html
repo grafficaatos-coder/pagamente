@@ -2281,6 +2281,52 @@
     @media(max-width:900px){.support-layout{grid-template-columns:minmax(0,1fr)}.support-inbox-list{max-height:225px}.support-history{max-height:55vh}}
     @media(max-width:720px){.support-page h2{font-size:21px}.support-history{min-height:250px;padding:11px}.support-bubble{max-width:92%;font-size:12px}.support-panel-header{padding:12px}.support-composer{padding:11px}}
 
+
+    /* Agenda Pro 2026: ações enxutas, navegação móvel legível e atualização do PWA */
+    .agenda-update-button{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:8px 12px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--wine);font-size:12px;font-weight:800;white-space:nowrap;flex:0 0 auto}
+    .agenda-update-button:hover{background:var(--rose)}
+    .agenda-update-button svg{width:17px;height:17px;stroke:currentColor;stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round}
+    .agenda-update-button[aria-busy="true"] svg{animation:agenda-update-spin 1s linear infinite}
+    @keyframes agenda-update-spin{to{transform:rotate(360deg)}}
+    .dashboard-operational-status{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-bottom:16px}
+    .dashboard-operational-status>div{display:flex;align-items:center;gap:11px;padding:13px 15px;border:1px solid var(--line);border-radius:15px;background:#fff;min-width:0}
+    .dashboard-operational-status strong,.dashboard-operational-status small{display:block}
+    .dashboard-operational-status strong{font-size:12px;color:var(--ink);font-weight:800}
+    .dashboard-operational-status small{margin-top:2px;font-size:11px;color:var(--muted)}
+    .ops-indicator{width:38px;height:38px;display:grid;place-items:center;border-radius:12px;background:var(--rose);color:var(--wine);flex:0 0 38px}
+    .ops-indicator svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8}
+    .agenda-actions-compact{align-items:flex-start;gap:7px}
+    .agenda-actions-compact>.mini-btn{font-size:11px;padding:8px 11px;min-height:38px}
+    .agenda-actions-compact .agenda-action-primary{background:var(--rose);color:var(--wine)}
+    .agenda-more-actions{flex-basis:100%;width:100%;font-size:11px;color:var(--wine);max-width:100%}
+    .agenda-more-actions summary{width:max-content;max-width:100%;padding:7px 8px;cursor:pointer;border-radius:8px;font-weight:750}
+    .agenda-more-actions summary:hover{background:var(--rose)}
+    .agenda-more-inner{display:flex;align-items:end;gap:8px;flex-wrap:wrap;padding:10px;border:1px solid var(--line);background:var(--surface-2);border-radius:12px}
+    .agenda-more-inner label{display:grid;gap:4px;color:var(--muted);font-weight:700;font-size:10px}
+    .agenda-more-inner select{min-height:38px;border:1px solid var(--line);border-radius:9px;background:#fff;padding:6px 9px;font-size:12px}
+    .agenda-more-inner .mini-btn{min-height:38px;font-size:11px;padding:8px 10px}
+    @media(max-width:720px){
+      .company-app .bottom,.admin-owner-app .bottom{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr));width:100%;overflow:visible;padding:5px 4px calc(5px + env(safe-area-inset-bottom));z-index:60}
+      .company-app .bottom button,.admin-owner-app .bottom button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font-size:10px;min-width:0;min-height:54px;white-space:nowrap}
+      .company-app .bottom button span,.admin-owner-app .bottom button span{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+      .company-app .main,.admin-owner-app .main{padding-bottom:calc(88px + env(safe-area-inset-bottom))}
+      .company-app .content,.admin-owner-app .content{padding-bottom:calc(95px + env(safe-area-inset-bottom))}
+      .company-app .fab{bottom:calc(82px + env(safe-area-inset-bottom));right:16px;z-index:59}
+      .company-app.dashboard-home .fab{display:none!important}
+      .agenda-update-button{width:40px;height:40px;min-width:40px;padding:8px;border-radius:12px}
+      .agenda-update-button span{display:none}
+      .top .top-left{min-width:0}
+      .dashboard-operational-status{grid-template-columns:minmax(0,1fr);gap:8px;margin-bottom:12px}
+      .dashboard-operational-status>div{padding:10px 11px}
+      .agenda-actions-compact>.mini-btn{flex:1 1 auto}
+      .agenda-more-inner{align-items:stretch;flex-direction:column}
+      .agenda-more-inner select,.agenda-more-inner .mini-btn{width:100%}
+    }
+    @media(max-width:380px){
+      .top .agenda-update-button{width:38px;min-width:38px;height:38px}
+      .company-app .bottom button,.admin-owner-app .bottom button{font-size:9px}
+    }
+    @media(prefers-reduced-motion:reduce){.agenda-update-button[aria-busy="true"] svg{animation:none}}
 </style>
 </head>
 <body>
@@ -2501,6 +2547,42 @@
     const I={
       home:'<svg viewBox="0 0 24 24"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10.5V20h13v-9.5"/><path d="M9.5 20v-6h5v6"/></svg>',calendar:'<svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>',users:'<svg viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>',sparkle:'<svg viewBox="0 0 24 24"><path d="m12 3 1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3Z"/><path d="m19 15 .8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8L19 15Z"/></svg>',wallet:'<svg viewBox="0 0 24 24"><path d="M4 6.5h15a2 2 0 0 1 2 2V19H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h13"/><path d="M17 11h4v4h-4a2 2 0 1 1 0-4Z"/></svg>',message:'<svg viewBox="0 0 24 24"><path d="M21 15a4 4 0 0 1-4 4H8l-5 3v-7a4 4 0 0 1-1-2.6V7a4 4 0 0 1 4-4h11a4 4 0 0 1 4 4Z"/></svg>',more:'<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/></svg>',search:'<svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>',plus:'<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>',bell:'<svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>',clock:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',money:'<svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="M8 10h.01M16 14h.01"/><circle cx="12" cy="12" r="2.5"/></svg>',check:'<svg viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></svg>',phone:'<svg viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1 1 .4 2 .7 2.9a2 2 0 0 1-.5 2.1L8 10a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.9.6 2.9.7A2 2 0 0 1 22 16.9Z"/></svg>',chart:'<svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19V3"/></svg>',userplus:'<svg viewBox="0 0 24 24"><path d="M15 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8" cy="7" r="4"/><path d="M19 8v6M16 11h6"/></svg>'
     };
+    // Atualizar manualmente o PWA sem limpar sessão ou dados locais.
+    I.refresh='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.3 9A7.8 7.8 0 0 1 19 7l1 5M4 12l1 5a7.8 7.8 0 0 0 13.7-2"/></svg>';
+    const AGENDA_UI_VERSION='2026.10.23.4';
+    let agendaUpdateInProgress=false;
+    async function refreshAgendaPro(){
+      if(agendaUpdateInProgress)return;
+      agendaUpdateInProgress=true;
+      const controls=[...document.querySelectorAll('.agenda-update-button')];
+      controls.forEach(button=>{button.disabled=true;button.setAttribute('aria-busy','true')});
+      try{
+        const url='/app-version.json?check='+Date.now();
+        const resp=await fetch(url,{cache:'no-store',credentials:'same-origin'});
+        if(!resp.ok)throw new Error('Versão indisponível');
+        const info=await resp.json();
+        const remoteVersion=String(info?.version||'');
+        if(!/^[0-9A-Za-z._-]{1,64}$/.test(remoteVersion))throw new Error('Versão inválida');
+        if('serviceWorker' in navigator){
+          const reg=await navigator.serviceWorker.getRegistration('/');
+          if(reg)await reg.update();
+        }
+        if(remoteVersion!==AGENDA_UI_VERSION){
+          toast('Nova versão encontrada. Atualizando...');
+          const target=new URL(window.location.href);
+          target.searchParams.set('agenda_atualizada',remoteVersion);
+          window.location.replace(target.toString());
+        }else{
+          toast('Você já está usando a versão mais recente.');
+        }
+      }catch(error){
+        console.warn('Verificação de atualizações:',error);
+        toast('Sem acesso às atualizações. Verifique a internet e tente novamente.');
+      }finally{
+        agendaUpdateInProgress=false;
+        controls.forEach(button=>{button.disabled=false;button.removeAttribute('aria-busy')});
+      }
+    }
     function P(){return PROFILES[segment]}
     function resetData(){A=P().appts.map(x=>[...x])}
     resetData();
@@ -2627,25 +2709,25 @@ async function installAgendaApp(){
 }
     function bottom(){
   if(appMode==='company'){
-    const p=P(),n=[['home','home','Início']];
-    if(hasFeature('agenda'))n.push(['agenda','calendar','Agenda'],['services','sparkle',p.serviceLabel]);
-    if(hasFeature('clients'))n.push(['clients','users',p.people]);
-    if(hasFeature('finance'))n.push(['cash','wallet','Financeiro']);
-    n.push(['wa','message','WhatsApp'],['support','message','Suporte']);
-    if(canAdminCompany())n.push(['team','userplus','Equipe']);
-    n.push(['profile','users','Perfil']);
-    return `<nav class="bottom company-bottom">${n.map(x=>`<button class="${page===x[0]?'on':''}" onclick="go('${x[0]}')">${I[x[1]]}${x[2]}</button>`).join('')}</nav>${hasFeature('agenda')?`<button class="fab" onclick="book()" aria-label="Novo horário">${I.plus}</button>`:''}`;
+    // Máximo de cinco destinos; o restante continua no menu lateral.
+    const links=[['home','home','Início']];
+    if(hasFeature('agenda'))links.push(['agenda','calendar','Agenda']);
+    if(hasFeature('clients'))links.push(['clients','users',P().people]);
+    links.push(['wa','message','WhatsApp']);
+    if(hasFeature('finance') && links.length<4)links.push(['cash','wallet','Financeiro']);
+    const rows=links.slice(0,4).map(x=>`<button type="button" class="${page===x[0]?'on':''}" onclick="go('${x[0]}')" aria-label="${appModalEscape(x[2])}">${I[x[1]]}<span>${appModalEscape(x[2])}</span></button>`).join('');
+    return `<nav class="bottom company-bottom" aria-label="Navegação principal">${rows}<button type="button" onclick="toggleMobileMenu()" aria-label="Abrir mais opções">${I.more}<span>Mais</span></button></nav>${hasFeature('agenda')&&canOperateCompany()? `<button class="fab" onclick="book()" aria-label="Novo agendamento">${I.plus}</button>`:''}`;
   }
-  const n=[['overview','home','Visão geral'],['clients','users','Assinantes'],['plans','sparkle','Planos'],['billing','wallet','Cobranças'],['support','message','Suporte'],['settings','more','Mais']];
-  return `<nav class="bottom">${n.map(x=>`<button class="${adminTab===x[0]?'on':''}" onclick="setAdminTab('${x[0]}')">${I[x[1]]}${x[2]}</button>`).join('')}</nav>`;
+  const n=[['overview','home','Início'],['clients','users','Assinantes'],['plans','sparkle','Planos'],['billing','wallet','Cobranças']];
+  return `<nav class="bottom" aria-label="Navegação do administrador">${n.map(x=>`<button type="button" class="${adminTab===x[0]?'on':''}" onclick="setAdminTab('${x[0]}')">${I[x[1]]}<span>${x[2]}</span></button>`).join('')}<button type="button" onclick="toggleMobileMenu()" aria-label="Abrir mais opções">${I.more}<span>Mais</span></button></nav>`;
 }
     function shell(content){
   if(appMode==='company'){
     const p=P(),t=companyTitles()[page]||companyTitles().home;
-    return `<div class="app company-app ${page==='home'?'dashboard-home':''}">${nav()}<div class="mobile-menu-overlay" onclick="closeMobileMenu()" aria-hidden="true"></div><main class="main"><header class="top"><div class="top-left"><button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Abrir menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="menu-label">Menu</span></button><div class="logo mini-logo">${p.initials}</div><div><h1>${t[0]}</h1><small>${t[1]}</small></div></div><div class="top-actions"><label class="agenda-global-search">${I.search}<input type="search" aria-label="Pesquisar clientes" placeholder="Buscar clientes..." onkeydown="if(event.key==='Enter')dashboardQuickSearch(this.value)"></label><span class="owner-session"><i class="owner-dot"></i> ${appModalEscape(companyCtx?.plan?.name||'Plano')} · ${companyRole()}</span><button class="agenda-profile-button" onclick="go('profile')"><span class="agenda-profile-avatar">AP</span>Meu perfil</button>${hasFeature('agenda')&&canOperateCompany()?'<button class="btn primary" onclick="book()">+ Novo horário</button>':''}<button class="logout-btn mobile-password-btn" onclick="changeMyPassword()">Senha</button><button class="logout-btn mobile-top-logout" onclick="ownerLogout()">Sair</button></div></header><div class="content">${content}</div></main>${bottom()}</div>`;
+    return `<div class="app company-app ${page==='home'?'dashboard-home':''}">${nav()}<div class="mobile-menu-overlay" onclick="closeMobileMenu()" aria-hidden="true"></div><main class="main"><header class="top"><div class="top-left"><button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Abrir menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="menu-label">Menu</span></button><div class="logo mini-logo">${p.initials}</div><div><h1>${t[0]}</h1><small>${t[1]}</small></div></div><div class="top-actions"><button type="button" class="agenda-update-button" onclick="refreshAgendaPro()" title="Verificar atualizações da Agenda Pro" aria-label="Verificar novas atualizações">${I.refresh}<span>Atualizar</span></button><label class="agenda-global-search">${I.search}<input type="search" aria-label="Pesquisar clientes" placeholder="Buscar clientes..." onkeydown="if(event.key==='Enter')dashboardQuickSearch(this.value)"></label><span class="owner-session"><i class="owner-dot"></i> ${appModalEscape(companyCtx?.plan?.name||'Plano')} · ${companyRole()}</span><button class="agenda-profile-button" onclick="go('profile')"><span class="agenda-profile-avatar">AP</span>Meu perfil</button>${hasFeature('agenda')&&canOperateCompany()?'<button class="btn primary" onclick="book()">+ Novo horário</button>':''}<button class="logout-btn mobile-password-btn" onclick="changeMyPassword()">Senha</button><button class="logout-btn mobile-top-logout" onclick="ownerLogout()">Sair</button></div></header><div class="content">${content}</div></main>${bottom()}</div>`;
   }
   const t=titles()[adminTab]||titles().overview;
-  return `<div class="app admin-owner-app">${nav()}<div class="mobile-menu-overlay" onclick="closeMobileMenu()" aria-hidden="true"></div><main class="main"><header class="top"><div class="top-left"><button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Abrir menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="menu-label">Menu</span></button><div class="logo mini-logo">AP</div><div><h1>${t[0]}</h1><small>${t[1]}</small></div></div><div class="top-actions"><span class="owner-session"><i class="owner-dot"></i> Proprietário</span><button class="logout-btn mobile-password-btn" onclick="changeMyPassword()">Senha</button><button class="logout-btn mobile-top-logout" onclick="ownerLogout()">Sair</button></div></header><div class="content">${content}</div></main>${bottom()}</div>`;
+  return `<div class="app admin-owner-app">${nav()}<div class="mobile-menu-overlay" onclick="closeMobileMenu()" aria-hidden="true"></div><main class="main"><header class="top"><div class="top-left"><button class="mobile-menu-toggle" onclick="toggleMobileMenu()" aria-label="Abrir menu"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="menu-label">Menu</span></button><div class="logo mini-logo">AP</div><div><h1>${t[0]}</h1><small>${t[1]}</small></div></div><div class="top-actions"><button type="button" class="agenda-update-button" onclick="refreshAgendaPro()" title="Verificar atualizações da Agenda Pro" aria-label="Verificar novas atualizações">${I.refresh}<span>Atualizar</span></button><span class="owner-session"><i class="owner-dot"></i> Proprietário</span><button class="logout-btn mobile-password-btn" onclick="changeMyPassword()">Senha</button><button class="logout-btn mobile-top-logout" onclick="ownerLogout()">Sair</button></div></header><div class="content">${content}</div></main>${bottom()}</div>`;
 }
     function segmentSwitch(){return `<div class="segment-switch"><button class="${segment==='salon'?'on':''}" onclick="setSegment('salon')">✂️ Salão</button><button class="${segment==='esthetic'?'on':''}" onclick="setSegment('esthetic')">✨ Estética</button><button class="${segment==='doctor'?'on':''}" onclick="setSegment('doctor')">🩺 Consultório</button></div>`}
     function setSegment(s){segment=s;localStorage.setItem('agendaProSegment',s);resetData();page='home';render();toast(`Modo alterado para ${P().segment}`)}
@@ -2730,6 +2812,13 @@ function home(){
     <button onclick="moveDashboardMonth(1)" aria-label="Próximo mês">›</button></div></div>
     <div class="dashboard-month-grid">${weekdays}${days}</div>
     <div class="dashboard-month-legend"><span><i></i>Agendamentos</span><span><i class="green"></i>Concluídos</span></div></section>`;
+  const waiting=valid.filter(a=>a.status==='pending'&&Date.parse(a.starts_at)>now.getTime()).length;
+  const nextScheduled=valid.filter(a=>Date.parse(a.starts_at)>now.getTime()).sort((a,b)=>Date.parse(a.starts_at)-Date.parse(b.starts_at))[0];
+  const nextText=nextScheduled?new Date(nextScheduled.starts_at).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'Sem próximos horários';
+  const dashboardOps=`<div class="dashboard-operational-status" aria-label="Resumo de operação">
+    <div><span class="ops-indicator ops-calendar">${I.clock}</span><div><strong>${waiting} aguardando confirmação</strong><small>Horários futuros pendentes</small></div></div>
+    <div><span class="ops-indicator ops-next">${I.calendar}</span><div><strong>Próximo: ${appModalEscape(nextText)}</strong><small>Atendimento agendado</small></div></div>
+  </div>`;
   const status=baileysSession?.status==='connected'?'Conectado':'Não conectado';
   const recent=[...customers].sort((a,b)=>(Date.parse(b.created_at)||0)-(Date.parse(a.created_at)||0)).slice(0,4)
     .map(c=>{const name=String(c.name||'Cliente');
@@ -2742,7 +2831,7 @@ function home(){
     <section class="dashboard-panel"><div class="dashboard-heading"><div class="dashboard-heading-main">
       <span class="dashboard-heading-icon">${I.message}</span><h3>WhatsApp</h3></div>
       <span class="dashboard-wa-status ${status==='Conectado'?'connected':''}">${status}</span></div>
-      <p class="dashboard-wa-hint">${status==='Conectado'?'WhatsApp integrado para confirmações e lembretes.':'Conecte o número da empresa para usar mensagens automáticas.'}</p>
+      <p class="dashboard-wa-hint">${status==='Conectado'?'Número conectado. Confira os avisos e o estado dos envios na área WhatsApp.':'Conecte o número da empresa e ative os avisos automáticos disponíveis.'}</p>
       <button class="dashboard-wa-button" onclick="go('wa')">${status==='Conectado'?'Gerenciar WhatsApp':'Configurar WhatsApp'} ↗</button></section>
     <section class="dashboard-panel"><div class="dashboard-heading"><h3>Últimos clientes</h3>
       <button class="dashboard-outline-action" onclick="go('clients')">Ver todos ›</button></div>
@@ -2783,6 +2872,7 @@ function home(){
   return shell(`<div class="agenda-dashboard">
     <section class="hero agenda-home-hero"><div><h2>${greeting()}! 👋</h2><p>Resumo de ${appModalEscape(displayBusinessName(companyCtx.business.name))} · ${appModalEscape(todayTitle)}</p></div>
       <div class="hero-shortcuts">${actions}${addCustomer}${addService}</div></section>
+    ${dashboardOps}
     <div class="dashboard-kpis">${metrics}</div>
     <div class="dashboard-main-grid">
       <section class="dashboard-panel"><div class="dashboard-heading"><div class="dashboard-heading-main">
@@ -2830,7 +2920,21 @@ function home(){
   return status==='pending'?'Pendente':status==='cancelled'?'Cancelado':status==='completed'?'Concluído':status==='no_show'?'Faltou':'Confirmado';
 }
     function agendaActions(a){
-  return canOperateCompany()?`<div class="agenda-actions"><select onchange="updateAppointmentStatus('${a.id}',this.value)"><option value="pending" ${a.status==='pending'?'selected':''}>Pendente</option><option value="confirmed" ${a.status==='confirmed'?'selected':''}>Confirmado</option><option value="completed" ${a.status==='completed'?'selected':''}>Concluído</option><option value="no_show" ${a.status==='no_show'?'selected':''}>Faltou</option><option value="cancelled" ${a.status==='cancelled'?'selected':''}>Cancelado</option></select><button class="mini-btn whats-mini" onclick="sendAppointmentConfirmationLink('${a.id}')">Enviar confirmação</button><button class="mini-btn" onclick="editAppointment('${a.id}')">Editar</button><button class="mini-btn ${a.status==='cancelled'?'':'danger'}" onclick="chooseAppointmentChange('${a.id}')">${a.status==='cancelled'?'Reagendar':'Cancelar / reagendar'}</button>${canAdminCompany()?`<button class="mini-btn danger" type="button" onclick="deleteAppointment('${a.id}')">Excluir horário</button>`:''}</div>`:'';
+  if(!canOperateCompany())return '';
+  const statusOptions=[['pending','Pendente'],['confirmed','Confirmado'],['completed','Concluído'],['no_show','Faltou'],['cancelled','Cancelado']]
+    .map(([value,label])=>`<option value="${value}" ${a.status===value?'selected':''}>${label}</option>`).join('');
+  const canReschedule=!['completed','no_show'].includes(a.status);
+  return `<div class="agenda-actions agenda-actions-compact">
+    <button type="button" class="mini-btn agenda-action-primary" onclick="editAppointment('${a.id}')">Editar horário</button>
+    ${canReschedule?`<button type="button" class="mini-btn" onclick="chooseAppointmentChange('${a.id}')">${a.status==='cancelled'?'Reagendar':'Cancelar / reagendar'}</button>`:''}
+    <details class="agenda-more-actions"><summary>Mais opções</summary>
+      <div class="agenda-more-inner">
+        <label>Alterar situação<select aria-label="Situação do agendamento" onchange="updateAppointmentStatus('${a.id}',this.value)">${statusOptions}</select></label>
+        <button type="button" class="mini-btn whats-mini" onclick="sendAppointmentConfirmationLink('${a.id}')">Enviar confirmação</button>
+        ${canAdminCompany()?`<button type="button" class="mini-btn danger" onclick="deleteAppointment('${a.id}')">Excluir horário</button>`:''}
+      </div>
+    </details>
+  </div>`;
 }
     function agendaRow(a,showDate=false){
   const d=new Date(a.starts_at),cu=companyData.customers.find(x=>x.id===a.customer_id),se=companyData.services.find(x=>x.id===a.service_id);
@@ -6552,7 +6656,7 @@ async function cancelAgendaSubscription(toPix=false){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261014-logo-oficial-v2',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261023-ui-refresh-v4',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
