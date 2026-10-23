@@ -679,6 +679,9 @@ export class WhatsSession{
       // Windows auto-updater installed the production-safe pilot code.
       dispatch_mode:julliAutoDispatchEnabled&&this.businessId===JULLI_BUSINESS_ID
         ?"julli-fresh-pilot":"paused",
+      // Version marker used for migration verification; does not expose secrets.
+      dispatch_capabilities:julliAutoDispatchEnabled&&this.businessId===JULLI_BUSINESS_ID
+        ?["confirmation","reminder","cancellation","rescheduled"]:[],
       catalog_broadcast:this.catalogBroadcast
     };
   }
