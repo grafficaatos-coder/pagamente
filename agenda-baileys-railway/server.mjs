@@ -513,7 +513,7 @@ export class WhatsSession{
     }
     if(this.testSendBusy)throw Object.assign(new Error("Já existe teste em execução"),{status:409});
     const normalized=normalizePhone(phone);
-    if(!/^55\\d{10,11}$/.test(normalized))
+    if(!/^55\d{10,11}$/.test(normalized))
       throw Object.assign(new Error("Informe um celular brasileiro com DDD"),{status:400});
     if(this.stopped||this.state!=="online"||!this.sock||!this.hasLease())
       throw Object.assign(new Error("WhatsApp de teste não está conectado"),{status:409});
