@@ -55,7 +55,14 @@ export function startLocalPollBridge({
         // Publish fresh status even if no command is waiting.
         await publishStatus(id);
         const job=await rpc("agenda_local_claim_next",{p_business_id:id});
-        if(!job)continue;
+        // Supabase/PostgREST can encode a null composite row as an object with
+        // null fields. Treat it as an empty queue; never execute or finish it.
+        if(!job || !job.id)continue;
+        // Do not execute an unexpected or partially populated command.
+        if(job.business_id!==id || !job.action || !job.claim_token){
+          logger.warn({business:id},"Local bridge rejected malformed claimed command");
+          continue;
+        }
         let status=200, body;
         try{
           const done=await execute(job);
