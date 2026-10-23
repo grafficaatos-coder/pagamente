@@ -15,8 +15,17 @@ function Log([string]$message) {
   Write-Host $line
 }
 function RunDocker([string[]]$ArgsList) {
-  & (Get-Command docker -CommandType Application).Source @ArgsList
-  if ($LASTEXITCODE -ne 0) { throw "Docker retornou erro ao executar: $($ArgsList[0])" }
+  # In Windows PowerShell 5.1, & (Get-Command docker).Source can bind
+  # multiple native command paths into a single invalid command name.
+  # Resolve EXACTLY one docker.exe path, then invoke its executable.
+  $command = Get-Command docker.exe -CommandType Application -ErrorAction Stop | Select-Object -First 1
+  if (-not $command) { throw "docker.exe nao encontrado no PATH" }
+  $exe = [string]$command.Source
+  if (-not (Test-Path -LiteralPath $exe -PathType Leaf)) {
+    throw "Executavel Docker invalido: $exe"
+  }
+  & $exe @ArgsList
+  if ($LASTEXITCODE -ne 0) { throw "Docker retornou erro ao executar: $($ArgsList[0]); codigo $LASTEXITCODE" }
 }
 $mutex = New-Object System.Threading.Mutex($false, "Local\AgendaProDockerAutoUpdate")
 $locked = $false
