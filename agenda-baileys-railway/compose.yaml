@@ -17,6 +17,9 @@ services:
       DISPATCH_ENABLED: "false"
       # Ativa somente a empresa técnica; não libera a fila dos demais assinantes.
       TEST_AUTO_DISPATCH_ENABLED: "${TEST_AUTO_DISPATCH_ENABLED:-false}"
+      # Modo piloto REAL bloqueado por padrão e por autorização no banco.
+      PILOT_DISPATCH_ENABLED: "${PILOT_DISPATCH_ENABLED:-false}"
+      PILOT_DISPATCH_BUSINESS_ID: "${PILOT_DISPATCH_BUSINESS_ID:-}"
       LOCAL_POLL_ENABLED: "${LOCAL_POLL_ENABLED:-false}"
       ALLOW_ALL_BUSINESSES: "false"
     volumes:
