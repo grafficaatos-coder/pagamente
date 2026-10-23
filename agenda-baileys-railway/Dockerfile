@@ -11,6 +11,7 @@ RUN npm ci --omit=dev
 
 COPY server.mjs ./
 COPY auth-state.mjs ./
+COPY local-poll-bridge.mjs ./
 
 ENV NODE_ENV=production
 ENV PORT=8080
