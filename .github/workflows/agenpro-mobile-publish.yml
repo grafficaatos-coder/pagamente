@@ -1,0 +1,55 @@
+name: Publicar layout mobile do AgenPro
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/agenpro-mobile-publish.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: agenpro-mobile-publish
+  cancel-in-progress: false
+
+jobs:
+  publish-mobile:
+    if: github.repository == 'grafficaatos-coder/pagamente'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout versionado
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: true
+
+      - name: Aplicar layout mobile
+        run: python3 tools/apply_agenpro_mobile.py
+
+      - name: Verificar sintaxe do JavaScript
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          html = Path("agenda-nails/index.html").read_text(encoding="utf-8")
+          src = html.split("<script>", 1)[1].rsplit("</script>", 1)[0]
+          Path("/tmp/agenpro-inline-check.js").write_text(src, encoding="utf-8")
+          assert "/mobile-redesign.css?v=20261023-5" in html
+          assert "class=\"mobile-nav-create\"" in html
+          PY
+          node --check /tmp/agenpro-inline-check.js
+          git diff --check
+
+      - name: Salvar atualização para deploy automático Vercel
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add agenda-nails/index.html agenda-nails/sw.js agenda-nails/app-version.json
+          if git diff --cached --quiet; then
+            echo "Layout já aplicado."
+            exit 0
+          fi
+          git commit -m "feat(agenpro): publish redesigned mobile dashboard and navigation"
+          git push origin HEAD:main
