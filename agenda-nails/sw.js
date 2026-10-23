@@ -1,5 +1,5 @@
-const CACHE_NAME='agenpro-shell-v56-mobile-brand-safe-area-20261023';
-const SHELL=['/','/manifest.webmanifest','/icons/app-icon.svg','/icons/app-icon-maskable.svg','/brand/agenda-pro-original.svg','/icons/agenda-pro-192-new.png','/icons/agenda-pro-192.png','/icons/agenda-pro-512-new.png','/mobile-fit.css?v=20261023-10'];
+const CACHE_NAME='agendajp-shell-v57-rebrand-20261023';
+const SHELL=['/','/manifest.webmanifest','/brand/agendajp-logo.webp','/icons/agendajp-192.png','/icons/agendajp-512.png','/mobile-fit.css?v=20261023-10'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(
@@ -54,12 +54,12 @@ self.addEventListener('fetch',event=>{
 self.addEventListener('push',event=>{
   let data={};
   try { data=event.data?.json()||{}; }
-  catch (_) { data={title:'AgenPro · Resposta de agendamento',body:'Você recebeu uma nova resposta.'}; }
-  const title=String(data.title||'AgenPro · Nova resposta').slice(0,80);
+  catch (_) { data={title:'AgendaJP · Resposta de agendamento',body:'Você recebeu uma nova resposta.'}; }
+  const title=String(data.title||'AgendaJP · Nova resposta').slice(0,80);
   const options={
     body:String(data.body||'Uma cliente respondeu ao seu horário.').slice(0,160),
-    icon:'/icons/agenda-pro-192-new.png',
-    badge:'/icons/agenda-pro-192-new.png',
+    icon:'/icons/agendajp-192.png',
+    badge:'/icons/agendajp-192.png',
     tag:String(data.tag||'agenpro-customer-response'),
     data:{url:'/?avisos=1'},
     renotify:true

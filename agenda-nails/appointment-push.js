@@ -1,4 +1,4 @@
-/* AgenPro - respostas de clientes e avisos Push, isolado da agenda e do WhatsApp. */
+/* AgendaJP - respostas de clientes e avisos Push, isolado da agenda e do WhatsApp. */
 (function(){
   "use strict";
   const FUNCTION_URL="https://zmrihyzwsyxjikdknfug.supabase.co/functions/v1/agenda-pwa-push";
@@ -8,7 +8,7 @@
   const current=()=>typeof sb!=="undefined"&&sb&&typeof companyCtx!=="undefined"&&companyCtx?.business?.id&&typeof authUser!=="undefined"&&authUser?.id&&typeof appMode!=="undefined"&&appMode==="company";
   const apiHeaders=async()=>{
     const {data}=await sb.auth.getSession();
-    if(!data?.session?.access_token)throw Error("Entre novamente no AgenPro para ativar os avisos.");
+    if(!data?.session?.access_token)throw Error("Entre novamente no AgendaJP para ativar os avisos.");
     return {"Content-Type":"application/json","Authorization":"Bearer "+data.session.access_token,"apikey":SUPABASE_KEY};
   };
   const b64urlToBytes=x=>Uint8Array.from(atob(x.replace(/-/g,"+").replace(/_/g,"/")+"=".repeat((4-x.length%4)%4)),c=>c.charCodeAt(0));
@@ -43,7 +43,7 @@
     }
     if(status){
       status.textContent=!supported
-        ?"Este navegador não oferece notificações PWA. No iPhone, instale o AgenPro na Tela de Início e abra o aplicativo instalado."
+        ?"Este navegador não oferece notificações PWA. No iPhone, instale o AgendaJP na Tela de Início e abra o aplicativo instalado."
         :Notification.permission==="denied"
           ?"As notificações foram bloqueadas nas configurações do navegador/celular."
           :subscribed?"Notificações do aplicativo ativadas neste dispositivo.":"Ative as notificações para receber respostas mesmo com o aplicativo fechado.";
@@ -63,7 +63,7 @@
       if(error)throw error;
       alerts=data||[];
       updateBadge();draw();
-    }catch(e){console.warn("Notificações AgenPro:",e.message||e)}
+    }catch(e){console.warn("Notificações AgendaJP:",e.message||e)}
     finally{loading=false}
   }
   function tearDown(){
@@ -170,7 +170,7 @@
       if(typeof toast==="function")toast("Notificações ativadas neste celular!");
     }catch(e){
       if(typeof toast==="function")toast(e.message||"Falha ao ativar notificações");
-      console.warn("AgenPro Push:",e);
+      console.warn("AgendaJP Push:",e);
     }finally{if(button)button.disabled=false;draw()}
   }
   async function markRead(){
@@ -179,7 +179,7 @@
     if(!ids.length)return;
     const {error}=await sb.from("agenda_response_notifications").update({read_at:new Date().toISOString()})
       .eq("recipient_user_id",authUser.id).eq("business_id",companyCtx.business.id).in("id",ids);
-    if(error){console.warn("AgenPro marcar como lida:",error);return}
+    if(error){console.warn("AgendaJP marcar como lida:",error);return}
     await refresh();
   }
   window.AgenProPush={openCenter,enable,refresh};
