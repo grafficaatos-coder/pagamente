@@ -4434,6 +4434,22 @@ async function cancelAgendaSubscription(toPix=false){
     </details>
     <p style="font-size:12px;margin-top:12px">A edição não altera o horário ou a frequência dos lembretes nem afeta as mensagens de confirmação e agradecimento.</p>
   </section>`;
+  const changeCards=['cancellation','rescheduled'].map(kind=>{
+    const cancellation=kind==='cancellation';
+    const field=cancellation?'cancellation_message':'rescheduled_message';
+    const label=cancellation?'cancelamento':'reagendamento';
+    const saved=companyCtx?.preferences?.[field];
+    const template=typeof saved==='string'&&saved.trim()?saved:
+      (cancellation?defaultCancellationTemplate():defaultRescheduledTemplate());
+    return '<section class="panel" style="padding:20px;margin-top:18px">'+
+      '<div class="head"><div><span class="eyebrow">Avisos de alterações</span><h3>Mensagem de '+label+'</h3></div></div>'+
+      '<p>Personalize o aviso automático de '+label+'. Os dados do cliente e do horário serão inseridos automaticamente.</p>'+
+      (admin?'<button type="button" class="btn secondary" onclick="openChangeMessageEditor(\''+kind+'\')">✏️ Editar mensagem de '+label+'</button>':'')+
+      '<details style="margin-top:12px"><summary>Ver mensagem '+(saved?'personalizada':'padrão')+'</summary>'+
+      '<p style="white-space:pre-wrap;line-height:1.6">'+appModalEscape(formatChangeMessageTemplate(template))+'</p></details>'+
+      '<p style="font-size:12px;margin-top:12px">O novo texto valerá apenas para notificações futuras. O envio automático permanece com as mesmas regras.</p>'+
+      '</section>';
+  }).join('');
   const thankYouEnabled=companyCtx?.preferences?.send_thank_you_after_service===true;
   const customThanks=companyCtx?.preferences?.thank_you_message;
   const thankYouTemplate=typeof customThanks==='string'&&customThanks.trim()?customThanks:defaultThankYouMessage();
@@ -4531,6 +4547,7 @@ async function cancelAgendaSubscription(toPix=false){
 
   ${appointmentCard}
   ${reminderCard}
+  ${changeCards}
   ${thankYouCard}
   ${baileysCard||'<section class="panel"><div class="empty-state">A conexão pelo servidor WhatsApp ainda não está habilitada para esta empresa.</div></section>'}`);
 }
