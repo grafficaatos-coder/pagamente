@@ -1,6 +1,6 @@
 {
-  "version": "2026.10.23.8",
+  "version": "2026.10.23.9",
   "released_at": "2026-10-23",
   "name": "AgenPro",
-  "notes": "Correções para telas pequenas e PWA: campos com 16px para evitar zoom automático no iPhone, ajuste de formulários, modais, menu, agenda e rolagem lateral."
+  "notes": "Logo original AgendaPro no cadastro de atendimento e botão Voltar fixado mais abaixo, respeitando a barra de status do iPhone."
 }
