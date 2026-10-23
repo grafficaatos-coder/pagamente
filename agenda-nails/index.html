@@ -2327,7 +2327,286 @@
       .company-app .bottom button,.admin-owner-app .bottom button{font-size:9px}
     }
     @media(prefers-reduced-motion:reduce){.agenda-update-button[aria-busy="true"] svg{animation:none}}
-</style>
+
+    /* Painel Agenda Pro premium — referência aprovada. Atua somente na empresa. */
+    .company-app{--bg:#f2f6fb;--surface:#fff;--surface-2:#f5f9fe;--ink:#0c254a;
+      --muted:#6b80a0;--line:#dce7f4;--wine:#0864c9;--wine-2:#0f6fda;
+      --rose:#e8f3ff;--rose-2:#dceeff}
+    .company-app{grid-template-columns:272px minmax(0,1fr);background:var(--bg)}
+    .company-app .main{width:100%;min-width:0}
+    .company-app .side{
+      height:100dvh;min-height:0;display:flex;flex-direction:column;
+      background:linear-gradient(170deg,#052c56 0%,#05264e 64%,#062346 100%);
+      padding:21px 13px 16px;color:#fff;overflow:hidden
+    }
+    .company-app .premium-brand{
+      display:flex;flex-direction:row;align-items:center;justify-content:flex-start;
+      gap:12px;padding:7px 12px 28px;min-height:64px
+    }
+    .company-app .premium-brand-symbol{display:grid;place-items:center;color:#3ca1ff;flex:none}
+    .company-app .premium-brand-symbol svg{width:37px;height:37px;stroke:currentColor;fill:none;stroke-width:1.8}
+    .company-app .premium-brand-title{font-size:23px;font-weight:850;color:#fff;letter-spacing:-.7px;white-space:nowrap}
+    .company-app .side .nav{
+      display:flex;flex:1 1 auto;min-height:0;flex-direction:column;gap:7px;
+      overflow-y:auto;overflow-x:hidden;padding:0 2px 10px;scrollbar-width:thin;
+      scrollbar-color:rgba(255,255,255,.18) transparent
+    }
+    .company-app .side .nav button{
+      display:flex;align-items:center;gap:13px;flex-shrink:0;min-height:48px;
+      border:1px solid transparent;border-radius:11px;padding:12px 14px;
+      font-size:13px;font-weight:720;color:#dcecff;background:transparent;
+      white-space:nowrap;text-align:left
+    }
+    .company-app .side .nav button:hover,.company-app .side .nav button.on{
+      background:linear-gradient(105deg,#1355a1,#0865ce);border-color:#247eda;
+      color:#fff;transform:none;box-shadow:none
+    }
+    .company-app .side .nav button svg{width:20px;height:20px;flex:0 0 auto;stroke-width:1.9}
+    .company-app .premium-side-foot{
+      position:static;margin-top:auto;padding:8px 4px 0;border:0;
+      border-top:1px solid rgba(168,203,248,.13);border-radius:0;
+      background:transparent;display:grid;gap:9px;flex:none
+    }
+    .company-app .premium-side-foot button{
+      display:flex;align-items:center;text-align:left;gap:11px;min-height:49px;
+      width:100%;border-radius:11px;color:#fff;font-size:12px;font-weight:750
+    }
+    .company-app .premium-account-button{
+      padding:9px 11px;background:rgba(255,255,255,.06);
+      border:1px solid rgba(157,202,251,.25)!important
+    }
+    .company-app .premium-account-avatar{
+      display:grid;place-items:center;width:39px;height:39px;flex:0 0 39px;
+      border-radius:10px;background:#245686;color:#fff;font-weight:800
+    }
+    .company-app .premium-account-label{flex:1;min-width:0}
+    .company-app .premium-account-label strong,.company-app .premium-account-label small{display:block!important}
+    .company-app .premium-account-label strong{font-size:12px}
+    .company-app .premium-account-label small{margin-top:4px;color:#b5d2e9;font-size:10px;letter-spacing:0}
+    .company-app .premium-account-button>span:last-child{font-size:22px;opacity:.8}
+    .company-app .premium-live-dot{display:inline-block;width:7px;height:7px;background:#25d884;border-radius:50%;margin-right:4px}
+    .company-app .premium-side-install{
+      padding:12px 14px;background:#0b65d6;border:1px solid #1d78e8!important
+    }
+    .company-app .premium-side-install:hover{background:#1778ea}
+    .company-app .premium-side-foot button svg{display:block;width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:2}
+    .company-app .premium-side-refresh.agenda-update-button{
+      display:flex!important;justify-content:center;
+      padding:11px 13px;background:rgba(255,255,255,.035)!important;
+      border:1px solid rgba(168,203,248,.35)!important;color:#fff!important
+    }
+    .company-app .premium-side-refresh.agenda-update-button span{display:inline!important}
+    .company-app .premium-app-installed{border-radius:10px;padding:12px;background:#0d4175;font-size:12px;color:#e2f2ff}
+    .company-app .top{
+      min-height:89px;height:auto;padding:14px 28px;
+      border-bottom:0;background:#f2f6fb;position:sticky;top:0;z-index:30;
+      box-shadow:none
+    }
+    .company-app .top h1{font-size:25px;letter-spacing:-.65px;font-weight:850;color:#0b264e}
+    .company-app .top small{font-size:12px;color:#7084a4}
+    .company-app .top .top-actions{gap:11px}
+    .company-app .top .owner-session{display:none}
+    .company-app .top .agenda-global-search{
+      width:min(28vw,355px);min-width:210px;height:46px;
+      background:#fff;border-color:#dee9f5;border-radius:12px;box-shadow:0 4px 19px rgba(11,51,94,.03);
+      padding:9px 13px
+    }
+    .company-app .top .agenda-global-search input{font-size:12px}
+    .company-app .top .agenda-profile-button{
+      background:#fff;min-height:46px;padding:5px 12px 5px 7px;
+      box-shadow:0 3px 14px rgba(18,55,96,.035);min-width:138px
+    }
+    .company-app .top .agenda-profile-avatar{width:35px;height:35px;flex:0 0 35px;background:#d7eafe;color:#0c559c;font-size:12px}
+    .company-app .top .premium-top-profile{display:block;white-space:nowrap;max-width:125px;overflow:hidden;text-overflow:ellipsis;text-align:left}
+    .company-app .top .premium-top-profile small{margin-top:3px;color:#0b9858;font-size:10px}
+    .company-app .top .dashboard-notification-button{
+      width:44px;height:45px;display:grid;place-items:center;flex:0 0 44px;
+      border-radius:12px;border:1px solid #e2ebf6;background:#fff;color:#134476
+    }
+    .company-app .top .dashboard-notification-button svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.8}
+    .company-app.dashboard-home .top .agenda-update-button{display:none}
+    .company-app.dashboard-home .content{max-width:1700px;margin:0 auto;padding:9px 22px 32px}
+    .company-app.dashboard-home .premium-dashboard{display:grid;gap:16px;width:100%;overflow:visible}
+    .company-app.dashboard-home .dashboard-kpis{
+      display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin:0
+    }
+    .company-app.dashboard-home .dashboard-kpi{
+      min-height:132px;display:flex;align-items:flex-start;flex-direction:row;
+      gap:15px;padding:20px 17px;border-radius:15px;border:1px solid #e0eaf5;
+      box-shadow:0 6px 22px rgba(12,48,83,.035);position:relative
+    }
+    .company-app.dashboard-home .dashboard-kpi-icon{
+      width:45px;height:45px;flex:0 0 45px;border-radius:13px;background:#e5f2ff;color:#0b75df
+    }
+    .company-app.dashboard-home .dashboard-kpi-icon.green{background:#e1f8ed;color:#0aab64}
+    .company-app.dashboard-home .dashboard-kpi-icon.violet{background:#eeebff;color:#7259d5}
+    .company-app.dashboard-home .dashboard-kpi-icon.red{background:#fff0f0;color:#d64356}
+    .company-app.dashboard-home .dashboard-kpi-copy span{font-size:12px;font-weight:800;color:#18365a}
+    .company-app.dashboard-home .dashboard-kpi-copy strong{font-size:27px;margin:8px 0 6px;color:#092853}
+    .company-app.dashboard-home .dashboard-kpi-copy small{font-size:10px;white-space:normal}
+    .company-app.dashboard-home .dashboard-main-grid{
+      display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1.15fr);
+      gap:15px;align-items:stretch
+    }
+    .company-app.dashboard-home .dashboard-side-stack{
+      grid-column:1/-1;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:15px;align-items:stretch;min-width:0
+    }
+    .company-app.dashboard-home .dashboard-panel{
+      border:1px solid #e0eaf4;border-radius:16px;padding:19px;min-width:0;
+      box-shadow:0 6px 22px rgba(12,48,83,.035);background:#fff
+    }
+    .company-app.dashboard-home .dashboard-heading{gap:12px;margin-bottom:17px}
+    .company-app.dashboard-home .dashboard-heading-icon{
+      width:37px;height:37px;border-radius:12px;background:#e7f2fe;color:#117ce5
+    }
+    .company-app.dashboard-home .dashboard-heading h3{font-size:16px;font-weight:850}
+    .company-app.dashboard-home .dashboard-heading small{font-size:11px;line-height:1.3;margin-top:4px}
+    .company-app.dashboard-home .dashboard-day-panel,.company-app.dashboard-home .dashboard-main-grid>.dashboard-panel:not(.dashboard-day-panel){
+      min-height:363px
+    }
+    .company-app.dashboard-home .dashboard-day-panel{display:flex;flex-direction:column}
+    .company-app.dashboard-home .dashboard-day-empty{
+      display:flex;flex:1;flex-direction:column;align-items:center;
+      justify-content:center;text-align:center;gap:10px;
+      min-height:235px;border:1px solid #e5edf7;border-radius:13px;
+      background:linear-gradient(180deg,#fff,#fcfdff);padding:24px 10px
+    }
+    .company-app.dashboard-home .dashboard-day-empty-icon{
+      display:grid;place-items:center;width:75px;height:75px;border-radius:22px;
+      color:#0a76e0;background:#e8f3ff
+    }
+    .company-app.dashboard-home .dashboard-day-empty-icon svg{width:36px;height:36px;fill:none;stroke:currentColor;stroke-width:1.9}
+    .company-app.dashboard-home .dashboard-day-empty strong{font-size:19px;color:#0d2b54}
+    .company-app.dashboard-home .dashboard-day-empty p{font-size:12px;color:#7186a4;margin:0 0 6px}
+    .company-app.dashboard-home .dashboard-day-empty-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:9px}
+    .company-app.dashboard-home .dashboard-empty-primary{
+      border:1px solid #0873e7;border-radius:10px;padding:12px 17px;background:#086add;color:#fff;
+      font-size:12px;font-weight:850;min-height:42px
+    }
+    .company-app.dashboard-home .dashboard-empty-primary:hover{background:#125abd}
+    .company-app.dashboard-home .dashboard-outline-action{
+      padding:10px 12px;min-height:39px;border-radius:9px;
+      border-color:#d2e1f4;color:#075bb3;font-size:11px
+    }
+    .company-app.dashboard-home .dashboard-month-switch{margin-top:0}
+    .company-app.dashboard-home .dashboard-month-grid{gap:4px}
+    .company-app.dashboard-home .dashboard-month-day{height:42px}
+    .company-app.dashboard-home .dashboard-month-day.active{background:#0868d4}
+    .company-app.dashboard-home .dashboard-month-legend{margin-top:17px;padding-top:6px}
+    .company-app.dashboard-home .dashboard-whatsapp-panel .dashboard-heading{margin-bottom:14px}
+    .company-app.dashboard-home .dashboard-whatsapp-logo{
+      display:grid;place-items:center;width:42px;height:42px;flex:0 0 42px;
+      border-radius:12px;background:#08c16a;color:#fff
+    }
+    .company-app.dashboard-home .dashboard-whatsapp-logo svg{width:23px;height:23px;fill:none;stroke:currentColor;stroke-width:1.9}
+    .company-app.dashboard-home .dashboard-wa-status.connected{color:#07834e;background:#e1f8ed}
+    .company-app.dashboard-home .dashboard-whatsapp-stats{
+      display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:0;border:1px solid #e4ecf6;background:#f6faff;
+      border-radius:11px;padding:15px 8px;margin-bottom:12px
+    }
+    .company-app.dashboard-home .dashboard-whatsapp-stat{
+      display:flex;align-items:flex-start;gap:10px;padding:0 13px;min-width:0
+    }
+    .company-app.dashboard-home .dashboard-whatsapp-stat+.dashboard-whatsapp-stat{border-left:1px solid #d8e2ee}
+    .company-app.dashboard-home .dashboard-whatsapp-stat-icon{
+      display:grid;place-items:center;width:32px;height:32px;flex:0 0 32px;
+      border-radius:9px;background:#e5f2ff;color:#0874db
+    }
+    .company-app.dashboard-home .dashboard-whatsapp-stat-icon svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2}
+    .company-app.dashboard-home .dashboard-whatsapp-stat div{min-width:0}
+    .company-app.dashboard-home .dashboard-whatsapp-stat small{font-size:10px;color:#7b8faa;display:block;line-height:1.5}
+    .company-app.dashboard-home .dashboard-whatsapp-stat strong{font-size:12px;font-weight:850;color:#102d56;display:block;margin:4px 0;overflow-wrap:anywhere}
+    .company-app.dashboard-home .dashboard-wa-actions{display:grid;grid-template-columns:1.3fr 1fr;gap:10px}
+    .company-app.dashboard-home .dashboard-wa-actions .dashboard-wa-button{
+      border:0;background:#0666d7;color:#fff;border-radius:9px;font-size:12px;min-height:41px
+    }
+    .company-app.dashboard-home .dashboard-wa-actions .dashboard-outline-action{min-height:41px}
+    .company-app.dashboard-home .dashboard-side-stack>.dashboard-panel{min-height:240px}
+    .company-app.dashboard-home .dashboard-client-row{display:flex;gap:11px;min-height:48px}
+    .company-app.dashboard-home .dashboard-client-info{min-width:0;flex:1;overflow:hidden}
+    .company-app.dashboard-home .dashboard-client-info strong,.company-app.dashboard-home .dashboard-client-info small{
+      white-space:nowrap;overflow:hidden;text-overflow:ellipsis
+    }
+    .company-app.dashboard-home .dashboard-client-badge{
+      border-radius:99px;padding:6px 9px;font-size:10px;font-weight:750;
+      color:#1169c9;background:#e5f2ff;white-space:nowrap
+    }
+    .company-app.dashboard-home .dashboard-client-badge.new{color:#12844c;background:#e2f8eb}
+    .company-app.dashboard-home .dashboard-client-badge.empty{color:#7b858f;background:#f0f3f6}
+    .company-app.dashboard-home .dashboard-client-more{color:#6a91be;font-weight:850;font-size:18px}
+    .company-app.dashboard-home .dashboard-client-row .dashboard-initials{width:34px;height:34px;flex:0 0 34px;font-size:12px}
+    .company-app.dashboard-home .dashboard-extra-details{margin-top:0}
+    @media(max-width:1200px) and (min-width:721px){
+      .company-app{grid-template-columns:230px minmax(0,1fr)}
+      .company-app.dashboard-home .dashboard-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+      .company-app.dashboard-home .dashboard-main-grid{grid-template-columns:minmax(0,1.2fr) minmax(0,1fr)}
+      .company-app .side .nav button{font-size:12px;min-height:43px}
+      .company-app .premium-brand-title{font-size:20px}
+      .company-app.dashboard-home .dashboard-whatsapp-stats{grid-template-columns:minmax(0,1fr);gap:9px}
+      .company-app.dashboard-home .dashboard-whatsapp-stat+.dashboard-whatsapp-stat{border-left:0;border-top:1px solid #d9e4ee;padding-top:9px}
+    }
+    @media(max-width:900px){
+      .company-app.dashboard-home .dashboard-main-grid{grid-template-columns:minmax(0,1fr)}
+      .company-app.dashboard-home .dashboard-side-stack{grid-column:auto;grid-template-columns:minmax(0,1fr)}
+      .company-app .top .agenda-global-search{display:none}
+    }
+    @media(max-width:720px){
+      .company-app{display:block}
+      .company-app .side{
+        height:100dvh;width:min(88vw,312px);padding:13px 11px 15px;
+        position:fixed;top:0;left:0;overflow:hidden
+      }
+      .company-app .premium-brand{padding:6px 10px 18px}
+      .company-app .premium-brand-title{font-size:20px}
+      .company-app .side .nav{gap:3px;padding-bottom:8px}
+      .company-app .side .nav button{min-height:43px;padding:9px 11px;font-size:12px}
+      .company-app .premium-side-foot{gap:6px;padding:7px 3px 0}
+      .company-app .premium-account-button{min-height:48px;padding:7px}
+      .company-app .premium-side-foot button{min-height:43px}
+      .company-app .premium-account-avatar{width:33px;height:33px;flex-basis:33px}
+      .company-app .top{padding:10px 12px;min-height:67px;height:auto}
+      .company-app .top h1{font-size:17px}
+      .company-app .top small{font-size:10px}
+      .company-app .top .dashboard-notification-button,.company-app .top .agenda-profile-button{display:none}
+      .company-app .top .agenda-update-button{display:grid!important}
+      .company-app.dashboard-home .content{
+        padding:13px 12px calc(95px + env(safe-area-inset-bottom))!important
+      }
+      .company-app.dashboard-home .dashboard-kpis{
+        grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px
+      }
+      .company-app.dashboard-home .dashboard-kpis>.dashboard-kpi{
+        grid-column:auto!important;min-height:101px!important;min-width:0;
+        padding:10px!important;gap:8px;align-items:flex-start!important
+      }
+      .company-app.dashboard-home .dashboard-kpi-icon{width:31px;height:31px;flex-basis:31px;border-radius:9px}
+      .company-app.dashboard-home .dashboard-kpi-icon svg{width:16px;height:16px}
+      .company-app.dashboard-home .dashboard-kpi-copy span{font-size:10px}
+      .company-app.dashboard-home .dashboard-kpi-copy strong{font-size:22px}
+      .company-app.dashboard-home .dashboard-kpi-copy small{font-size:9px}
+      .company-app.dashboard-home .dashboard-main-grid,.company-app.dashboard-home .dashboard-side-stack{
+        grid-template-columns:minmax(0,1fr)!important;gap:12px!important
+      }
+      .company-app.dashboard-home .dashboard-panel{padding:13px!important}
+      .company-app.dashboard-home .dashboard-day-panel,.company-app.dashboard-home .dashboard-main-grid>.dashboard-panel:not(.dashboard-day-panel){min-height:0}
+      .company-app.dashboard-home .dashboard-day-empty{min-height:220px;padding:19px 9px}
+      .company-app.dashboard-home .dashboard-day-empty strong{font-size:16px}
+      .company-app.dashboard-home .dashboard-whatsapp-stats{grid-template-columns:minmax(0,1fr);gap:10px}
+      .company-app.dashboard-home .dashboard-whatsapp-stat+.dashboard-whatsapp-stat{border:0;border-top:1px solid #d9e4ee;padding-top:10px}
+      .company-app.dashboard-home .dashboard-wa-actions{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+      .company-app.dashboard-home .dashboard-client-badge{font-size:9px;padding:5px 7px}
+      .company-app.dashboard-home .dashboard-client-more{display:none}
+    }
+    @media(max-width:380px){
+      .company-app.dashboard-home .dashboard-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+      .company-app.dashboard-home .dashboard-kpi-copy small{display:none}
+      .company-app.dashboard-home .dashboard-whatsapp-stats{padding:10px 2px}
+      .company-app.dashboard-home .dashboard-day-empty-actions{flex-direction:column}
+    }
+
+  </style>
 </head>
 <body>
   <div id="root"></div>
