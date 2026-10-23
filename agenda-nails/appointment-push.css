@@ -1,0 +1,42 @@
+/* AgenPro • Notificações PWA de confirmação ou recusa de agendamentos */
+.company-app .top .dashboard-notification-button{position:relative!important}
+.company-app .agenpro-response-count{
+  display:grid;place-items:center;position:absolute;right:-3px;top:-4px;min-width:17px;height:17px;
+  border-radius:99px;background:#dc3f58;border:2px solid #fff;color:#fff;font-size:9px;font-weight:900;padding:0 3px
+}
+.agenpro-response-overlay{
+  position:fixed;inset:0;background:rgba(19,27,54,.58);z-index:9000;display:flex;
+  align-items:center;justify-content:center;padding:16px
+}
+.agenpro-response-dialog{
+  width:min(100%,550px);max-height:min(690px,90dvh);overflow:auto;background:#fff;color:#20263f;
+  box-shadow:0 22px 70px rgba(15,25,55,.25);border-radius:18px;padding:22px;
+  font:inherit;box-sizing:border-box
+}
+.agenpro-response-head{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.agenpro-response-head small{font-size:10px;font-weight:900;letter-spacing:.08em;color:#795dde}
+.agenpro-response-head h2{font-size:21px;margin:4px 0 0;color:#25213e}
+.agenpro-response-close{width:36px;height:36px;border:0;border-radius:10px;background:#f2effb;color:#6252a9;font-size:25px;cursor:pointer}
+.agenpro-response-help{font-size:12px;color:#78869a;line-height:1.5;margin:10px 0 13px}
+.agenpro-response-subscribe{background:#f7f6ff;border:1px solid #eee8ff;border-radius:12px;padding:12px 13px;margin:10px 0 14px;display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.agenpro-response-permission{font-size:12px;color:#514c7c;flex:1 1 190px;line-height:1.5}
+.agenpro-response-enable{font-size:12px!important;min-height:38px;cursor:pointer}
+.agenpro-response-items{display:grid;gap:9px;max-height:300px;overflow-y:auto}
+.agenpro-response-item{display:flex;gap:11px;align-items:flex-start;padding:12px;background:#fcfcff;border:1px solid #eceef5;border-radius:12px}
+.agenpro-response-item.unread{background:#f5f3ff;border-color:#dcd1fa}
+.agenpro-response-icon{width:30px;height:30px;flex:0 0 30px;display:grid;place-items:center;border-radius:9px;font-weight:900}
+.agenpro-response-icon.ok{background:#dcf9ed;color:#10805e}
+.agenpro-response-icon.no{background:#ffeaef;color:#d03b5c}
+.agenpro-response-item strong,.agenpro-response-item small{display:block;overflow-wrap:anywhere}
+.agenpro-response-item strong{font-size:13px;color:#262a47;line-height:1.4}
+.agenpro-response-item small{font-size:11px;color:#7e899f;margin-top:4px}
+.agenpro-response-empty{text-align:center;color:#8a91a0;padding:20px;font-size:13px}
+.agenpro-response-footer{display:flex;justify-content:flex-end;flex-wrap:wrap;gap:9px;margin-top:17px}
+@media(max-width:720px){
+  .agenpro-response-overlay{align-items:flex-end;padding:0}
+  .agenpro-response-dialog{border-radius:18px 18px 0 0;padding:20px 15px calc(21px + env(safe-area-inset-bottom));width:100%;max-height:85dvh}
+  .agenpro-response-head h2{font-size:19px}
+  .agenpro-response-subscribe{display:block}
+  .agenpro-response-enable{width:100%;margin-top:10px}
+  .agenpro-response-footer button{flex:1 1 120px}
+}
