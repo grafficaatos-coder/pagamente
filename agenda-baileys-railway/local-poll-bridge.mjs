@@ -62,6 +62,8 @@ export function startLocalPollBridge({
     try{
       for(const id of ids){
         if(closed||isShuttingDown())break;
+        // One failing tenant must never block heartbeat or commands for others.
+        try{
         // Publish fresh status even if no command is waiting.
         await publishStatus(id);
         const job=await rpc("agenda_local_claim_next",{p_business_id:id});
@@ -90,6 +92,10 @@ export function startLocalPollBridge({
           p_http_status:status
         });
         await publishStatus(id);
+        }catch(tenantError){
+          logger.warn({business:id,error:String(tenantError?.message||tenantError).slice(0,260)},
+            "Isolated WhatsApp tenant poll failure; continuing with other tenants");
+        }
       }
     }catch(e){
       logger.warn({error:String(e?.message||e).slice(0,400)}, "Supabase local bridge unavailable; retrying");
