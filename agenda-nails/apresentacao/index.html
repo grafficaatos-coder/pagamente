@@ -398,6 +398,17 @@ footer small,footer .footer-links{color:#76708a}
  .footer-inner .site-wordmark{font-size:19px}
 }
 @media(prefers-reduced-motion:reduce){.benefit,.btn{transition:none!important}}
+
+/* Centraliza automaticamente a vitrine caso apenas um plano esteja público. */
+.pricing-cards.single-plan{
+  grid-template-columns:minmax(0,480px)!important;
+  justify-content:center!important;
+  max-width:100%;
+}
+.pricing-cards.single-plan>.plan-card{
+  width:100%;
+  min-width:0;
+}
 </style>
 </head>
 <body>
@@ -668,6 +679,7 @@ footer small,footer .footer-links{color:#76708a}
         }
       }
       if(!Array.isArray(plans)||!plans.length)throw new Error('Nenhum plano público');
+      plansRoot.classList.toggle('single-plan',plans.length===1);
       plansRoot.innerHTML=plans.map((plan,i)=>{
         const isTeam=Number(plan.max_users||0)>1;
         const listed=Object.entries(features).filter(([key])=>plan.permissions?.[key]).map(([,label])=>label);
