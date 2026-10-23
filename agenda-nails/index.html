@@ -3179,6 +3179,19 @@ async function installAgendaApp(){
   if(baileysSession.status==='connected')toast('WhatsApp conectado com sucesso');
   else toast('Ainda aguardando. Conclua o código no WhatsApp.');
 }
+    async function approveWhatsAppServerMigration(){
+      if(!sb||!companyCtx?.business?.id||!canAdminCompany())return toast('Somente o responsável pela empresa pode autorizar.');
+      const accepted=window.confirm('Você autoriza a Agenda Pro a preparar a transferência do WhatsApp desta empresa do Railway para o Docker? A autorização NÃO desconecta seu número nem envia mensagens agora. Você ainda acompanhará o novo pareamento em data combinada.');
+      if(!accepted)return;
+      try{
+        const {data,error}=await sb.rpc('agenda_whatsapp_owner_approve_migration',{p_business_id:companyCtx.business.id});
+        if(error)throw error;
+        if(!data?.consent_registered)throw Error('Não foi possível registrar a autorização');
+        toast('Autorização registrada. A conexão atual permanece no Railway até o pareamento.');
+      }catch(e){
+        toast('Não foi possível autorizar: '+String(e?.message||e));
+      }
+    }
     function wa(){
   const conn=whatsappState?.connection;
   const connected=conn?.status==='connected';
@@ -3282,9 +3295,14 @@ async function installAgendaApp(){
 
   const recent=(whatsappState?.messages||[]).map(m=>`<div class="wa-log-row"><span class="wa-log-dot ${m.status==='sent'?'ok':'bad'}"></span><div><b>${m.status==='sent'?'Enviado':'Falhou'}</b><small>${m.to_phone} · ${new Date(m.created_at).toLocaleString('pt-BR')}</small>${m.error_message?`<small class="wa-log-error">${m.error_message}</small>`:''}</div></div>`).join('');
 
-  return shell(`<div class="section-title"><span class="eyebrow">WhatsApp</span><h2>Conexão do WhatsApp</h2><p>Conecte o número pelo próprio celular usando o servidor Oracle Cloud, sem depender de QR Code.</p></div>
-
-  ${baileysCard||'<section class="panel"><div class="empty-state">A conexão pelo Oracle Cloud ainda não está habilitada para esta empresa.</div></section>'}`);
+  const migrationConsentCard=admin?`<section class="panel" style="margin:14px 0;padding:17px">
+    <div class="head"><div><span class="eyebrow">Migração opcional de servidor</span><h3>Autorizar a transferência do WhatsApp</h3></div></div>
+    <p style="color:var(--muted);line-height:1.5">A Agenda Pro está preparando uma nova conexão pelo Docker e Supabase. Autorizar não desconecta seu WhatsApp atual, não envia mensagens antigas e não inicia a transferência. Depois, nossa equipe combinará o novo pareamento com você.</p>
+    <button class="btn secondary" onclick="approveWhatsAppServerMigration()">Eu autorizo preparar a migração</button>
+  </section>`:''; 
+  return shell(`<div class="section-title"><span class="eyebrow">WhatsApp</span><h2>Conexão do WhatsApp</h2><p>Gerencie seu número com segurança. A migração de servidor só ocorrerá após autorização e confirmação do pareamento.</p></div>
+  ${migrationConsentCard}
+  ${baileysCard||'<section class="panel"><div class="empty-state">A conexão automática do WhatsApp ainda não está habilitada para esta empresa.</div></section>'}`);
 }
     function setup(){const p=P();return shell(`<div class="section-title"><span class="eyebrow">Personalização</span><h2>Profissão / área</h2><p>O sistema adapta automaticamente clientes ou pacientes, serviços ou sessões e o fluxo de agendamento.</p></div><div class="setup-grid">${Object.values(PROFILES).map(x=>`<button class="setup-card ${x.key===segment?'on':''}" onclick="setSegment('${x.key}')"><span class="big-emoji">${x.emoji}</span><b>${x.segment}</b><small>${x.key==='salon'?'Clientes, serviços, profissionais, agenda e caixa.':x.key==='esthetic'?'Clientes, procedimentos, sessões, profissionais e pacotes.':'Pacientes, consultas, médicos, convênio e teleconsulta.'}</small></button>`).join('')}</div><div class="profile-row"><div class="profile-box"><span>Empresa demonstrada</span><b>${p.business}</b></div><div class="profile-box"><span>Terminologia ativa</span><b>${p.people} · ${p.serviceLabel} · ${p.professionals}</b></div></div><div class="context-note"><b>Multiempresa:</b> na versão comercial, cada assinante terá seu próprio cadastro, logo, equipe, horários, serviços e dados isolados. Esta tela demonstra como um único produto pode atender segmentos diferentes.</div>`)}
     function more(){const p=P();return shell(`<div class="section-title"><span class="eyebrow">Configurações</span><h2>Mais opções</h2><p>Personalize o sistema para ${p.business}.</p></div><div class="more-list"><button class="more-btn" onclick="go('admin')"><div class="quick-ico">${I.wallet}</div><b>Administração da plataforma</b><small>Planos, mensalidades, assinantes e bloqueios</small></button><button class="more-btn" onclick="go('setup')"><div class="quick-ico"><span style="font-size:18px">${p.emoji}</span></div><b>Tipo de negócio</b><small>${p.segment} · alterar modo</small></button><button class="more-btn" onclick="go('services')"><div class="quick-ico">${I.sparkle}</div><b>${p.serviceLabel}</b><small>Duração, valores e catálogo</small></button><button class="more-btn" onclick="go('wa')"><div class="quick-ico">${I.message}</div><b>WhatsApp</b><small>Confirmações e lembretes</small></button><button class="more-btn" onclick="book()"><div class="quick-ico">${I.calendar}</div><b>Novo horário</b><small>Cadastre ${p.appointment.toLowerCase()}</small></button><button class="more-btn" onclick="toast('Relatórios em breve')"><div class="quick-ico">${I.chart}</div><b>Relatórios</b><small>Indicadores de ${p.business}</small></button></div>`)}
