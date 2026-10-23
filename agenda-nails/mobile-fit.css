@@ -223,3 +223,69 @@
   .company-app .daybox .count { font-size: 8px; }
   .app-modal-head { gap: 8px; }
 }
+
+
+/* AgenPro - cabeçalho seguro do cadastro de atendimento.
+   Usa a logo original já publicada e respeita a área de status do iPhone. */
+.booking .booking-logo{
+  display:block;width:84px;height:84px;max-width:100%;
+  object-fit:contain;flex:0 0 auto;
+  background:#fff;border-radius:21px;
+  box-shadow:0 5px 18px rgba(7,35,72,.08);
+}
+@media (max-width:720px){
+  .booking{
+    /* Preserva a área de segurança da barra de status em PWA standalone. */
+    padding-top:max(54px, calc(env(safe-area-inset-top) + 14px))!important;
+    padding-left:max(12px,env(safe-area-inset-left))!important;
+    padding-right:max(12px,env(safe-area-inset-right))!important;
+    padding-bottom:calc(28px + env(safe-area-inset-bottom))!important;
+  }
+  .booking .bookwrap{
+    padding-top:0!important;gap:14px!important;
+    min-width:0!important;max-width:100%!important;
+  }
+  .booking .bookintro{
+    display:flex!important;flex-direction:row!important;
+    height:62px!important;min-height:62px!important;
+    align-items:center!important;justify-content:space-between!important;
+    padding:0 2px!important;margin:0!important;
+  }
+  .booking .bookintro .booking-logo{
+    width:60px!important;height:60px!important;
+    border-radius:16px!important;
+    object-fit:contain!important;
+    box-shadow:0 5px 13px rgba(4,36,78,.10)!important;
+  }
+  .booking .bookintro .booking-back{
+    /* Mantém Voltar à vista ao rolar, sem invadir o relógio/câmera do iPhone. */
+    position:fixed!important;
+    top:max(54px, calc(env(safe-area-inset-top) + 14px))!important;
+    right:max(13px,calc(env(safe-area-inset-right) + 13px))!important;
+    left:auto!important;bottom:auto!important;
+    z-index:180!important;
+    display:inline-flex!important;align-items:center!important;justify-content:center!important;
+    min-height:46px!important;min-width:104px!important;
+    padding:10px 15px!important;
+    margin:0!important;
+    border:1px solid #d8e1f0!important;
+    border-radius:12px!important;
+    background:rgba(255,255,255,.98)!important;
+    color:#0b365e!important;
+    font-size:14px!important;font-weight:800!important;
+    line-height:1.2!important;
+    box-shadow:0 3px 12px rgba(16,42,79,.08)!important;
+    white-space:nowrap!important;
+  }
+  .booking .bookintro .booking-back:focus-visible{
+    outline:3px solid #5392dd!important;
+    outline-offset:3px!important;
+  }
+  .booking .book{min-width:0!important;max-width:100%!important}
+}
+@media (max-width:360px){
+  .booking .bookintro .booking-back{
+    right:10px!important;min-width:96px!important;
+    padding:10px 11px!important;font-size:13px!important;
+  }
+}
