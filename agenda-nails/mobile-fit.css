@@ -1,0 +1,225 @@
+/*
+ * AgenPro · ajuste responsivo para PWA móvel · 2026-10-23.8
+ * Evita foco com zoom automático em Safari/iOS sem retirar o zoom manual.
+ * Mantém o menu, dashboard, confirmação pública e PWA Push existentes.
+ */
+@media (max-width: 820px) {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+  body, #root {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: hidden;
+  }
+  body { margin: 0; }
+
+  /* O iOS aproxima a página quando um campo focado tem fonte inferior a 16 px.
+     Não tocar nos botões e nos textos compactos da navegação. */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+    line-height: 1.35 !important;
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  input[type="search"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="text"],
+  input[type="number"],
+  input[type="password"],
+  input[type="date"],
+  input[type="time"],
+  textarea,
+  select { -webkit-appearance: none; appearance: none; }
+  input[type="checkbox"], input[type="radio"] { -webkit-appearance: auto; appearance: auto; }
+
+  .login-screen, .login-panel, .signup-screen, .signup-wrap, .signup-box,
+  .signup-form, .signup-fields, .login-card, .public-confirm-screen,
+  .public-confirm-card, .public-confirm-body {
+    max-width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+  }
+  .login-panel, .signup-screen {
+    padding-inline: max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right));
+  }
+  .signup-fields, .signup-plans { grid-template-columns: minmax(0,1fr); }
+  .signup-plan, .signup-plan-head, .signup-plan-head > * {
+    min-width: 0;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+  .signup-plan-head { flex-wrap: wrap; }
+
+  /* Formulários de cadastro e edição: cada campo utiliza a largura disponível. */
+  .formgrid, .app-modal-grid, .wa-form-grid {
+    grid-template-columns: minmax(0,1fr) !important;
+    width: 100%;
+    min-width: 0;
+  }
+  .formgrid > *, .app-modal-grid > *, .wa-form-grid > * {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .app-modal-grid .full, .wa-form-grid .wa-full { grid-column: 1 / -1; }
+  .field, .login-field, .app-modal-field { min-width: 0; max-width: 100%; }
+
+  /* Modais permanecem visíveis ao abrir o teclado e respeitam os recortes do aparelho. */
+  .app-modal-layer {
+    width: 100%;
+    max-width: 100%;
+    padding: 10px max(10px,env(safe-area-inset-left))
+      max(10px,env(safe-area-inset-bottom)) max(10px,env(safe-area-inset-right));
+    overflow-y: auto;
+    box-sizing: border-box;
+  }
+  .app-modal, .app-modal.wide, .app-confirm-modal {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    max-height: calc(100dvh - 24px - env(safe-area-inset-bottom)) !important;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .app-modal-head, .app-modal-body, .app-modal-actions,
+  .app-modal-title { min-width: 0; max-width: 100%; }
+  .app-modal-title h2, .app-modal-title p { overflow-wrap: anywhere; }
+  .app-modal-actions { display: flex; flex-wrap: wrap; }
+  .app-modal-actions > button { min-width: 0; flex: 1 1 115px; }
+
+  .agenpro-response-overlay {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
+  }
+  .agenpro-response-dialog {
+    width: 100%;
+    max-width: 100%;
+    max-height: 85dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+  .public-confirm-screen { width: 100%; min-height: 100dvh; }
+  .public-confirm-card { width: 100%; }
+  .public-confirm-summary, .public-confirm-row { min-width: 0; }
+  .public-confirm-row > * { min-width: 0; overflow-wrap: anywhere; }
+
+  /* Painel do dono, empresas e áreas de clientes compartilham a base responsiva. */
+  .app, .main, .content, .booking, .bookwrap, .book,
+  .panel, .card, .section-title, .toolbar, .hero,
+  .section-grid, .dashboard-grid, .metrics, .money,
+  .services, .finance-grid, .profile-layout, .month,
+  .agenda-dashboard, .dashboard-main-grid, .dashboard-side-stack {
+    box-sizing: border-box;
+    min-width: 0;
+    max-width: 100%;
+  }
+  .app, .main { width: 100%; }
+  .content { width: 100%; }
+  .content > *, .content > * > * { min-width: 0; max-width: 100%; }
+  .toolbar { flex-wrap: wrap; align-items: stretch; }
+  .toolbar .search-wrap { flex: 1 1 160px; min-width: 0; }
+  .section-title, .service-top-actions, .inline-actions, .finance-toolbar,
+  .finance-actions, .agenda-header { flex-wrap: wrap; }
+  .section-title h1, .section-title h2, .section-title p,
+  .panel h2, .panel h3, .card strong, .card p, .card small,
+  .client strong, .appt strong { overflow-wrap: anywhere; }
+  img, video, canvas { max-width: 100%; height: auto; }
+  svg { max-width: 100%; }
+
+  /* Colunas estreitas não devem empurrar a página para fora da tela. */
+  .dashboard-grid, .dashboard-main-grid, .dashboard-side-stack,
+  .section-grid, .finance-grid, .bookwrap {
+    grid-template-columns: minmax(0,1fr) !important;
+  }
+  .agenda-period-nav, .agenda-header, .agenda-nav-actions {
+    min-width: 0; max-width: 100%; flex-wrap: wrap;
+  }
+  .agenda-period-title { min-width: 0; overflow-wrap: anywhere; }
+  .agenda-nav-actions button { min-width: 34px; }
+
+  /* Tabelas grandes rolam por dentro do card, sem deslocar a tela inteira. */
+  .table-responsive, .table-scroll, .table-wrapper, .table-container,
+  .horizontal-scroll, .company-app .content .panel:has(> table:not(.client-table)),
+  .admin-owner-app .content .panel:has(> table:not(.client-table)) {
+    max-width: 100%;
+    min-width: 0;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .client-table, .client-table tbody, .client-table tr, .client-table td {
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  /* Barra inferior com cinco ações: manter texto e ícones centralizados. */
+  .company-app .bottom.company-bottom {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    grid-template-columns: repeat(5,minmax(0,1fr)) !important;
+    box-sizing: border-box;
+  }
+  .company-app .bottom.company-bottom button {
+    min-width: 0 !important;
+    max-width: 100% !important;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .company-app .side {
+    max-height: 100dvh !important;
+    max-width: min(87vw,316px) !important;
+  }
+  .company-app .side .nav {
+    min-height: 0;
+    overflow-y: auto !important;
+    overscroll-behavior-y: contain;
+  }
+
+  /* Grade mensal mantém os sete dias e se adapta até às telas estreitas. */
+  .month {
+    width: 100%;
+    grid-template-columns: repeat(7,minmax(0,1fr)) !important;
+    gap: clamp(2px,1vw,6px);
+  }
+  .month-label, .daybox {
+    min-width: 0 !important;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+  .daybox { padding: clamp(3px,1.2vw,7px) !important; }
+  .daybox .count { max-width: 100%; padding: 3px 4px; font-size: 9px; }
+  .weekgrid {
+    width: 100%;
+    min-width: 0 !important;
+    max-width: 100%;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+@media (max-width: 380px) {
+  .company-app .mobile-brand-name { font-size: 15px !important; }
+  .company-app .top { padding-left: 6px !important; padding-right: 6px !important; }
+  .company-app .top-left { gap: 4px !important; min-width: 0; }
+  .company-app .top .top-actions { gap: 0 !important; }
+  .company-app .top .mobile-menu-toggle { min-width: 53px !important; padding: 0 5px !important; }
+  .company-app .content, .company-app.dashboard-home .content {
+    padding-left: 9px !important; padding-right: 9px !important;
+  }
+  .company-app .dashboard-kpis { gap: 7px !important; }
+  .company-app .dashboard-kpis > .dashboard-kpi { padding: 9px !important; }
+  .company-app .month { gap: 2px; }
+  .company-app .daybox .count { font-size: 8px; }
+  .app-modal-head { gap: 8px; }
+}
