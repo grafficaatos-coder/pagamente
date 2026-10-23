@@ -12,7 +12,7 @@ O GitHub armazena **código**, não credenciais do WhatsApp. O Supabase guarda a
 
 O arquivo `compose.yaml` **obriga DISPATCH_ENABLED=false e ALLOW_ALL_BUSINESSES=false**. Portanto é só preparação/healthcheck, sem disparo de cobranças ou mensagens. As sessões ficam no volume Docker `agenda_whatsapp_sessions` em `/data`; este volume é LOCAL, não um backup externo.
 
-**Não vincule o mesmo WhatsApp em dois Baileys ao mesmo tempo.** Preserve Railway, não habilite automaticamente filas, e não exponha a porta 8080 à Internet. A Agenda Pro hospedada na Vercel não alcança `localhost`; mudar o serviço de produção exige uma conexão pública segura, atualização de roteamento server-side e testes.
+**Não vincule o mesmo WhatsApp em dois Baileys ao mesmo tempo.** Preserve Railway, não habilite automaticamente filas, e não exponha a porta 8080 à Internet. A Agenda Pro hospedada na Vercel não alcança `localhost`; para eliminar a necessidade de um túnel público, usamos o canal seguro de saída pelo Supabase. Veja [SEM-CLOUDFLARE.md](./SEM-CLOUDFLARE.md). A migração exige testes com uma empresa isolada e continua desativada por padrão.
 
 ## Recuperação e segurança
 
