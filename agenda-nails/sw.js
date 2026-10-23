@@ -1,5 +1,5 @@
-const CACHE_NAME='agenpro-shell-v55-booking-logo-back-20261023';
-const SHELL=['/','/manifest.webmanifest','/icons/app-icon.svg','/icons/app-icon-maskable.svg','/brand/agenda-pro-original.svg','/icons/agenda-pro-192-new.png','/icons/agenda-pro-512-new.png','/mobile-fit.css?v=20261023-9'];
+const CACHE_NAME='agenpro-shell-v56-mobile-brand-safe-area-20261023';
+const SHELL=['/','/manifest.webmanifest','/icons/app-icon.svg','/icons/app-icon-maskable.svg','/brand/agenda-pro-original.svg','/icons/agenda-pro-192-new.png','/icons/agenda-pro-192.png','/icons/agenda-pro-512-new.png','/mobile-fit.css?v=20261023-10'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(
