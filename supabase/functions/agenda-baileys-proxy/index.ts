@@ -90,7 +90,7 @@ Deno.serve(async(req)=>{
       if(action==="status")return json(heartbeat.snapshot??{status:"disconnected"});
 
       const commandPayload=action==="pair-code"?
-        {phone:String(payload?.phone??"").replace(/\\D/g,"").slice(0,15),force_new:payload?.force_new===true}:{};
+        {phone:String(payload?.phone??"").replace(/\D/g,"").slice(0,15),force_new:payload?.force_new===true}:{};
       if(action==="pair-code"&&commandPayload.phone.length<10)
         return json({error:"Informe um celular com DDD"},400);
 
