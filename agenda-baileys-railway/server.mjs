@@ -504,6 +504,33 @@ export class WhatsSession{
       }
     }finally{this.dispatchBusy=false}
   }
+  async sendSingleTestMessage(phone){
+    // Strictly one test company. The database allows at most one test-send job
+    // per tenant; never retry a message automatically after sendMessage starts.
+    const TEST_COMPANY="270de0ad-2013-4afb-b8ba-2e21175b3f01";
+    if(!localPollEnabled||dispatchEnabled||this.businessId!==TEST_COMPANY||!allowed(this.businessId)){
+      throw Object.assign(new Error("Envio de teste não autorizado"),{status:403});
+    }
+    if(this.testSendBusy)throw Object.assign(new Error("Já existe teste em execução"),{status:409});
+    const normalized=normalizePhone(phone);
+    if(!/^55\\d{10,11}$/.test(normalized))
+      throw Object.assign(new Error("Informe um celular brasileiro com DDD"),{status:400});
+    if(this.stopped||this.state!=="online"||!this.sock||!this.hasLease())
+      throw Object.assign(new Error("WhatsApp de teste não está conectado"),{status:409});
+
+    this.testSendBusy=true;
+    try{
+      const sock=this.sock;
+      const targets=await sock.onWhatsApp(normalized);
+      const target=Array.isArray(targets)?targets.find(x=>x?.exists):null;
+      if(!target?.jid)throw Object.assign(new Error("Número informado não possui WhatsApp"),{status:422});
+      if(this.sock!==sock||!this.hasLease()||this.state!=="online")
+        throw Object.assign(new Error("Sessão mudou antes do envio; não repetir automaticamente"),{status:409});
+      const text="Olá! Esta é uma mensagem de teste da Agenda Pro. ✅ A integração com o WhatsApp está funcionando.";
+      const receipt=await sock.sendMessage(target.jid,{text});
+      return {ok:true,status:"submitted",message_ref:receipt?.key?.id||null};
+    }finally{this.testSendBusy=false}
+  }
   async startCatalogBroadcast(){
     if(!dispatchEnabled)throw Object.assign(new Error("Envios pausados durante a migração."),{status:409});
     if(this.broadcastBusy||this.catalogBroadcast.running){
