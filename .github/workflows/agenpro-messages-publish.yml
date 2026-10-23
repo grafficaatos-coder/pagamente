@@ -1,0 +1,65 @@
+name: Publicar aba Mensagens do AgenPro
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - .github/workflows/agenpro-messages-publish.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: agenpro-messages-publish
+  cancel-in-progress: false
+
+jobs:
+  publish-messages:
+    if: github.repository == 'grafficaatos-coder/pagamente'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout dos arquivos
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: true
+
+      - name: Verificar o script
+        run: python3 -m py_compile tools/apply_agenpro_messages.py
+
+      - name: Separar os modelos de WhatsApp
+        run: python3 tools/apply_agenpro_messages.py
+
+      - name: Validar sintaxe e navegacao
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          html=Path("agenda-nails/index.html").read_text(encoding="utf-8")
+          js=html.split("<script>",1)[1].rsplit("</script>",1)[0]
+          Path("/tmp/agenpro-messages-check.js").write_text(js,encoding="utf-8")
+          assert 'function messages(){' in html
+          assert "['messages','message','Mensagens']" in html
+          assert "wa,messages,team" in html
+          assert "/messages-layout.css?v=20261023-6" in html
+          wa=html[html.index('    function wa(){'):html.index('    function setup(){')]
+          assert '${appointmentCard}' not in wa
+          assert '${reminderCard}' not in wa
+          assert '${changeCards}' not in wa
+          assert '${thankYouCard}' not in wa
+          PY
+          node --check /tmp/agenpro-messages-check.js
+          git diff --check
+
+      - name: Publicar nova versao no GitHub e Vercel
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add agenda-nails/index.html agenda-nails/sw.js agenda-nails/app-version.json
+          if git diff --cached --quiet; then
+            echo "A atualizacao ja esta instalada."
+            exit 0
+          fi
+          git commit -m "feat(agenpro): move editable messages out of WhatsApp into Messages page"
+          git push origin HEAD:main
