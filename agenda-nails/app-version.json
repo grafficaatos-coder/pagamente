@@ -1,6 +1,6 @@
 {
-  "version": "2026.10.23.5",
+  "version": "2026.10.23.6",
   "released_at": "2026-10-23",
   "name": "AgenPro",
-  "notes": "Novo layout profissional para celular."
+  "notes": "Nova aba Mensagens com modelos editáveis; WhatsApp somente conexão e envio."
 }

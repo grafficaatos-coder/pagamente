@@ -2638,6 +2638,7 @@
 
   </style>
   <link rel="stylesheet" href="/mobile-redesign.css?v=20261023-5">
+  <link rel="stylesheet" href="/messages-layout.css?v=20261023-6">
 </head>
 <body>
   <div id="root"></div>
@@ -2860,7 +2861,7 @@
     // Atualizar manualmente o PWA sem limpar sessão ou dados locais.
     I.refresh='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.3 9A7.8 7.8 0 0 1 19 7l1 5M4 12l1 5a7.8 7.8 0 0 0 13.7-2"/></svg>';
     I.cancel='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></svg>';
-    const AGENDA_UI_VERSION='2026.10.23.4';
+    const AGENDA_UI_VERSION='2026.10.23.6';
     let agendaUpdateInProgress=false;
     async function refreshAgendaPro(){
       if(agendaUpdateInProgress)return;
@@ -2910,7 +2911,8 @@
     clients:[p.people,'Cadastro e histórico'],
     services:[p.serviceLabel,p.catalog],
     cash:['Financeiro','Resumo do negócio'],
-    wa:['WhatsApp','Lembretes e confirmações'],
+    wa:['WhatsApp','Conexão e envio automático'],
+    messages:['Mensagens','Modelos e textos automáticos'],
     support:['Suporte','Converse com a equipe do Agenda Pro'],
     team:['Equipe','Usuários e permissões'],
     profile:['Meu perfil','Dados pessoais e acesso'],
@@ -3013,7 +3015,7 @@ async function installAgendaApp(){
     if(hasFeature('agenda'))n.push(['agenda','calendar','Agenda']);
     if(hasFeature('clients'))n.push(['clients','users',p.people]);
     if(hasFeature('finance'))n.push(['cash','wallet','Financeiro']);
-    n.push(['wa','message','WhatsApp'],['support','message','Suporte']);
+    n.push(['wa','message','WhatsApp'],['messages','message','Mensagens'],['support','message','Suporte']);
     if(canAdminCompany())n.push(['team','userplus','Equipe']);
     n.push(['subscription','wallet','Planos e assinatura']);
     if(hasFeature('agenda'))n.push(['services','sparkle',p.serviceLabel]);
@@ -4891,29 +4893,8 @@ async function cancelAgendaSubscription(toPix=false){
   render();
   toast(next?'Mensagem de agradecimento ativada para próximos atendimentos concluídos.':'Mensagem de agradecimento desativada.');
 }
-    function wa(){
-  const conn=whatsappState?.connection;
-  const connected=conn?.status==='connected';
+    function messages(){
   const admin=canAdminCompany();
-  const customers=companyData.customers.map(x=>`<option value="${x.id}">${x.name}${x.phone?' · '+x.phone:' · sem telefone'}</option>`).join('');
-  const due=dueWhatsappQueue();
-  const future=futureWhatsappQueue().slice(0,6);
-  const notifOn=('Notification' in window)&&Notification.permission==='granted';
-  const queueRows=due.map(item=>{
-    const when=new Date(item.scheduled_for);
-    return `<div class="wa-queue-row">
-      <div class="wa-queue-type ${item.message_type}">${queueTypeLabel(item.message_type)}</div>
-      <div class="wa-queue-main"><b>${item.customer_name||'Cliente'}</b><small>${item.service_name||'Atendimento'} · ${when.toLocaleString('pt-BR')}</small></div>
-      <span class="status-badge status-active">Automático</span>
-    </div>`;
-  }).join('');
-  const futureRows=future.map(item=>`<div class="wa-upcoming-row"><span>${queueTypeLabel(item.message_type)}</span><b>${item.customer_name||'Cliente'}</b><small>${new Date(item.scheduled_for).toLocaleString('pt-BR')}</small></div>`).join('');
-
-  const easyHelp=whatsappSetupDevice==='mobile'
-    ? `<b>📱 No celular</b><span>O Agenda Pro prepara tudo sozinho e avisa quando houver mensagem. Ao abrir, o WhatsApp/WhatsApp Business já vem com o texto pronto.</span>`
-    : `<b>💻 No computador</b><span>O Agenda Pro prepara tudo sozinho e avisa quando houver mensagem. Ao abrir, o WhatsApp Web já vem com o texto pronto.</span>`;
-
-  const baileysEnabled=!!(companyCtx?.settings?.baileys_enabled&&companyCtx?.settings?.baileys_service_url);
   const customAppointmentText=companyCtx?.preferences?.confirmation_message;
   const appointmentPreviewText=customAppointmentText&&customAppointmentText.trim()?customAppointmentText:defaultAppointmentTemplate();
   const appointmentCard=`<section class="panel" style="padding:20px;margin-top:18px">
@@ -4965,6 +4946,53 @@ async function cancelAgendaSubscription(toPix=false){
       <p style="white-space:pre-wrap;line-height:1.65">${thanksPreview}</p></details>
     <p style="font-size:12px;margin-top:12px">Desativado por padrão. Se ativado, o envio usa o WhatsApp automático conectado e depende da disponibilidade do serviço. Não envia mensagens de atendimentos antigos ao ativar.</p>
   </section>`;
+  const confirmationCard=`<section class="panel message-settings-confirmation">
+    <div class="head"><div><span class="eyebrow">Confirmação de horário</span><h3>Mensagem de confirmação</h3></div>
+      <span class="status-badge status-active">Modelo compartilhado</span></div>
+    <p>A confirmação usa o mesmo texto de <b>Mensagem de agendamento</b>. O lembrete pode incluir separadamente o link para o cliente confirmar.</p>
+    <div class="message-linked-info">Para mudar este texto, edite a mensagem de agendamento. O envio continua utilizando o modelo salvo para esta empresa.</div>
+    ${admin?'<button type="button" class="btn secondary" style="margin-top:12px" onclick="openAppointmentMessageEditor()">✏️ Editar texto de confirmação/agendamento</button>':''}
+    <details style="margin-top:12px"><summary>Ver prévia da confirmação</summary>
+      <p style="white-space:pre-wrap;line-height:1.6">${appModalEscape(formatAppointmentTemplate(appointmentPreviewText,{cliente:'Cliente',empresa:whatsappBookingName(companyCtx?.business?.name||'Agenda Pro'),data:'15/10/2026',horario:'10:00',servico:'Atendimento',profissional:'Profissional'})||'')}</p>
+    </details>
+  </section>`;
+  return shell(`<div class="section-title"><span class="eyebrow">Personalização da empresa</span>
+    <h2>Mensagens</h2><p>Personalize os textos de agendamentos, lembretes e alterações enviados pelo WhatsApp.</p></div>
+    <section class="message-settings-intro">
+      <div><strong>Seus modelos ficam salvos por empresa</strong><p>O envio automático e os horários dos lembretes continuam funcionando como antes. Somente administradores podem editar.</p></div>
+      <button type="button" class="btn secondary" onclick="go('wa')">Ver conexão do WhatsApp</button>
+    </section>
+    <div class="message-settings-grid">
+      ${appointmentCard}
+      ${reminderCard}
+      ${changeCards}
+      ${confirmationCard}
+      ${thankYouCard}
+    </div>`);
+}
+    function wa(){
+  const conn=whatsappState?.connection;
+  const connected=conn?.status==='connected';
+  const admin=canAdminCompany();
+  const customers=companyData.customers.map(x=>`<option value="${x.id}">${x.name}${x.phone?' · '+x.phone:' · sem telefone'}</option>`).join('');
+  const due=dueWhatsappQueue();
+  const future=futureWhatsappQueue().slice(0,6);
+  const notifOn=('Notification' in window)&&Notification.permission==='granted';
+  const queueRows=due.map(item=>{
+    const when=new Date(item.scheduled_for);
+    return `<div class="wa-queue-row">
+      <div class="wa-queue-type ${item.message_type}">${queueTypeLabel(item.message_type)}</div>
+      <div class="wa-queue-main"><b>${item.customer_name||'Cliente'}</b><small>${item.service_name||'Atendimento'} · ${when.toLocaleString('pt-BR')}</small></div>
+      <span class="status-badge status-active">Automático</span>
+    </div>`;
+  }).join('');
+  const futureRows=future.map(item=>`<div class="wa-upcoming-row"><span>${queueTypeLabel(item.message_type)}</span><b>${item.customer_name||'Cliente'}</b><small>${new Date(item.scheduled_for).toLocaleString('pt-BR')}</small></div>`).join('');
+
+  const easyHelp=whatsappSetupDevice==='mobile'
+    ? `<b>📱 No celular</b><span>O Agenda Pro prepara tudo sozinho e avisa quando houver mensagem. Ao abrir, o WhatsApp/WhatsApp Business já vem com o texto pronto.</span>`
+    : `<b>💻 No computador</b><span>O Agenda Pro prepara tudo sozinho e avisa quando houver mensagem. Ao abrir, o WhatsApp Web já vem com o texto pronto.</span>`;
+
+  const baileysEnabled=!!(companyCtx?.settings?.baileys_enabled&&companyCtx?.settings?.baileys_service_url);
   const preferredPhoneRaw=baileysPreferredPhone();
   const preferredPhone=preferredPhoneRaw?formatBusinessPhone(preferredPhoneRaw):'';
   const baileysWaiting=baileysSession.status==='qr'||baileysSession.status==='connecting';
@@ -5047,10 +5075,6 @@ async function cancelAgendaSubscription(toPix=false){
 
   return shell(`<div class="section-title"><span class="eyebrow">WhatsApp</span><h2>Conexão do WhatsApp</h2><p>Conecte o número pelo próprio celular usando o servidor Servidor WhatsApp, sem depender de QR Code.</p></div>
 
-  ${appointmentCard}
-  ${reminderCard}
-  ${changeCards}
-  ${thankYouCard}
   ${baileysCard||'<section class="panel"><div class="empty-state">A conexão pelo servidor WhatsApp ainda não está habilitada para esta empresa.</div></section>'}`);
 }
     function setup(){const p=P();return shell(`<div class="section-title"><span class="eyebrow">Personalização</span><h2>Profissão / área</h2><p>O sistema adapta automaticamente clientes ou pacientes, serviços ou sessões e o fluxo de agendamento.</p></div><div class="setup-grid">${Object.values(PROFILES).map(x=>`<button class="setup-card ${x.key===segment?'on':''}" onclick="setSegment('${x.key}')"><span class="big-emoji">${x.emoji}</span><b>${x.segment}</b><small>${x.key==='salon'?'Clientes, serviços, profissionais, agenda e caixa.':x.key==='esthetic'?'Clientes, procedimentos, sessões, profissionais e pacotes.':'Pacientes, consultas, médicos, convênio e teleconsulta.'}</small></button>`).join('')}</div><div class="profile-row"><div class="profile-box"><span>Empresa demonstrada</span><b>${p.business}</b></div><div class="profile-box"><span>Terminologia ativa</span><b>${p.people} · ${p.serviceLabel} · ${p.professionals}</b></div></div><div class="context-note"><b>Multiempresa:</b> na versão comercial, cada assinante terá seu próprio cadastro, logo, equipe, horários, serviços e dados isolados. Esta tela demonstra como um único produto pode atender segmentos diferentes.</div>`)}
@@ -6967,7 +6991,7 @@ async function cancelAgendaSubscription(toPix=false){
   closeMobileMenu();
   if(!appMode){render();return}
   if(appMode==='owner'){page='admin';adminTab=['overview','clients','plans','billing','support','settings'].includes(p)?p:'overview';render();scrollTo(0,0);if(adminTab==='support')loadSupportData(false);else stopSupportWatch();return}
-  const allowed={home:true,agenda:hasFeature('agenda'),services:hasFeature('agenda'),clients:hasFeature('clients'),cash:hasFeature('finance'),wa:true,support:true,team:canAdminCompany(),profile:true,subscription:true};
+  const allowed={home:true,agenda:hasFeature('agenda'),services:hasFeature('agenda'),clients:hasFeature('clients'),cash:hasFeature('finance'),wa:true,messages:true,support:true,team:canAdminCompany(),profile:true,subscription:true};
   if(!allowed[p])return toast(p==='team'?'Seu perfil não permite gerenciar usuários':'Este recurso não está incluído no seu plano');
   page=p;render();scrollTo(0,0);
   if(p==='team')setTimeout(()=>loadTeamMembers(true),0);
@@ -7024,7 +7048,7 @@ async function cancelAgendaSubscription(toPix=false){
     requestAnimationFrame(resetMobileHorizontalPosition);
     return;
   }
-  R.innerHTML=page==='book'?booking():({home,agenda,clients,services,cash,wa,team,profile:myProfile,subscription:companySubscriptionPage,support:()=>shell(supportPage())}[page]||home)();
+  R.innerHTML=page==='book'?booking():({home,agenda,clients,services,cash,wa,messages,team,profile:myProfile,subscription:companySubscriptionPage,support:()=>shell(supportPage())}[page]||home)();
   if(shouldShowWhatsappWelcome())R.insertAdjacentHTML('beforeend',whatsappWelcomeBanner());
   requestAnimationFrame(resetMobileHorizontalPosition);
 }
