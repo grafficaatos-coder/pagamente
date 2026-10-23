@@ -489,8 +489,8 @@ export class WhatsSession{
       const message=await claimAndValidate(this.businessId,this.leaseId,
         julliPilot?"agenda_baileys_claim_next_pilot":"agenda_baileys_claim_next");
       if(!message)return;
-      if(julliPilot&&!["confirmation","reminder"].includes(message.message_type)){
-        await cancelClaimed(this.businessId,message,"Somente confirmação e lembrete no piloto Julli.");
+      if(julliPilot&&!["confirmation","reminder","cancellation","rescheduled"].includes(message.message_type)){
+        await cancelClaimed(this.businessId,message,"Tipo de mensagem não autorizado no piloto Julli.");
         return;
       }
       if(technicalTest){
