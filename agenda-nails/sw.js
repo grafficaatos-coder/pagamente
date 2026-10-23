@@ -1,4 +1,4 @@
-const CACHE_NAME='agenda-pro-shell-v49-professional-ui-refresh-20261023';
+const CACHE_NAME='agenda-pro-shell-v50-dashboard-premium-reference-20261023';
 const SHELL=['/','/manifest.webmanifest','/icons/app-icon.svg','/icons/app-icon-maskable.svg','/brand/agenda-pro-original.svg','/icons/agenda-pro-192-new.png','/icons/agenda-pro-512-new.png'];
 
 self.addEventListener('install',event=>{
