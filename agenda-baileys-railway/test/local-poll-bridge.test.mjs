@@ -71,3 +71,28 @@ test("bridge rejects disconnect without a local session (no Railway tenant mutat
     assert.equal(finished?.p_http_status,409);
   }finally{stop();}
 });
+
+test("null composite row from empty Supabase RPC is NOT a command and does NOT produce 403",async()=>{
+  let finishCalls=0;
+  const warnings=[];
+  const stop=startLocalPollBridge({
+    db:async()=>({ok:true}),
+    rpc:async(name)=>{
+      if(name==="agenda_local_claim_next"){
+        return {id:null,business_id:null,action:null,claim_token:null};
+      }
+      if(name==="agenda_local_finish")finishCalls++;
+      return null;
+    },
+    sessions:new Map(),
+    ensureSession:async()=>{throw Error("should never start session")},
+    allowedBusinesses:new Set([TEST_ID]),
+    logger:{warn:(...v)=>warnings.push(v)},
+    isShuttingDown:()=>false
+  });
+  try{
+    await sleep(80);
+    assert.equal(finishCalls,0);
+    assert.equal(warnings.length,0);
+  }finally{stop();}
+});
