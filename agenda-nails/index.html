@@ -2940,19 +2940,32 @@ function home(){
   const actions=hasFeature('agenda')&&canOperateCompany()?'<button class="btn primary" onclick="book()">＋ Novo agendamento</button>':'';
   const addCustomer=hasFeature('clients')&&canOperateCompany()?'<button class="btn secondary" onclick="addCompanyCustomer()">＋ Novo cliente</button>':'';
   const addService=hasFeature('agenda')&&canOperateCompany()?'<button class="btn secondary" onclick="openServiceModal()">＋ Novo serviço</button>':'';
-  return shell(`<div class="agenda-dashboard">
-    <section class="hero agenda-home-hero"><div><h2>${greeting()}! 👋</h2><p>Resumo de ${appModalEscape(displayBusinessName(companyCtx.business.name))} · ${appModalEscape(todayTitle)}</p></div>
-      <div class="hero-shortcuts">${actions}${addCustomer}${addService}</div></section>
-    ${dashboardOps}
+  const emptySchedule=`<div class="dashboard-day-empty">
+    <span class="dashboard-day-empty-icon">${I.calendar}</span>
+    <strong>Nenhum horário para hoje.</strong>
+    <p>Que tal criar um novo agendamento?</p>
+    <div class="dashboard-day-empty-actions">
+      ${hasFeature('agenda')&&canOperateCompany()?'<button class="dashboard-empty-primary" onclick="book()">＋ Criar agendamento</button>':''}
+      ${hasFeature('agenda')?'<button class="dashboard-outline-action" onclick="go(\'agenda\')">Ver agenda completa</button>':''}
+    </div>
+  </div>`;
+  return shell(`<div class="agenda-dashboard premium-dashboard">
     <div class="dashboard-kpis">${metrics}</div>
     <div class="dashboard-main-grid">
-      <section class="dashboard-panel"><div class="dashboard-heading"><div class="dashboard-heading-main">
-        <span class="dashboard-heading-icon">${I.calendar}</span><div><h3>Agenda do dia</h3><small>${appModalEscape(todayTitle)}</small></div></div>
-        ${hasFeature('agenda')?'<button class="dashboard-outline-action" onclick="go(\'agenda\')">Ver agenda completa ›</button>':''}</div>
-        ${rows||'<div class="dashboard-empty">Nenhum horário para hoje.</div>'}
-        <button class="dashboard-bottom-link" onclick="go('agenda')">Ver todos os agendamentos do dia →</button>
-      </section>${cal}${side}</div>
-      <details class="dashboard-extra-details"><summary>Ver gráficos e serviços mais agendados</summary><div class="dashboard-bottom-grid">${financePanel}${servicesPanel}</div></details></div>`);
+      <section class="dashboard-panel dashboard-day-panel">
+        <div class="dashboard-heading"><div class="dashboard-heading-main">
+          <span class="dashboard-heading-icon">${I.calendar}</span><div><h3>Agenda do dia</h3><small>${appModalEscape(todayTitle)}</small></div></div>
+          ${hasFeature('agenda')?'<button class="dashboard-outline-action" onclick="go(\'agenda\')">Ver agenda completa ›</button>':''}
+        </div>
+        ${rows||emptySchedule}
+        ${rows?'<button class="dashboard-bottom-link" onclick="go(\'agenda\')">Ver todos os agendamentos do dia →</button>':''}
+      </section>
+      ${cal}${side}
+    </div>
+    <details class="dashboard-extra-details"><summary>Ver gráficos e serviços mais agendados</summary>
+      <div class="dashboard-bottom-grid">${financePanel}${servicesPanel}</div>
+    </details>
+  </div>`);
 }
     function agendaDateKey(value){
   const d=value instanceof Date?value:new Date(value);
