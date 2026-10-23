@@ -320,7 +320,39 @@ h1 em{color:#754bdc;background:linear-gradient(120deg,#5533c9,#9069ea);backgroun
 .demo-status{background:#e7f9f0;color:#158366}
 .demo-status.wait{background:#fff3e1;color:#997331}
 .pricing{background:linear-gradient(180deg,#fff,#f5f0ff)}
-.pricing-cards{max-width:970px}
+.pricing-cards{
+  max-width:1000px;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  align-items:stretch;
+  gap:22px;
+}
+.plan-card{
+  display:flex;
+  flex-direction:column;
+  min-width:0;
+  height:100%;
+  padding:30px;
+}
+.plan-card .description{
+  min-height:48px;
+  overflow-wrap:anywhere;
+}
+.plan-card .plan-price{margin:18px 0 20px}
+.plan-card .btn{
+  width:100%;
+  min-height:52px;
+}
+.plan-card ul{flex:1}
+.plan-card.featured{background:linear-gradient(180deg,#fcfaff,#fff 33%)}
+@media(max-width:740px){
+  .pricing-cards{grid-template-columns:minmax(0,1fr)!important;max-width:520px;gap:24px}
+  .plan-card{padding:24px}
+}
+@media(min-width:741px) and (max-width:1000px){
+  .pricing-cards{gap:15px}
+  .plan-card{padding:21px}
+}
+
 .plan-card{border:1px solid #e8e0fa;border-radius:20px;box-shadow:0 15px 40px rgba(88,53,170,.07)}
 .plan-card.featured{border:2px solid #815de8;box-shadow:0 25px 51px rgba(101,60,200,.17)}
 .featured-label{background:#6945d0}
@@ -640,9 +672,9 @@ footer small,footer .footer-links{color:#76708a}
         const isTeam=Number(plan.max_users||0)>1;
         const listed=Object.entries(features).filter(([key])=>plan.permissions?.[key]).map(([,label])=>label);
         const unique=[...new Set([plan.max_users===1?'1 usuário':plan.max_users?'Até '+Number(plan.max_users)+' usuários':'Usuários conforme o plano',...listed])].slice(0,6);
-        const featured=isTeam&&plans.length>1;
+        const featured=String(plan.code||'').toLowerCase()==='profissional'&&plans.length>1;
         return '<article class="plan-card'+(featured?' featured':'')+'">'+
-          (featured?'<span class="featured-label">Para equipes</span>':'')+
+          (featured?'<span class="featured-label">Mais completo</span>':'')+
           '<h3>'+esc(plan.name||'Plano')+'</h3>'+
           '<p class="description">'+esc(plan.description||'Organize sua rotina de atendimentos com o Agenda Pro.')+'</p>'+
           '<div class="plan-price">'+esc(brl(plan.monthly_price_cents))+' <small>/mês</small></div>'+
