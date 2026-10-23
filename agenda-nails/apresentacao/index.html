@@ -624,7 +624,7 @@ footer small,footer .footer-links{color:#76708a}
           document.querySelectorAll('[data-trial-cta]').forEach(link=>{link.textContent='Cadastros indisponíveis';link.href='#planos';});
           const heroTrial=document.getElementById('hero-trial-days');if(heroTrial)heroTrial.textContent='Novos cadastros temporariamente fechados';
         }
-        if(settings?.free_trial_enabled&&Number(settings.trial_days)>0){
+        if(settings?.public_signup_enabled!==false&&settings?.free_trial_enabled&&Number(settings.trial_days)>0){
           const tag=document.getElementById('trial-tag');
           tag.hidden=false;
           tag.textContent='✓ '+Number(settings.trial_days)+' dias de teste grátis';
