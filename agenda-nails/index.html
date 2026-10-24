@@ -2873,6 +2873,7 @@
     }
     let ADMIN=(()=>{try{return normalizeAdmin(JSON.parse(localStorage.getItem('agendaProAdmin')))}catch(e){return cloneAdmin()}})();
     let adminTab='overview';
+    let siteVisitsStats={loading:false,total:0,today:0,week:0,month:0,error:''};
     function saveAdmin(){localStorage.setItem('agendaProAdmin',JSON.stringify(ADMIN))}
 
     const R=document.getElementById('root');
@@ -5872,6 +5873,62 @@ async function cancelAgendaSubscription(toPix=false){
   document.querySelectorAll('.client-real-card').forEach(el=>el.style.display=(el.dataset.search||'').includes(q)?'':'none');
 }
     
+    // Somente a conta administradora pode consultar as visitas, conforme RLS.
+    async function loadSiteVisitsStats(){
+      if(!sb||appMode!=='owner')return;
+      siteVisitsStats.loading=true;
+      try{
+        const parts=Object.fromEntries(
+          new Intl.DateTimeFormat('en-US',{
+            timeZone:'America/Sao_Paulo',year:'numeric',month:'2-digit',day:'2-digit'
+          }).formatToParts(new Date()).filter(p=>p.type!=='literal').map(p=>[p.type,p.value])
+        );
+        const dayStart=new Date(parts.year+'-'+parts.month+'-'+parts.day+'T00:00:00-03:00').toISOString();
+        const monthStart=new Date(parts.year+'-'+parts.month+'-01T00:00:00-03:00').toISOString();
+        const weekStart=new Date(Date.now()-7*24*60*60*1000).toISOString();
+        const counter=(from)=>{
+          let q=sb.from('agenda_site_visits').select('id',{count:'exact',head:true});
+          if(from)q=q.gte('visited_at',from);
+          return q;
+        };
+        const [all,today,week,month]=await Promise.all([
+          counter(null),counter(dayStart),counter(weekStart),counter(monthStart)
+        ]);
+        const error=all.error||today.error||week.error||month.error;
+        if(error)throw error;
+        siteVisitsStats={
+          loading:false,total:all.count??0,today:today.count??0,
+          week:week.count??0,month:month.count??0,error:''
+        };
+      }catch(error){
+        console.error('Acessos do site AgendaJP:',error);
+        siteVisitsStats={...siteVisitsStats,loading:false,error:'Não foi possível carregar os acessos do site.'};
+      }
+    }
+    async function refreshSiteVisitsStats(){
+      if(appMode!=='owner')return;
+      const btn=document.getElementById('siteVisitRefresh');
+      if(btn)btn.disabled=true;
+      await loadSiteVisitsStats();
+      if(appMode==='owner'&&adminTab==='overview')render();
+    }
+    function ownerSiteVisitsCard(){
+      if(appMode!=='owner')return '';
+      const a=siteVisitsStats;
+      const shown=n=>a.error?'—':Number(n||0).toLocaleString('pt-BR');
+      return '<section class="panel" style="margin-bottom:18px">'+
+        '<div class="head"><div><span class="eyebrow">Somente para o dono</span><h3>Acessos ao site de apresentação</h3>'+
+        '<p style="margin:7px 0 0;color:var(--muted)">Visitas contabilizadas a partir de 24/10/2026, com uma contagem por aba a cada 30 minutos.</p></div>'+
+        '<button id="siteVisitRefresh" type="button" class="btn secondary" onclick="refreshSiteVisitsStats()">'+(a.loading?'Atualizando...':'↻ Atualizar')+'</button></div>'+
+        (a.error?'<div class="context-note">'+a.error+'</div>':'')+
+        '<div class="admin-kpis" style="margin-top:15px">'+
+        '<div class="admin-kpi"><span>Total de visitas</span><b>'+shown(a.total)+'</b><small>desde o início da contagem</small></div>'+
+        '<div class="admin-kpi"><span>Hoje</span><b>'+shown(a.today)+'</b><small>horário de Brasília</small></div>'+
+        '<div class="admin-kpi"><span>Últimos 7 dias</span><b>'+shown(a.week)+'</b><small>período móvel</small></div>'+
+        '<div class="admin-kpi"><span>Este mês</span><b>'+shown(a.month)+'</b><small>mês atual</small></div>'+
+        '</div></section>';
+    }
+
     async function loadOwnerData(){
       if(!sb)return;
       const [plansRes,bizRes,subRes,membersRes,settingsRes]=await Promise.all([
@@ -5916,6 +5973,7 @@ async function cancelAgendaSubscription(toPix=false){
           manualBlocked:!!b.manual_blocked,subscription:s
         };
       });
+      await loadSiteVisitsStats();
     }
 
     async function editClientUsers(id){
@@ -5943,7 +6001,7 @@ async function cancelAgendaSubscription(toPix=false){
   const late=ADMIN.clients.filter(x=>effectiveClientStatus(x)==='late').length;
   const blocked=ADMIN.clients.filter(x=>effectiveClientStatus(x)==='blocked').length;
   const mrr=ADMIN.clients.filter(x=>effectiveClientStatus(x)==='active').reduce((a,x)=>a+x.monthly,0);
-  return `<div class="section-title"><span class="eyebrow">Área do proprietário</span><h2>Painel da plataforma</h2><p>Acompanhe assinantes, receita mensal e situação das contas.</p></div><div class="owner-note"><b>Este painel é somente seu.</b> Cada empresa terá login próprio e dados separados no banco.</div><div class="admin-kpis"><div class="admin-kpi"><span>Assinantes ativos</span><b>${active}</b><small>${trial} em teste grátis</small></div><div class="admin-kpi"><span>Receita mensal</span><b>${moneyBR(mrr)}</b><small>mensalidades ativas</small></div><div class="admin-kpi"><span>Em atraso</span><b>${late}</b><small>dentro da tolerância</small></div><div class="admin-kpi"><span>Bloqueados</span><b>${blocked}</b><small>automático ou manual</small></div></div><div class="admin-home-grid"><section class="panel"><div class="head"><div><span class="eyebrow">Gestão</span><h3>Ações rápidas</h3></div></div><div class="owner-actions"><button onclick="addDemoClient()"><b>+ Novo assinante</b><small>Criar empresa, e-mail e senha</small></button><button onclick="setAdminTab('billing')"><b>Ver cobranças</b><small>Vencimentos, atrasos e bloqueios</small></button><button onclick="setAdminTab('plans')"><b>Editar planos</b><small>Preços, limites e recursos</small></button></div></section><section class="panel"><div class="head"><div><span class="eyebrow">Empresas</span><h3>Últimos assinantes</h3></div></div><div class="platform-list">${ADMIN.clients.slice(0,5).map(x=>{const s=effectiveClientStatus(x);return `<div><span><b>${x.name}</b><small>${x.plan} · ${x.segment}</small></span><span class="status-badge ${statusClass(s)}">${statusLabel(s)}</span></div>`}).join('')||'<div><span><b>Nenhum assinante ainda</b><small>Cadastre o primeiro cliente da plataforma.</small></span></div>'}</div></section></div>`;
+  return `<div class="section-title"><span class="eyebrow">Área do proprietário</span><h2>Painel da plataforma</h2><p>Acompanhe assinantes, receita mensal e situação das contas.</p></div><div class="owner-note"><b>Este painel é somente seu.</b> Cada empresa terá login próprio e dados separados no banco.</div><div class="admin-kpis"><div class="admin-kpi"><span>Assinantes ativos</span><b>${active}</b><small>${trial} em teste grátis</small></div><div class="admin-kpi"><span>Receita mensal</span><b>${moneyBR(mrr)}</b><small>mensalidades ativas</small></div><div class="admin-kpi"><span>Em atraso</span><b>${late}</b><small>dentro da tolerância</small></div><div class="admin-kpi"><span>Bloqueados</span><b>${blocked}</b><small>automático ou manual</small></div></div>${ownerSiteVisitsCard()}<div class="admin-home-grid"><section class="panel"><div class="head"><div><span class="eyebrow">Gestão</span><h3>Ações rápidas</h3></div></div><div class="owner-actions"><button onclick="addDemoClient()"><b>+ Novo assinante</b><small>Criar empresa, e-mail e senha</small></button><button onclick="setAdminTab('billing')"><b>Ver cobranças</b><small>Vencimentos, atrasos e bloqueios</small></button><button onclick="setAdminTab('plans')"><b>Editar planos</b><small>Preços, limites e recursos</small></button></div></section><section class="panel"><div class="head"><div><span class="eyebrow">Empresas</span><h3>Últimos assinantes</h3></div></div><div class="platform-list">${ADMIN.clients.slice(0,5).map(x=>{const s=effectiveClientStatus(x);return `<div><span><b>${x.name}</b><small>${x.plan} · ${x.segment}</small></span><span class="status-badge ${statusClass(s)}">${statusLabel(s)}</span></div>`}).join('')||'<div><span><b>Nenhum assinante ainda</b><small>Cadastre o primeiro cliente da plataforma.</small></span></div>'}</div></section></div>`;
 }
     function adminBilling(){
   const total=ADMIN.clients.reduce((a,x)=>a+x.monthly,0);
