@@ -1,5 +1,5 @@
-const CACHE_NAME='agendajp-shell-v57-rebrand-20261023';
-const SHELL=['/','/manifest.webmanifest','/brand/agendajp-logo.webp','/icons/agendajp-192.png','/icons/agendajp-512.png','/mobile-fit.css?v=20261023-10'];
+const CACHE_NAME='agendajp-shell-v58-whatsapp-first-login-20261023';
+const SHELL=['/','/manifest.webmanifest','/brand/agendajp-logo.webp','/icons/agendajp-192.png','/icons/agendajp-512.png','/mobile-fit.css?v=20261023-10','/whatsapp-welcome.css?v=20261023-12'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(
