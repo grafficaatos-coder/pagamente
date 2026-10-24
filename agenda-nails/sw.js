@@ -1,4 +1,4 @@
-const CACHE_NAME='agendajp-shell-v61-required-signup-phone-20261024';
+const CACHE_NAME='agendajp-shell-v62-landing-visit-count-20261024';
 const SHELL=['/','/manifest.webmanifest?v=20261024-ios-v2','/apple-touch-icon.png','/apple-touch-icon-agendajp.png','/brand/agendajp-logo.webp','/icons/agendajp-192.png','/icons/agendajp-512.png','/mobile-fit.css?v=20261023-10','/whatsapp-welcome.css?v=20261023-12'];
 
 self.addEventListener('install',event=>{
