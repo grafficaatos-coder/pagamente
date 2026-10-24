@@ -673,6 +673,32 @@ footer small,footer .footer-links{color:#76708a}
 
   const endpoint='https://zmrihyzwsyxjikdknfug.supabase.co';
   const publishableKey='sb_publishable_nX-qLw9rEdLUvZpgXMj1LA_2gjB3umn';
+
+  // Contagem aproximada de visitas ao site: no máximo 1 registro por aba a cada 30 minutos.
+  // Armazena somente identificador aleatório e horário. Não coleta IP, usuário ou telefone.
+  function recordLandingVisit(){
+    if(navigator.globalPrivacyControl===true||navigator.doNotTrack==='1')return;
+    try{
+      const key='agendajp_landing_visit_30m_v1';
+      const now=Date.now();
+      const existing=JSON.parse(sessionStorage.getItem(key)||'null');
+      if(existing&&Number.isFinite(existing.at)&&now-existing.at<30*60*1000)return;
+      if(!crypto?.randomUUID)return;
+      const visitKey=crypto.randomUUID();
+      sessionStorage.setItem(key,JSON.stringify({at:now}));
+      fetch(endpoint+'/rest/v1/agenda_site_visits',{
+        method:'POST',
+        headers:{apikey:publishableKey,'Content-Type':'application/json','Prefer':'return=minimal'},
+        body:JSON.stringify({visit_key:visitKey}),
+        keepalive:true,
+        credentials:'omit'
+      }).catch(()=>{});
+    }catch(e){
+      // Visitas com bloqueadores ou navegação privada continuam funcionando normalmente.
+    }
+  }
+  recordLandingVisit();
+
   const plansRoot=document.getElementById('plan-cards');
   const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const brl=cents=>new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'}).format(Number(cents||0)/100);
