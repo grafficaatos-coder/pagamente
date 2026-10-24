@@ -1,6 +1,6 @@
 {
-  "version": "2026.10.24.3",
+  "version": "2026.10.24.4",
   "released_at": "2026-10-24",
   "name": "AgendaJP",
-  "notes": "Cadastro: telefone/WhatsApp obrigatório e validado no banco; dono pode acompanhar testes gratuitos vencidos sem assinatura e iniciar contato manual."
+  "notes": "Contador de visitas ao site de apresentação disponível somente para o dono da plataforma: total, hoje, últimos 7 dias e mês; sem dados pessoais de visitantes."
 }
