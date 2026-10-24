@@ -8,13 +8,13 @@
   <meta name="robots" content="index,follow">
   <title>AgendaJP | Agendamentos e gestão com teste grátis</title>
   <meta name="description" content="AgendaJP: agendamentos, confirmações pelo WhatsApp, clientes, equipe e financeiro em um único sistema. Faça seu cadastro e comece com um teste grátis.">
-  <link rel="canonical" href="https://agenda-pro-iucw.vercel.app/apresentacao/">
+  <link rel="canonical" href="https://agendajp.com.br/">
   <link rel="icon" type="image/png" href="/icons/agendajp-192.png">
   <meta property="og:type" content="website">
   <meta property="og:locale" content="pt_BR">
   <meta property="og:title" content="AgendaJP — Agenda online e gestão profissional com teste grátis">
   <meta property="og:description" content="Organize agenda, clientes, lembretes e financeiro. Comece a usar o AgendaJP com teste grátis.">
-  <meta property="og:url" content="https://agenda-pro-iucw.vercel.app/apresentacao/">
+  <meta property="og:url" content="https://agendajp.com.br/">
   <meta property="og:image" content="https://agenda-pro-iucw.vercel.app/icons/agendajp-512.png">
   <style>
     :root{
@@ -608,6 +608,13 @@ footer small,footer .footer-links{color:#76708a}
 <script>
 (function(){
   'use strict';
+  // Mantém o site antigo; no domínio próprio, o cadastro acontece no app.
+  const appOrigin=location.hostname==='agendajp.com.br'?'https://app.agendajp.com.br':'';
+  if(appOrigin){
+    document.querySelectorAll('a[href="/"],a[href^="/?cadastro=1"]').forEach(link=>{
+      link.href=appOrigin+link.getAttribute('href');
+    });
+  }
   const menu=document.getElementById('navigation');
   const toggle=document.getElementById('toggle-navigation');
   function setMenu(open){
@@ -690,13 +697,13 @@ footer small,footer .footer-links{color:#76708a}
           '<h3>'+esc(plan.name||'Plano')+'</h3>'+
           '<p class="description">'+esc(plan.description||'Organize sua rotina de atendimentos com o AgendaJP.')+'</p>'+
           '<div class="plan-price">'+esc(brl(plan.monthly_price_cents))+' <small>/mês</small></div>'+
-          '<a class="btn '+(featured?'btn-primary':'btn-outline')+'" href="/?cadastro=1&amp;plano='+encodeURIComponent(String(plan.code||''))+'">Começar agora <svg><use href="#i-arrow"></use></svg></a>'+
+          '<a class="btn '+(featured?'btn-primary':'btn-outline')+'" href="'+appOrigin+'/?cadastro=1&amp;plano='+encodeURIComponent(String(plan.code||''))+'">Começar agora <svg><use href="#i-arrow"></use></svg></a>'+
           '<ul>'+unique.map(text=>'<li>'+esc(text)+'</li>').join('')+'</ul>'+
           '</article>';
       }).join('');
     }catch(error){
       console.error('Planos do AgendaJP:',error);
-      plansRoot.innerHTML='<div class="plan-fallback">Não foi possível consultar os planos neste momento. <a href="/?cadastro=1" style="color:#126eb2;font-weight:850;text-decoration:underline">Veja as opções no cadastro do AgendaJP.</a></div>';
+      plansRoot.innerHTML='<div class="plan-fallback">Não foi possível consultar os planos neste momento. <a href="'+appOrigin+'/?cadastro=1" style="color:#126eb2;font-weight:850;text-decoration:underline">Veja as opções no cadastro do AgendaJP.</a></div>';
     }
   }
   loadPlans();
