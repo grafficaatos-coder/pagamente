@@ -6,6 +6,20 @@
   <meta name="theme-color" content="#6f50d6">
   <meta name="color-scheme" content="light">
   <meta name="robots" content="index,follow">
+  <script>
+    // Limpa apenas o parâmetro acrescentado por links do ChatGPT.
+    // Mantém os parâmetros de cadastro, plano e a âncora (#planos).
+    (() => {
+      try {
+        const url = new URL(window.location.href);
+        if (url.searchParams.get('utm_source') === 'chatgpt.com') {
+          url.searchParams.delete('utm_source');
+          window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
+        }
+      } catch (_) {}
+    })();
+  </script>
+
   <title>AgendaJP | Agendamentos e gestão com teste grátis</title>
   <meta name="description" content="AgendaJP: agendamentos, confirmações pelo WhatsApp, clientes, equipe e financeiro em um único sistema. Faça seu cadastro e comece com um teste grátis.">
   <link rel="canonical" href="https://agendajp.com.br/">
