@@ -1,6 +1,6 @@
 {
-  "version": "2026.10.24.2",
+  "version": "2026.10.24.3",
   "released_at": "2026-10-24",
   "name": "AgendaJP",
-  "notes": "Correção do nome AgendaJP e da logo oficial ao adicionar à Tela de Início no iPhone; ícone Apple dedicado em ambos os domínios."
+  "notes": "Cadastro: telefone/WhatsApp obrigatório e validado no banco; dono pode acompanhar testes gratuitos vencidos sem assinatura e iniciar contato manual."
 }
