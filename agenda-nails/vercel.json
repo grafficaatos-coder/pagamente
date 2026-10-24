@@ -2,6 +2,16 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "agendajp.com.br"
+        }
+      ],
+      "destination": "/apresentacao/index.html"
+    },
+    {
       "source": "/site",
       "destination": "/apresentacao/index.html"
     },
