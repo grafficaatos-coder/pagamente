@@ -1,6 +1,6 @@
 {
-  "version": "2026.10.23.11",
+  "version": "2026.10.23.12",
   "released_at": "2026-10-23",
   "name": "AgendaJP",
-  "notes": "Nova identidade visual AgendaJP no sistema, login, agendamento, site de apresentação e ícones do aplicativo."
+  "notes": "Primeiro acesso dos novos assinantes: orientação para conectar o WhatsApp aparece em janela modal antes de utilizar o painel; opção configurar depois; cadastro e assinatura preservados."
 }
