@@ -1,0 +1,46 @@
+/* AgendaJP: aviso de primeira conexão do WhatsApp.
+   O dialog modal nativo impede interações no painel até uma escolha. */
+#whatsapp-welcome.whatsapp-welcome-dialog{
+  box-sizing:border-box;
+  border:1px solid #e5def5;
+  border-radius:24px;
+  width:min(480px,calc(100vw - 32px));
+  max-width:480px;
+  max-height:min(88dvh,720px);
+  padding:0;
+  margin:auto;
+  overflow:auto;
+  color:#251d43;
+  background:#fff;
+  box-shadow:0 32px 95px rgba(31,23,69,.32);
+}
+#whatsapp-welcome.whatsapp-welcome-dialog::backdrop{
+  background:rgba(19,17,41,.64);
+  -webkit-backdrop-filter:blur(5px);
+  backdrop-filter:blur(5px);
+}
+.whatsapp-welcome-body{padding:32px;display:grid;gap:14px;text-align:center}
+.whatsapp-welcome-icon{
+  width:64px;height:64px;display:grid;place-items:center;margin:0 auto 3px;
+  border-radius:21px;background:#e9f8ee;color:#168a56;font-size:29px;
+}
+.whatsapp-welcome-kicker{
+  color:#6d48d4;letter-spacing:.11em;text-transform:uppercase;
+  font-size:11px;font-weight:800;
+}
+.whatsapp-welcome-title{margin:0;font-size:25px;font-weight:850;line-height:1.2;color:#211b42}
+.whatsapp-welcome-copy{font-size:14px;line-height:1.65;color:#605b75;margin:0}
+.whatsapp-welcome-benefits{display:grid;gap:9px;text-align:left;margin:5px 0 4px;padding:15px 17px;border-radius:16px;background:#f8f6fe}
+.whatsapp-welcome-benefits span{font-size:13px;font-weight:650;color:#393054}
+.whatsapp-welcome-benefits span::before{content:'✓';color:#168a56;margin-right:9px}
+.whatsapp-welcome-actions{display:grid;gap:10px;margin-top:5px}
+.whatsapp-welcome-action{min-height:49px;border-radius:12px;padding:12px 18px;border:0;font-weight:800;font-size:14px;cursor:pointer}
+.whatsapp-welcome-action.primary{color:white;background:#6945d5;box-shadow:0 9px 24px rgba(105,69,213,.22)}
+.whatsapp-welcome-action.secondary{color:#5c5277;background:#fff;border:1px solid #dcd4eb}
+.whatsapp-welcome-action:focus-visible{outline:3px solid #6b51d6;outline-offset:3px}
+.whatsapp-welcome-footnote{color:#8b849c;font-size:11px;line-height:1.5}
+@media(max-width:520px){
+  #whatsapp-welcome.whatsapp-welcome-dialog{width:calc(100vw - 28px);border-radius:20px;max-height:calc(100dvh - 36px)}
+  .whatsapp-welcome-body{padding:25px 20px;gap:12px}
+  .whatsapp-welcome-title{font-size:22px}
+}
