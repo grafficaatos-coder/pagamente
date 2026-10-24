@@ -2641,6 +2641,7 @@
   <link rel="stylesheet" href="/messages-layout.css?v=20261023-6">
   <link rel="stylesheet" href="/appointment-push.css?v=20261023-7">
   <link rel="stylesheet" href="/mobile-fit.css?v=20261023-10">
+  <link rel="stylesheet" href="/whatsapp-welcome.css?v=20261023-12">
   <script defer src="/appointment-push.js?v=20261023-7"></script>
 </head>
 <body>
@@ -6962,33 +6963,40 @@ async function cancelAgendaSubscription(toPix=false){
   if(sb)sb.auth.signOut();
   resetSupportState();authUser=null;appMode=null;ownerLogged=false;companyCtx=null;companyData={customers:[],services:[],appointments:[],financialEntries:[]};teamState={members:[],count:0,maxUsers:null,loading:false,loaded:false};whatsappQueue=[];page='home';adminTab='overview';loginMessage='';render();
 }
-    // Boas-vindas ao WhatsApp para empresas cadastradas a partir desta versão.
-    // Exibir uma única vez por usuário/dispositivo e nunca para o dono da plataforma.
+    // Primeira entrada no painel: mostrar um diálogo modal antes de qualquer outra função.
+    // O aviso vale para a empresa recém-cadastrada, uma vez por usuário/dispositivo.
     function whatsappWelcomeKey(){
-      return 'agendaProWhatsWelcomeV1:'+String(companyCtx?.business?.id||'')+':'+String(authUser?.id||'');
+      return 'agendaJPWhatsWelcomeV2:'+String(companyCtx?.business?.id||'')+':'+String(authUser?.id||'');
     }
     function shouldShowWhatsappWelcome(){
       if(appMode!=='company'||page!=='home'||!companyCtx?.business||!canAdminCompany())return false;
       if(baileysSession?.status==='connected'||whatsappState?.connection?.status==='connected')return false;
       const created=Date.parse(companyCtx.business.created_at||'');
       if(!Number.isFinite(created)||created<Date.parse('2026-10-21T00:00:00-03:00'))return false;
-      try{return localStorage.getItem(whatsappWelcomeKey())!=='seen'}catch(e){return false}
+      try{return localStorage.getItem(whatsappWelcomeKey())!=='seen'}catch(e){return true}
     }
     function dismissWhatsappWelcome(openSettings=false){
       try{localStorage.setItem(whatsappWelcomeKey(),'seen')}catch(e){}
-      document.getElementById('whatsapp-welcome')?.remove();
+      const dialog=document.getElementById('whatsapp-welcome');
+      if(dialog?.open&&typeof dialog.close==='function')dialog.close();
+      dialog?.remove();
       if(openSettings)go('wa');
     }
     function whatsappWelcomeBanner(){
-      return `<section id="whatsapp-welcome" role="region" aria-label="Configuração inicial do WhatsApp" style="position:fixed;z-index:80;top:78px;right:16px;left:auto;width:min(390px,calc(100vw - 32px));padding:18px;background:#fff;color:#17334f;border:1px solid #caddec;border-left:4px solid #15865b;box-shadow:0 12px 36px #10263f26;border-radius:16px;box-sizing:border-box">
-        <button onclick="dismissWhatsappWelcome()" aria-label="Fechar orientação" style="position:absolute;right:10px;top:8px;border:0;background:transparent;color:#57718b;font-size:23px;cursor:pointer">×</button>
-        <strong style="display:block;font-size:16px;margin:0 26px 8px 0">Conecte o WhatsApp da sua empresa</strong>
-        <p style="font-size:13px;line-height:1.5;margin:0 0 13px">Configure seu número para enviar confirmações e lembretes automáticos de agendamento. Você pode fazer isso agora ou depois no menu WhatsApp.</p>
-        <div style="display:flex;gap:9px;flex-wrap:wrap">
-          <button onclick="dismissWhatsappWelcome(true)" style="border:0;border-radius:9px;background:#0d416a;color:white;padding:11px 14px;font-weight:700;cursor:pointer">Conectar WhatsApp</button>
-          <button onclick="dismissWhatsappWelcome()" style="border:1px solid #cbd5e1;border-radius:9px;background:white;color:#24415a;padding:11px 14px;cursor:pointer">Agora não</button>
-        </div>
-      </section>`;
+      return '<dialog id="whatsapp-welcome" class="whatsapp-welcome-dialog" aria-labelledby="whatsapp-welcome-title" aria-describedby="whatsapp-welcome-description">'+
+        '<div class="whatsapp-welcome-body">'+
+          '<div class="whatsapp-welcome-icon" aria-hidden="true">✉</div>'+
+          '<span class="whatsapp-welcome-kicker">Primeiros passos · AgendaJP</span>'+
+          '<h2 class="whatsapp-welcome-title" id="whatsapp-welcome-title">Conecte o WhatsApp da sua empresa</h2>'+
+          '<p class="whatsapp-welcome-copy" id="whatsapp-welcome-description">Antes de começar a organizar seus horários, configure seu WhatsApp para enviar mensagens de agendamento e lembretes automaticamente.</p>'+
+          '<div class="whatsapp-welcome-benefits"><span>Confirmações de agendamento</span><span>Lembretes para os clientes</span><span>Mensagens pelo seu próprio número</span></div>'+
+          '<div class="whatsapp-welcome-actions">'+
+            '<button type="button" class="whatsapp-welcome-action primary" onclick="dismissWhatsappWelcome(true)" autofocus>Conectar WhatsApp</button>'+
+            '<button type="button" class="whatsapp-welcome-action secondary" onclick="dismissWhatsappWelcome()">Configurar depois</button>'+
+          '</div>'+
+          '<small class="whatsapp-welcome-footnote">Você pode conectar mais tarde no menu WhatsApp. Nenhuma mensagem será enviada até a conexão estar ativa.</small>'+
+        '</div>'+
+      '</dialog>';
     }
     function go(p){
   closeMobileMenu();
@@ -7052,7 +7060,16 @@ async function cancelAgendaSubscription(toPix=false){
     return;
   }
   R.innerHTML=page==='book'?booking():({home,agenda,clients,services,cash,wa,messages,team,profile:myProfile,subscription:companySubscriptionPage,support:()=>shell(supportPage())}[page]||home)();
-  if(shouldShowWhatsappWelcome())R.insertAdjacentHTML('beforeend',whatsappWelcomeBanner());
+  if(shouldShowWhatsappWelcome()){
+    R.insertAdjacentHTML('beforeend',whatsappWelcomeBanner());
+    const dialog=document.getElementById('whatsapp-welcome');
+    if(dialog&&typeof dialog.showModal==='function'){
+      dialog.addEventListener('cancel',event=>event.preventDefault());
+      dialog.showModal();
+    }else if(dialog){
+      dialog.setAttribute('open','');
+    }
+  }
   requestAnimationFrame(resetMobileHorizontalPosition);
 }
     window.addEventListener('pageshow',resetMobileHorizontalPosition);
