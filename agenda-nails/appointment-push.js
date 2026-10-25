@@ -4,6 +4,7 @@
   const FUNCTION_URL="https://zmrihyzwsyxjikdknfug.supabase.co/functions/v1/agenda-pwa-push";
   let activeKey="",channel=null,poll=null,alerts=[],modal=null,subscribed=false,loading=false,openingFromPush=false;
   let preferences={confirmed:true,declined:true,rescheduled:true};
+  let permissionGuideOpen=false;
   const byId=id=>document.getElementById(id);
   const escapeText=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const current=()=>typeof sb!=="undefined"&&sb&&typeof companyCtx!=="undefined"&&companyCtx?.business?.id&&typeof authUser!=="undefined"&&authUser?.id&&typeof appMode!=="undefined"&&appMode==="company";
@@ -55,18 +56,25 @@
       box.checked=preferences[box.dataset.pushEvent]!==false;
     });
     if(enable){
-      enable.hidden=(!supported&&!needsInstall)||(permission==="denied"&&!needsInstall);
-      enable.textContent=needsInstall?"Como instalar o AgendaJP":subscribed?"Notificações ativadas":"Ativar notificações neste celular";
-      enable.disabled=subscribed&&!needsInstall;
+      // Nunca esconder o botão em caso de bloqueio: ofereça instruções para reativação.
+      enable.hidden=!supported&&!needsInstall;
+      enable.textContent=needsInstall?"Como instalar o AgendaJP"
+        :permission==="denied"?"Como liberar notificações"
+        :subscribed?"Notificações ativadas"
+        :"Ativar notificações neste celular";
+      enable.disabled=subscribed&&!needsInstall&&permission!=="denied";
     }
     if(status){
       status.textContent=needsInstall
-        ?"No iPhone, notificações com o aplicativo fechado exigem o AgendaJP instalado na Tela de Início. Abra pelo ícone após instalar."
-        :!supported?"Este navegador não permite notificações push."
-        :permission==="denied"?"Notificações bloqueadas: libere o AgendaJP nos Ajustes do celular."
+        ?"No iPhone, instale o AgendaJP na Tela de Início e abra pelo ícone para ativar os avisos."
+        :!supported?"Este navegador não oferece notificações push."
+        :permission==="denied"?"Notificações bloqueadas no aparelho. Toque em Como liberar notificações."
         :subscribed?"Notificações ativas neste dispositivo. Personalize os eventos abaixo."
-        :"Ative os avisos para receber respostas mesmo com o aplicativo fechado.";
+        :permission==="granted"?"Permissão concedida! Toque em Ativar notificações para concluir a configuração."
+        :"Toque em Ativar notificações e permita os avisos na janela do celular.";
     }
+    const guide=modal.querySelector(".agenpro-response-unblock");
+    if(guide)guide.hidden=!(permissionGuideOpen&&permission==="denied");
     const mark=modal.querySelector(".agenpro-response-read");
     if(mark)mark.disabled=!alerts.some(a=>!a.read_at);
   }
@@ -89,7 +97,7 @@
     if(channel&&typeof sb!=="undefined"&&sb)void sb.removeChannel(channel);
     channel=null;activeKey="";
     if(poll){clearInterval(poll);poll=null}
-    alerts=[];subscribed=false;loading=false;
+    alerts=[];subscribed=false;loading=false;permissionGuideOpen=false;
     modal?.remove();modal=null;
   }
   async function registerSubscription(subscription){
@@ -102,7 +110,7 @@
     });
     const out=await resp.json().catch(()=>({}));
     if(!resp.ok)throw Error(out.error||"Falha ao salvar preferências de avisos");
-    subscribed=true;draw();
+    subscribed=true;permissionGuideOpen=false;draw();
   }
   async function savePreference(eventType,value){
     if(!current()||!Object.hasOwn(preferences,eventType))return;
@@ -168,6 +176,13 @@
       '<p class="agenpro-response-help">Veja confirmações, cancelamentos e reagendamentos. Os avisos ficam registrados aqui mesmo quando as notificações do celular estão desativadas.</p>'+
       '<div class="agenpro-response-subscribe"><span class="agenpro-response-permission"></span>'+
       '<button class="btn primary agenpro-response-enable" type="button">Ativar notificações neste celular</button></div>'+
+      '<div class="agenpro-response-unblock" hidden>'+
+      '<strong>Como liberar notificações bloqueadas</strong>'+
+      (isIOSBrowser()
+        ? '<ol><li>Abra os <b>Ajustes</b> do iPhone.</li><li>Entre em <b>Notificações</b> e escolha <b>AgendaJP</b> na lista de aplicativos.</li><li>Ative <b>Permitir Notificações</b>.</li><li>Volte ao AgendaJP e toque no botão abaixo.</li></ol>'
+        : '<ol><li>Abra as <b>Configurações</b> do celular ou navegador.</li><li>Em <b>Notificações</b> ou <b>Configurações do site</b>, localize o AgendaJP.</li><li>Permita as notificações e volte ao aplicativo.</li></ol>')+
+      '<p>Por segurança, o celular não permite que o AgendaJP altere essa opção sozinho.</p>'+
+      '<button class="btn secondary agenpro-response-retry" type="button">Já liberei, verificar e ativar</button></div>'+
       '<fieldset class="agenpro-response-preferences"><legend>Quais notificações deseja receber neste aparelho?</legend>'+
       '<label><input type="checkbox" data-push-event="confirmed"> Confirmação de agendamento</label>'+
       '<label><input type="checkbox" data-push-event="declined"> Cancelamento / recusa</label>'+
@@ -180,6 +195,7 @@
     modal.addEventListener("click",e=>{if(e.target===modal)closeCenter()});
     modal.querySelector(".agenpro-response-close").onclick=closeCenter;
     modal.querySelector(".agenpro-response-enable").onclick=enable;
+    modal.querySelector(".agenpro-response-retry").onclick=enable;
     modal.querySelectorAll("[data-push-event]").forEach(box=>{
       box.addEventListener("change",()=>void savePreference(box.dataset.pushEvent,box.checked));
     });
@@ -187,24 +203,42 @@
     modal.querySelector(".agenpro-response-agenda").onclick=()=>{closeCenter();go("agenda")};
     draw();void refresh();
   }
-  function closeCenter(){modal?.remove();modal=null}
+  function closeCenter(){modal?.remove();modal=null;permissionGuideOpen=false}
   async function enable(){
     const button=modal?.querySelector(".agenpro-response-enable");
     if(!current())return;
     if(isIOSBrowser()&&!isInstalled()){
       if(typeof installAgendaApp==="function")installAgendaApp();
-      else if(typeof toast==="function")toast("Abra no Safari e use Compartilhar > Adicionar à Tela de Início.");
+      else if(typeof toast==="function")toast("Abra no Safari, use Compartilhar e adicione à Tela de Início.");
       return;
     }
     if(!("Notification" in window)||!("PushManager" in window)||!("serviceWorker" in navigator)){
-      if(typeof toast==="function")toast("Notificações não disponíveis neste navegador.");
+      if(typeof toast==="function")toast("Notificações não estão disponíveis neste navegador.");
+      return;
+    }
+    // O iOS e outros navegadores não permitem repetir a janela se o usuário já negou.
+    // Nessa situação o próprio botão explica como alterar a permissão nos Ajustes.
+    if(Notification.permission==="denied"){
+      permissionGuideOpen=true;
+      draw();
       return;
     }
     if(subscribed)return;
     if(button){button.disabled=true;button.textContent="Ativando..."}
     try{
-      const permission=await Notification.requestPermission();
-      if(permission!=="granted")throw Error("Permissão não concedida. Verifique os Ajustes do celular.");
+      // Esta chamada ocorre diretamente no clique, antes de qualquer operação assíncrona,
+      // para preservar a interação obrigatória exigida pelo Safari/iOS.
+      const permission=Notification.permission==="granted"?"granted":await Notification.requestPermission();
+      if(permission!=="granted"){
+        if(permission==="denied"){
+          permissionGuideOpen=true;
+          draw();
+        }else if(typeof toast==="function"){
+          toast("Para receber avisos, permita as notificações do AgendaJP no celular.");
+        }
+        return;
+      }
+      permissionGuideOpen=false;
       const registration=await navigator.serviceWorker.ready;
       const pub=await fetch(FUNCTION_URL,{cache:"no-store"}).then(async r=>{
         if(!r.ok)throw Error("Servidor de notificações indisponível");
@@ -220,9 +254,12 @@
       await registerSubscription(subscription);
       if(typeof toast==="function")toast("Notificações ativadas neste celular!");
     }catch(e){
-      if(typeof toast==="function")toast(e.message||"Falha ao ativar notificações");
+      if(typeof toast==="function")toast(e.message||"Não foi possível ativar notificações");
       console.warn("AgendaJP Push:",e);
-    }finally{if(button)button.disabled=false;draw()}
+    }finally{
+      if(button)button.disabled=false;
+      draw();
+    }
   }
   async function markRead(){
     if(!current())return;
@@ -236,6 +273,13 @@
   window.AgenProPush={openCenter,enable,refresh};
   document.addEventListener("keydown",e=>{if(e.key==="Escape"&&modal)closeCenter()});
   setInterval(detect,2500);
-  document.addEventListener("visibilitychange",()=>{if(!document.hidden){detect();void refresh()}});
+  document.addEventListener("visibilitychange",()=>{
+    if(!document.hidden){
+      detect();void refresh();draw();
+      if(current()&&("Notification" in window)&&Notification.permission==="granted"&&!subscribed){
+        void syncPreviousSubscription();
+      }
+    }
+  });
   detect();
 })();
