@@ -1,6 +1,6 @@
 {
-  "version": "2026.10.25.1",
+  "version": "2026.10.25.2",
   "released_at": "2026-10-25",
   "name": "AgendaJP",
-  "notes": "Envio de mensagens para assinantes pelo WhatsApp conectado ao AgendaJP; elimina abertura automática do WhatsApp externo ao criar agendamento e preserva fila quando a conexão não está ativa."
+  "notes": "Notificações de confirmação, cancelamento e reagendamento com ativação por dispositivo; instalação orientada no iPhone e abertura em modo aplicativo."
 }
