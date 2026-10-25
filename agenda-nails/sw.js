@@ -1,5 +1,5 @@
-const CACHE_NAME='agendajp-shell-v63-no-external-whatsapp-20261025';
-const SHELL=['/','/manifest.webmanifest?v=20261024-ios-v2','/apple-touch-icon.png','/apple-touch-icon-agendajp.png','/brand/agendajp-logo.webp','/icons/agendajp-192.png','/icons/agendajp-512.png','/mobile-fit.css?v=20261023-10','/whatsapp-welcome.css?v=20261023-12'];
+const CACHE_NAME='agendajp-shell-v64-push-install-20261025';
+const SHELL=['/','/manifest.webmanifest?v=20261025-native-v1','/apple-touch-icon.png','/apple-touch-icon-agendajp.png','/brand/agendajp-logo.webp','/icons/agendajp-192.png','/icons/agendajp-512.png','/mobile-fit.css?v=20261023-10','/whatsapp-welcome.css?v=20261023-12'];
 
 self.addEventListener('install',event=>{
   event.waitUntil(
