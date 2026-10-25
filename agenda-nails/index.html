@@ -2883,7 +2883,7 @@
     // Atualizar manualmente o PWA sem limpar sessão ou dados locais.
     I.refresh='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.3 9A7.8 7.8 0 0 1 19 7l1 5M4 12l1 5a7.8 7.8 0 0 0 13.7-2"/></svg>';
     I.cancel='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></svg>';
-    const AGENDA_UI_VERSION='2026.10.25.5';
+    const AGENDA_UI_VERSION='2026.10.25.6';
     let agendaUpdateInProgress=false;
     async function refreshAgendaPro(){
       if(agendaUpdateInProgress)return;
@@ -5057,12 +5057,13 @@ async function cancelAgendaSubscription(toPix=false){
   const due=dueWhatsappQueue();
   const future=futureWhatsappQueue().slice(0,6);
   const notifOn=('Notification' in window)&&Notification.permission==='granted';
+  const canAutoSend=['active','pilot_local'].includes(baileysSession.dispatch_mode);
   const queueRows=due.map(item=>{
     const when=new Date(item.scheduled_for);
     return `<div class="wa-queue-row">
       <div class="wa-queue-type ${item.message_type}">${queueTypeLabel(item.message_type)}</div>
       <div class="wa-queue-main"><b>${item.customer_name||'Cliente'}</b><small>${item.service_name||'Atendimento'} · ${when.toLocaleString('pt-BR')}</small></div>
-      <span class="status-badge status-active">Automático</span>
+      <span class="status-badge ${canAutoSend?'status-active':'status-late'}">${canAutoSend?'Envio automático ativo':'Envio não ativado'}</span>
     </div>`;
   }).join('');
   const futureRows=future.map(item=>`<div class="wa-upcoming-row"><span>${queueTypeLabel(item.message_type)}</span><b>${item.customer_name||'Cliente'}</b><small>${new Date(item.scheduled_for).toLocaleString('pt-BR')}</small></div>`).join('');
