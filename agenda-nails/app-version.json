@@ -1,6 +1,6 @@
 {
-  "version": "2026.10.25.4",
+  "version": "2026.10.25.6",
   "released_at": "2026-10-25",
   "name": "AgendaJP",
-  "notes": "WhatsApp por empresa: identifica conexão com envios pausados, permite ativar mensagens futuras pelo responsável e impede reenvio de histórico acumulado."
+  "notes": "Diagnóstico da fila de WhatsApp por empresa, migração autorizada do servidor antigo para Railway e ativação de envios futuros sem duplicar mensagens antigas."
 }
