@@ -508,6 +508,11 @@ export class WhatsSession{
     if(!dispatchEnabled)throw Object.assign(new Error("Envio automático pausado neste servidor."),{status:409});
     if(this.state!=="online"||!this.sock||!this.hasLease()||this.stopped)
       throw Object.assign(new Error("WhatsApp não conectado ao servidor Railway."),{status:409});
+    const authorized=await rpc("agenda_whatsapp_manual_dispatch_allowed",{
+      p_business_id:this.businessId,p_lease_id:this.leaseId
+    });
+    if(authorized!==true)
+      throw Object.assign(new Error("Automação desta empresa ainda não está autorizada ou conectada."),{status:409});
     const phone=normalizePhone(rawPhone);
     const text=String(rawText||"").trim();
     if(!phone||!/^55[0-9]{10,11}$/.test(phone))
