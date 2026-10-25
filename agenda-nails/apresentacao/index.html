@@ -432,6 +432,15 @@ footer small,footer .footer-links{color:#76708a}
   width:100%;
   min-width:0;
 }
+/* Menu mobile: acesso claro para assinantes. */
+.nav-links .nav-login-link{display:none}
+@media(max-width:900px){
+  .nav-links .nav-login-link{display:flex;align-items:center;justify-content:center;min-height:48px;
+    margin-top:14px;padding:14px 16px;border:0;border-radius:12px;
+    background:#6945d5;color:#fff;font-size:14px;font-weight:800;
+    box-shadow:0 7px 16px rgba(105,69,213,.18)}
+  .nav-links .nav-login-link:hover,.nav-links .nav-login-link:focus-visible{background:#5637b4;color:#fff}
+}
 </style>
 </head>
 <body>
@@ -454,6 +463,7 @@ footer small,footer .footer-links{color:#76708a}
       <a href="#demonstracao">Como funciona</a>
       <a href="#planos">Planos</a>
       <a href="#duvidas">Dúvidas</a>
+      <a class="nav-login-link" href="https://app.agendajp.com.br/">Entrar no sistema</a>
     </nav>
     <div class="nav-actions">
       <a class="btn btn-outline" href="/">Já tenho conta</a>
@@ -647,6 +657,12 @@ footer small,footer .footer-links{color:#76708a}
   }
   toggle.addEventListener('click',()=>setMenu(!menu.classList.contains('open')));
   menu.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>setMenu(false)));
+  // Tocar fora do menu o fecha, inclusive no iPhone.
+  document.addEventListener('pointerdown',event=>{
+    if(!menu.classList.contains('open'))return;
+    if(menu.contains(event.target)||toggle.contains(event.target))return;
+    setMenu(false);
+  },{passive:true});
   document.addEventListener('keydown',event=>{if(event.key==='Escape')setMenu(false)});
   window.addEventListener('resize',()=>{if(window.innerWidth>900)setMenu(false)});
   document.getElementById('year').textContent=String(new Date().getFullYear());
