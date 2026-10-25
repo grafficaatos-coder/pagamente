@@ -1,6 +1,6 @@
 {
-  "version": "2026.10.25.3",
+  "version": "2026.10.25.4",
   "released_at": "2026-10-25",
   "name": "AgendaJP",
-  "notes": "Ativação de notificações com solicitação do iOS e orientação automática quando a permissão estiver bloqueada; preserva confirmações, cancelamentos e reagendamentos."
+  "notes": "WhatsApp por empresa: identifica conexão com envios pausados, permite ativar mensagens futuras pelo responsável e impede reenvio de histórico acumulado."
 }
