@@ -1,6 +1,6 @@
 {
-  "version": "2026.10.25.8",
+  "version": "2026.10.25.9",
   "released_at": "2026-10-25",
   "name": "AgendaJP",
-  "notes": "Ativação automática do envio de confirmações e lembretes na primeira conexão WhatsApp no Railway; empresas desconectadas migram para canal atualizado sem reenvio do histórico."
+  "notes": "Corrige erro de envio direto via Docker local, consulta fila antes de reenviar confirmação e habilita envios manuais no Railway com controle de duplicidade."
 }
