@@ -322,6 +322,9 @@ export class WhatsSession{
     this.sock=null;this.state="offline";this.error="";this.phone=null;this.qrSvg=null;
     this.leaseOwned=false;this.connectBusy=false;this.dispatchBusy=false;this.broadcastBusy=false;this.stopped=false;
     this.catalogBroadcast={running:false,total:0,sent:0,failed:0,started_at:null,finished_at:null};
+    this.manualInFlight=new Map();
+    this.manualRecent=new Map();
+    this.manualSentAt=[];
     this.timers=[];
     this.leaseBusy=false;this.leaseExpires=0;this.socketStarted=0;
     this.pairBusy=false;this.pairCode=null;this.pairExpires=0;this.pairPhone=null;this.qrReady=false;
@@ -501,6 +504,45 @@ export class WhatsSession{
       }
     }finally{this.dispatchBusy=false}
   }
+  async sendDirectMessage(rawPhone,rawText){
+    if(!dispatchEnabled)throw Object.assign(new Error("Envio automático pausado neste servidor."),{status:409});
+    if(this.state!=="online"||!this.sock||!this.hasLease()||this.stopped)
+      throw Object.assign(new Error("WhatsApp não conectado ao servidor Railway."),{status:409});
+    const phone=normalizePhone(rawPhone);
+    const text=String(rawText||"").trim();
+    if(!phone||!/^55[0-9]{10,11}$/.test(phone))
+      throw Object.assign(new Error("Informe um número brasileiro válido com DDD."),{status:400});
+    if(!text||text.length>3500)
+      throw Object.assign(new Error("Digite uma mensagem entre 1 e 3500 caracteres."),{status:400});
+    const key=phone+"\n"+text;
+    const now=Date.now();
+    for(const [k,value] of this.manualRecent){
+      if(now-value.at>90000)this.manualRecent.delete(k);
+    }
+    const previous=this.manualRecent.get(key);
+    if(previous)return {...previous.result,already_sent:true};
+    if(this.manualInFlight.has(key))return this.manualInFlight.get(key);
+    this.manualSentAt=this.manualSentAt.filter(at=>now-at<60000);
+    if(this.manualSentAt.length>=12)
+      throw Object.assign(new Error("Limite de segurança: aguarde antes de enviar mais mensagens."),{status:429});
+    // Uma tentativa por mensagem; nunca repetir automaticamente após resultado incerto.
+    const task=(async()=>{
+      const socket=this.sock;
+      const found=await socket.onWhatsApp(phone).catch(()=>[]);
+      const target=Array.isArray(found)?found.find(entry=>entry?.exists):null;
+      if(!target?.jid)
+        throw Object.assign(new Error("Este número não está disponível no WhatsApp."),{status:400});
+      if(this.sock!==socket||!this.hasLease())
+        throw Object.assign(new Error("A sessão mudou durante o envio. Verifique antes de tentar novamente."),{status:409});
+      this.manualSentAt.push(Date.now());
+      const sent=await socket.sendMessage(target.jid,{text});
+      const result={sent:true,message_ref:sent?.key?.id||null};
+      this.manualRecent.set(key,{at:Date.now(),result});
+      return result;
+    })();
+    this.manualInFlight.set(key,task);
+    try{return await task}finally{this.manualInFlight.delete(key)}
+  }
   async startCatalogBroadcast(){
     if(!dispatchEnabled)throw Object.assign(new Error("Envios pausados durante a migração."),{status:409});
     if(this.broadcastBusy||this.catalogBroadcast.running){
@@ -660,7 +702,7 @@ const server=http.createServer(async(req,res)=>{
     if(url.pathname==="/health")return json(res,200,{ok:true,service:"agenda-pro-baileys-railway",version:"1.1.0"});
     if(url.pathname==="/ready")return json(res,configured&&databaseReady?200:503,{ok:configured&&databaseReady,configured,database_ready:databaseReady,dispatch_enabled:dispatchEnabled});
     if(!configured||!databaseReady||shuttingDown)return json(res,503,{error:"Serviço aguardando configuração ou conexão com o Supabase."});
-    const match=url.pathname.match(/^\/v1\/([^/]+)\/(status|connect|disconnect|pair-code|send-catalog)$/);
+    const match=url.pathname.match(/^\/v1\/([^/]+)\/(status|connect|disconnect|pair-code|send-catalog|send-message)$/);
     if(!match)return json(res,404,{error:"Rota não encontrada"});
     const businessId=decodeURIComponent(match[1]);
     const action=match[2];
@@ -668,7 +710,7 @@ const server=http.createServer(async(req,res)=>{
     if(action!=="status"&&req.method!=="POST")return json(res,405,{error:"Use POST para esta ação"});
     if(!allowed(businessId))return json(res,403,{error:"Empresa ainda não liberada no Railway."});
     const access=await verifyMember(req,businessId);
-    if(["connect","disconnect","pair-code","send-catalog"].includes(action)&&!["owner","admin"].includes(access.role)){
+    if(["connect","disconnect","pair-code","send-catalog","send-message"].includes(action)&&!["owner","admin"].includes(access.role)){
       return json(res,403,{error:"Somente o administrador da empresa pode executar esta ação no WhatsApp"});
     }
     if(action==="connect"){
@@ -682,6 +724,14 @@ const server=http.createServer(async(req,res)=>{
       const s=await ensureSession(businessId);
       const code=await s.pairingCode(payload.phone||"",{forceNew:payload.force_new===true});
       return json(res,200,{ok:true,status:"qr",pairing_code:code});
+    }
+    if(action==="send-message"){
+      const body=await bodyJson(req);
+      const session=sessions.get(businessId);
+      if(!session||session.stopped)
+        throw Object.assign(new Error("Conecte o WhatsApp no servidor Railway antes de enviar."),{status:409});
+      const result=await session.sendDirectMessage(body.phone,body.text);
+      return json(res,200,{ok:true,...result});
     }
     if(action==="send-catalog"){
       const s=sessions.get(businessId);
