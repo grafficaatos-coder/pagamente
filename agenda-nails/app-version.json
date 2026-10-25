@@ -1,6 +1,6 @@
 {
-  "version": "2026.10.25.6",
+  "version": "2026.10.25.7",
   "released_at": "2026-10-25",
   "name": "AgendaJP",
-  "notes": "Diagnóstico da fila de WhatsApp por empresa, migração autorizada do servidor antigo para Railway e ativação de envios futuros sem duplicar mensagens antigas."
+  "notes": "WhatsApp: acompanhamento por empresa, nova conexão no Railway mediante autorização e histórico de falhas sem reenvio de mensagens vencidas."
 }
