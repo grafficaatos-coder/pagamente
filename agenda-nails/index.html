@@ -2883,7 +2883,7 @@
     // Atualizar manualmente o PWA sem limpar sessão ou dados locais.
     I.refresh='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.3 9A7.8 7.8 0 0 1 19 7l1 5M4 12l1 5a7.8 7.8 0 0 0 13.7-2"/></svg>';
     I.cancel='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></svg>';
-    const AGENDA_UI_VERSION='2026.10.25.4';
+    const AGENDA_UI_VERSION='2026.10.25.5';
     let agendaUpdateInProgress=false;
     async function refreshAgendaPro(){
       if(agendaUpdateInProgress)return;
@@ -5075,7 +5075,11 @@ async function cancelAgendaSubscription(toPix=false){
   const preferredPhoneRaw=baileysPreferredPhone();
   const preferredPhone=preferredPhoneRaw?formatBusinessPhone(preferredPhoneRaw):'';
   const baileysWaiting=baileysSession.status==='qr'||baileysSession.status==='connecting';
-  const automaticPaused=baileysSession.status==='connected'&&baileysSession.dispatch_mode==='paused';
+  const routeLegacy=baileysSession.dispatch_route==='local-poll:';
+  const automaticPaused=baileysSession.status==='connected'&&
+    ['legacy_paused','paused','awaiting_activation'].includes(baileysSession.dispatch_mode);
+  const automaticActive=['active','pilot_local'].includes(baileysSession.dispatch_mode);
+  const migrateLegacy=routeLegacy&&baileysSession.dispatch_mode==='legacy_paused'&&admin;
   const baileysCard=baileysEnabled?`<section class="panel baileys-card wa-easy-connect ${baileysSession.status==='connected'?'connected':''}">
     <div class="head">
       <div><span class="eyebrow">Servidor WhatsApp</span><h3>${baileysSession.status==='connected'?'WhatsApp conectado':'Conectar pelo celular'}</h3></div>
@@ -5084,8 +5088,16 @@ async function cancelAgendaSubscription(toPix=false){
     ${baileysSession.status==='connected'
       ? `<div class="wa-easy-success">
           <div class="wa-easy-success-icon">✓</div>
-          <div><b>WhatsApp conectado.</b><p>${automaticPaused?'Os envios automáticos de novos horários ainda não foram autorizados para esta empresa.':'Conexão ativa. Acompanhe os agendamentos e o status de envio pela aba WhatsApp.'}</p><small>${baileysSession.phone?'Número conectado: +'+baileysSession.phone:''}</small></div>
-          ${admin?`<button class="btn wa-disconnect" onclick="disconnectBaileys()">Desconectar</button>`:''}
+          <div><b>WhatsApp conectado.</b><p>${migrateLegacy
+  ?'O servidor antigo não permite envios desta empresa. Para corrigir, migre a conexão para o servidor automático; será necessário conectar o WhatsApp novamente.'
+  :automaticPaused?'A conexão está ativa, mas falta autorizar o envio automático de novos horários.'
+  :automaticActive?'Conexão e automação ativadas para novos agendamentos.':'Verifique abaixo se os envios estão realmente ativos.'}</p>
+  <small>${baileysSession.phone?'Número conectado: +'+baileysSession.phone:''}</small>
+  ${Number(baileysSession.due_messages||0)>0? `<small> · ${baileysSession.due_messages} item(ns) pendente(s) na fila (não significa enviado)</small>`:''}
+  </div>
+  ${migrateLegacy?`<button type="button" class="btn primary" onclick="migrateCompanyWhatsAppToRailway()">Corrigir envio automático</button>`:''}
+  ${!migrateLegacy&&automaticPaused&&admin?`<button type="button" class="btn primary" onclick="activateFreshWhatsAppDispatch()">Ativar mensagens automáticas</button>`:''}
+  ${admin?`<button class="btn wa-disconnect" onclick="disconnectBaileys()">Desconectar</button>`:''}
         </div>`
       : baileysSession.pairing_code
         ? `<div class="wa-pair-ready">
@@ -6111,6 +6123,21 @@ async function cancelAgendaSubscription(toPix=false){
   }
   return out;
 }
+    async function migrateCompanyWhatsAppToRailway(){
+  if(!sb||!companyCtx||!canAdminCompany())return toast('Somente o responsável da empresa pode migrar o WhatsApp.');
+  if(!confirm('Corrigir o envio automático desta empresa mudando para o Railway? É necessário CONECTAR NOVAMENTE o mesmo WhatsApp pelo código no celular. As mensagens antigas NÃO serão reenviadas. A mudança pode interromper temporariamente a conexão antiga.'))return;
+  try{
+    const {data,error}=await sb.rpc('agenda_whatsapp_switch_to_railway',{p_business_id:companyCtx.business.id});
+    if(error)throw error;
+    if(!data?.ok)throw new Error('Não foi possível atualizar o servidor da empresa.');
+    baileysSession={status:'disconnected',phone:null,qr_svg:null,pairing_code:null,last_error:null,dispatch_route:'railway:',dispatch_mode:'awaiting_activation'};
+    render();
+    toast('Servidor alterado. Conecte seu WhatsApp novamente; depois ative os envios na mesma aba.');
+  }catch(ex){
+    console.error('Migração WhatsApp',ex);
+    toast(ex.message||'Erro na mudança de servidor.');
+  }
+}
     async function activateFreshWhatsAppDispatch(){
   if(!sb||!companyCtx||!canAdminCompany())return toast('Somente o responsável pela empresa pode autorizar os envios.');
   if(!confirm('Autorizar mensagens automáticas para NOVOS agendamentos e lembretes desta empresa? Mensagens antigas e atrasadas NÃO serão reenviadas.'))return;
@@ -6122,9 +6149,9 @@ async function cancelAgendaSubscription(toPix=false){
     if(!data?.ok)throw new Error('O servidor não confirmou a ativação.');
     await loadBaileysStatus(false);
     render();
-    toast(baileysSession.dispatch_mode==='paused'
-      ?'Autorização registrada. Verifique o status em alguns instantes.'
-      :'Envio de novos agendamentos ativado. Mensagens antigas não serão reenviadas.');
+    toast(baileysSession.dispatch_mode==='active'
+      ?'Envio automático ativado para novos agendamentos! Mensagens antigas não serão reenviadas.'
+      :'Configuração registrada. Confira o status antes de criar um horário de teste.');
   }catch(ex){
     console.error('Ativação de mensagens automáticas',ex);
     toast(ex.message||'Não foi possível ativar os envios.');
@@ -6149,6 +6176,19 @@ async function cancelAgendaSubscription(toPix=false){
     console.error(ex);
     baileysSession={status:'disconnected',phone:null,qr_svg:null,pairing_code:null,last_error:ex.message};
   }
+  // O socket conectado não prova que o worker pode enviar. A fonte autoritativa
+  // é o estado por empresa, calculado no servidor com as permissões da fila.
+  try{
+    const {data,error}=await sb.rpc('agenda_whatsapp_dispatch_status',{p_business_id:companyCtx.business.id});
+    if(!error&&data){
+      baileysSession.dispatch_mode=data.dispatch_mode;
+      baileysSession.dispatch_route=data.route;
+      baileysSession.due_messages=data.due_messages;
+      if(data.route==='railway:'&&data.status==='disconnected'&&baileysSession.status==='connected'){
+        baileysSession.status='connecting';
+      }
+    }
+  }catch(ex){console.warn('Status de automação indisponível',ex)}
   if(redraw&&(page==='wa'||page==='services'))render();
 }
     function startBaileysPoll(){
@@ -6734,7 +6774,7 @@ async function cancelAgendaSubscription(toPix=false){
   render();
   if(!phone)toast('Horário salvo. Cliente sem WhatsApp cadastrado.');
   else if(automaticSent)toast('Horário salvo e mensagem de agendamento enviada automaticamente');
-  else if(baileysConnected&&baileysSession.dispatch_mode==='paused')toast('Horário salvo, mas o envio automático ainda precisa ser ativado na aba WhatsApp.');
+  else if(baileysConnected&&['paused','legacy_paused','awaiting_activation'].includes(baileysSession.dispatch_mode))toast('Horário salvo, mas a empresa ainda não ativou os envios automáticos na aba WhatsApp.');
   else if(baileysConnected)toast('Horário salvo. Mensagem colocada na fila automática; confira o status em WhatsApp.');
   else if(!autoConnected)toast('Horário salvo. Conecte o WhatsApp na aba WhatsApp para enviar a confirmação pelo sistema.');
 }
