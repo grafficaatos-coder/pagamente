@@ -40,3 +40,20 @@
   .agenpro-response-enable{width:100%;margin-top:10px}
   .agenpro-response-footer button{flex:1 1 120px}
 }
+
+
+/* Preferências de notificações do dispositivo */
+.agenpro-response-preferences{border:1px solid #e9e2fb;background:#fbfaff;border-radius:13px;padding:12px 14px;margin:0 0 14px;display:grid;gap:10px}
+.agenpro-response-preferences legend{font-weight:800;font-size:12px;color:#493a7b;padding:0 4px}
+.agenpro-response-preferences label{display:flex;align-items:center;gap:10px;font-size:13px;line-height:1.4;color:#2d3150;cursor:pointer;min-height:29px}
+.agenpro-response-preferences input{width:18px;height:18px;accent-color:#6945d5;flex:none}
+.agenpro-response-enable:disabled{opacity:.7;cursor:default}
+.agenpro-install-steps{margin:14px 0;padding-left:24px;display:grid;gap:10px;color:#41435c;font-size:14px;line-height:1.5}
+.agenpro-install-steps li{padding-left:3px}
+.agenpro-install-link{display:block;font-size:13px;overflow-wrap:anywhere;color:#6945d5;font-weight:700;margin:6px 0 12px}
+.agenpro-install-buttons{display:flex;gap:9px;flex-wrap:wrap}
+.agenpro-install-buttons button{flex:1 1 145px;min-height:43px}
+@media(max-width:720px){
+  .agenpro-response-preferences{padding:11px}
+  .agenpro-response-preferences label{font-size:12px}
+}
