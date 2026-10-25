@@ -20,10 +20,10 @@
 
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="AgendaJP">
   <meta name="application-name" content="AgendaJP">
-  <link rel="manifest" href="/manifest.webmanifest?v=20261024-ios-v2">
+  <link rel="manifest" href="/manifest.webmanifest?v=20261025-native-v1">
   <link rel="icon" href="/icons/agendajp-192.png?v=20261024-ios-v2" type="image/png">
   
   <link rel="apple-touch-icon" href="/apple-touch-icon-agendajp.png" sizes="192x192">
@@ -2656,10 +2656,10 @@
   </style>
   <link rel="stylesheet" href="/mobile-redesign.css?v=20261023-5">
   <link rel="stylesheet" href="/messages-layout.css?v=20261023-6">
-  <link rel="stylesheet" href="/appointment-push.css?v=20261023-7">
+  <link rel="stylesheet" href="/appointment-push.css?v=20261025-2">
   <link rel="stylesheet" href="/mobile-fit.css?v=20261023-10">
   <link rel="stylesheet" href="/whatsapp-welcome.css?v=20261023-12">
-  <script defer src="/appointment-push.js?v=20261023-7"></script>
+  <script defer src="/appointment-push.js?v=20261025-2"></script>
 </head>
 <body>
   <div id="root"></div>
@@ -2883,7 +2883,7 @@
     // Atualizar manualmente o PWA sem limpar sessão ou dados locais.
     I.refresh='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.3 9A7.8 7.8 0 0 1 19 7l1 5M4 12l1 5a7.8 7.8 0 0 0 13.7-2"/></svg>';
     I.cancel='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></svg>';
-    const AGENDA_UI_VERSION='2026.10.23.11';
+    const AGENDA_UI_VERSION='2026.10.25.2';
     let agendaUpdateInProgress=false;
     async function refreshAgendaPro(){
       if(agendaUpdateInProgress)return;
@@ -3013,24 +3013,50 @@ function pwaInstallEntry(){
   if(isStandaloneApp())return '';
   return '<button class="pwa-install-entry" onclick="installAgendaApp()"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M5 20h14"/></svg><span class="label">Instalar aplicativo</span></button>';
 }
-async function installAgendaApp(){
-  closeMobileMenu();
-  if(isStandaloneApp())return toast('O AgendaJP já está instalado');
-  if(deferredPwaPrompt){
-    deferredPwaPrompt.prompt();
-    const choice=await deferredPwaPrompt.userChoice.catch(()=>null);
-    deferredPwaPrompt=null;
-    if(choice?.outcome==='accepted')toast('Instalando AgendaJP...');
-    return;
-  }
-  const ua=navigator.userAgent||'';
-  const isIOS=/iPad|iPhone|iPod/.test(ua);
-  if(isIOS){
-    alert('No iPhone: abra no Safari, toque em Compartilhar e escolha “Adicionar à Tela de Início”.');
-  }else{
-    alert('No Chrome do celular: toque no menu ⋮ e escolha “Instalar app” ou “Adicionar à tela inicial”.');
-  }
-}
+function showAgendaInstallGuide(isIOS){
+   document.getElementById('agendajp-install-guide')?.remove();
+   const guide=document.createElement('div');
+   guide.id='agendajp-install-guide';
+   guide.className='agenpro-response-overlay';
+   const steps=isIOS
+     ? '<li>Abra <b>https://app.agendajp.com.br</b> no <b>Safari</b>. Se estiver dentro do Instagram ou de outro aplicativo, use o menu para abrir no Safari.</li>'+
+       '<li>No Safari, toque no ícone <b>Compartilhar</b> (quadrado com seta para cima).</li>'+
+       '<li>Escolha <b>Adicionar à Tela de Início</b> e confirme em <b>Adicionar</b>.</li>'+
+       '<li>Abra o <b>AgendaJP pelo novo ícone</b> na Tela de Início. Assim ele fica sem as barras do navegador.</li>'
+     : '<li>Abra o endereço no <b>Google Chrome</b>.</li>'+
+       '<li>Toque no menu <b>⋮</b> e escolha <b>Instalar aplicativo</b> ou <b>Adicionar à tela inicial</b>.</li>'+
+       '<li>Abra pelo ícone <b>AgendaJP</b> instalado na tela inicial.</li>';
+   guide.innerHTML='<section class="agenpro-response-dialog" role="dialog" aria-modal="true" aria-labelledby="agendajp-install-title">'+
+     '<div class="agenpro-response-head"><div><small>AGENDAJP NO CELULAR</small><h2 id="agendajp-install-title">Instalar como aplicativo</h2></div><button type="button" class="agenpro-response-close" aria-label="Fechar">×</button></div>'+
+     '<p class="agenpro-response-help">A barra do navegador desaparece quando você abre o AgendaJP pelo ícone instalado, em vez de abrir por um link.</p>'+
+     '<ol class="agenpro-install-steps">'+steps+'</ol>'+
+     '<span class="agenpro-install-link">app.agendajp.com.br</span>'+
+     '<div class="agenpro-install-buttons"><button type="button" class="btn secondary" id="agendajp-copy-install-url">Copiar endereço</button>'+
+     '<button type="button" class="btn primary" id="agendajp-close-install">Entendi</button></div></section>';
+   document.body.append(guide);
+   const close=()=>guide.remove();
+   guide.addEventListener('click',e=>{if(e.target===guide)close()});
+   guide.querySelector('.agenpro-response-close').addEventListener('click',close);
+   guide.querySelector('#agendajp-close-install').addEventListener('click',close);
+   guide.querySelector('#agendajp-copy-install-url').addEventListener('click',async()=>{
+     try{
+       await navigator.clipboard.writeText('https://app.agendajp.com.br/');
+       toast('Endereço do AgendaJP copiado!');
+     }catch(_){prompt('Copie o endereço e abra no Safari:', 'https://app.agendajp.com.br/')}
+   });
+ }
+ async function installAgendaApp(){
+   closeMobileMenu();
+   if(isStandaloneApp())return toast('O AgendaJP já está instalado');
+   if(deferredPwaPrompt){
+     deferredPwaPrompt.prompt();
+     const choice=await deferredPwaPrompt.userChoice.catch(()=>null);
+     deferredPwaPrompt=null;
+     if(choice?.outcome==='accepted')toast('Instalando AgendaJP...');
+     return;
+   }
+   showAgendaInstallGuide(/iPad|iPhone|iPod/.test(navigator.userAgent||''));
+ }
     function nav(){
   if(appMode==='company'){
     const p=P(),n=[['home','home','Início']];
@@ -7245,7 +7271,7 @@ async function cancelAgendaSubscription(toPix=false){
         window.location.reload();
       });
       window.addEventListener('load',()=>{
-        navigator.serviceWorker.register('/sw.js?v=20261025-internal-whatsapp',{scope:'/',updateViaCache:'none'})
+        navigator.serviceWorker.register('/sw.js?v=20261025-push-pwa-v2',{scope:'/',updateViaCache:'none'})
           .then(reg=>reg.update())
           .catch(err=>console.error('Service Worker:',err));
       });
