@@ -2883,7 +2883,7 @@
     // Atualizar manualmente o PWA sem limpar sessão ou dados locais.
     I.refresh='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.3 9A7.8 7.8 0 0 1 19 7l1 5M4 12l1 5a7.8 7.8 0 0 0 13.7-2"/></svg>';
     I.cancel='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></svg>';
-    const AGENDA_UI_VERSION='2026.10.25.8';
+    const AGENDA_UI_VERSION='2026.10.25.9';
     let agendaUpdateInProgress=false;
     async function refreshAgendaPro(){
       if(agendaUpdateInProgress)return;
@@ -3518,6 +3518,14 @@ function home(){
         await loadBaileysStatus(false);
         if(baileysSession.status!=='connected'){
           toast('Conecte seu WhatsApp na aba WhatsApp antes de enviar mensagens.');return false;
+        }
+        if(baileysSession.dispatch_route==='local-poll:'){
+          toast('Envio direto indisponível no servidor antigo. Acesse WhatsApp para migrar a conexão com segurança.');
+          return false;
+        }
+        if(baileysSession.dispatch_route!=='railway:'||baileysSession.dispatch_mode!=='active'){
+          toast('Envio ainda não ativado. Acesse a aba WhatsApp para verificar a conexão e a automação.');
+          return false;
         }
         const out=await callBaileys('send-message','POST',{phone:normalized,text});
         if(out?.sent!==true)throw new Error(out?.error||'O servidor não confirmou o envio da mensagem.');
@@ -6777,8 +6785,25 @@ async function cancelAgendaSubscription(toPix=false){
   render();
   if(!phone)toast('Horário salvo. Cliente sem WhatsApp cadastrado.');
   else if(automaticSent)toast('Horário salvo e mensagem de agendamento enviada automaticamente');
-  else if(baileysConnected&&['paused','legacy_paused','awaiting_activation'].includes(baileysSession.dispatch_mode))toast('Horário salvo, mas a empresa ainda não ativou os envios automáticos na aba WhatsApp.');
-  else if(baileysConnected)toast('Horário salvo. Mensagem colocada na fila automática; confira o status em WhatsApp.');
+  else if(baileysConnected){
+    try{
+      const {data:job,error:queueError}=await sb.from('agenda_whatsapp_queue')
+        .select('status').eq('business_id',companyCtx.business.id)
+        .eq('appointment_id',created.id).eq('message_type','confirmation').maybeSingle();
+      if(queueError||!job){
+        toast('Horário salvo. Não foi possível confirmar o registro do aviso; confira a aba WhatsApp.');
+      }else if(job.status==='done'){
+        toast('Horário salvo. O servidor registrou o envio da confirmação.');
+      }else if(['active','pilot_local'].includes(baileysSession.dispatch_mode)&&['pending','processing'].includes(job.status)){
+        toast('Horário salvo. Confirmação aguardando o envio automático; ainda não foi entregue.');
+      }else{
+        toast('Horário salvo, mas a confirmação não foi enviada. Confira a conexão e a automação na aba WhatsApp.');
+      }
+    }catch(ex){
+      console.warn('Fila WhatsApp não confirmada',ex);
+      toast('Horário salvo. Verifique o envio na aba WhatsApp.');
+    }
+  }
   else if(!autoConnected)toast('Horário salvo. Conecte o WhatsApp na aba WhatsApp para enviar a confirmação pelo sistema.');
 }
     function confirmationLink(key){
@@ -6908,17 +6933,58 @@ async function cancelAgendaSubscription(toPix=false){
   }
 }
     async function sendAppointmentConfirmationLink(id){
-  const a=companyData.appointments.find(x=>x.id===id);if(!a)return;
+  if(!canOperateCompany())return toast('Seu perfil não permite enviar confirmações.');
+  const a=companyData.appointments.find(x=>x.id===id);
+  if(!a)return toast('Agendamento não encontrado. Atualize a agenda.');
   const customer=companyData.customers.find(x=>x.id===a.customer_id);
   const service=companyData.services.find(x=>x.id===a.service_id);
   const phone=normalizeWhatsPhone(customer?.phone);
-  if(!phone)return toast('Cadastre o WhatsApp do cliente primeiro');
-  const d=new Date(a.starts_at);
-  const localDate=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
-  const time=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
-  const msg=appointmentWhatsMessage(customer,service,localDate,time,a.professional_name||'',a.status,a.confirmation_code||a.confirmation_token,true);
-  const sent=await sendCustomerWhatsappFromSystem(phone,msg);
-  if(sent)await markQueueByAppointment(a.id,'confirmation','done');
+  if(!phone)return toast('Cadastre o WhatsApp do cliente primeiro.');
+  // Não confundir registro na fila com entrega, nem duplicar confirmação já enviada.
+  try{
+    const {data:job,error}=await sb.from('agenda_whatsapp_queue')
+      .select('status,created_at,done_at,message_ref,last_error')
+      .eq('business_id',companyCtx.business.id)
+      .eq('appointment_id',a.id)
+      .eq('message_type','confirmation')
+      .maybeSingle();
+    if(error)throw error;
+    if(job?.status==='done'){
+      toast('A confirmação deste horário já foi enviada. Nenhum reenvio foi realizado.');
+      return;
+    }
+    await loadBaileysStatus(false);
+    const mode=baileysSession.dispatch_mode;
+    const route=baileysSession.dispatch_route;
+    if(job&&['pending','processing','queued'].includes(job.status)){
+      if(['active','pilot_local'].includes(mode)&&baileysSession.status==='connected'){
+        toast('Confirmação aguardando o envio automático. Evitamos um segundo disparo.');
+      }else{
+        toast('Confirmação ainda não enviada. Verifique a automação na aba WhatsApp.');
+      }
+      return;
+    }
+    if(route==='local-poll:'){
+      toast('Envio direto não disponível no servidor antigo. Verifique a conexão na aba WhatsApp.');
+      return;
+    }
+    if(route!=='railway:'||mode!=='active'||baileysSession.status!=='connected'){
+      toast('Envio não ativado. Abra a aba WhatsApp para corrigir a conexão.');
+      return;
+    }
+    if(job?.status==='opened'&&!confirm('Esse aviso já foi aberto anteriormente. Deseja enviar pelo servidor agora?'))return;
+    if(job?.status==='failed'&&!confirm('A confirmação anterior falhou. Tentar um novo envio manual desta mensagem?'))return;
+    const d=new Date(a.starts_at);
+    const localDate=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+    const time=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+    const msg=appointmentWhatsMessage(customer,service,localDate,time,a.professional_name||'',a.status,a.confirmation_code||a.confirmation_token,true);
+    const sent=await sendCustomerWhatsappFromSystem(phone,msg);
+    // O servidor confirmou que transmitiu a mensagem. Não marcar como entregue no aparelho.
+    if(sent&&job)await markQueueByAppointment(a.id,'confirmation','done');
+  }catch(ex){
+    console.error('Falha ao consultar confirmação WhatsApp',ex);
+    toast('Não foi possível verificar o envio. Consulte o status na aba WhatsApp.');
+  }
 }
 
     function companyBlockedView(){
