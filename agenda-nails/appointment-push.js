@@ -3,9 +3,19 @@
   "use strict";
   const FUNCTION_URL="https://zmrihyzwsyxjikdknfug.supabase.co/functions/v1/agenda-pwa-push";
   let activeKey="",channel=null,poll=null,alerts=[],modal=null,subscribed=false,loading=false,openingFromPush=false;
+  let preferences={confirmed:true,declined:true,rescheduled:true};
   const byId=id=>document.getElementById(id);
   const escapeText=x=>String(x??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const current=()=>typeof sb!=="undefined"&&sb&&typeof companyCtx!=="undefined"&&companyCtx?.business?.id&&typeof authUser!=="undefined"&&authUser?.id&&typeof appMode!=="undefined"&&appMode==="company";
+  function preferenceKey(){return "agendajp-push-events:"+authUser?.id+":"+companyCtx?.business?.id}
+  function loadPreferences(){
+    try{
+      const stored=JSON.parse(localStorage.getItem(preferenceKey())||"{}");
+      return {confirmed:stored.confirmed!==false,declined:stored.declined!==false,rescheduled:stored.rescheduled!==false};
+    }catch(_){return {confirmed:true,declined:true,rescheduled:true}}
+  }
+  function isIOSBrowser(){return /iPhone|iPad|iPod/i.test(navigator.userAgent||"")}
+  function isInstalled(){return navigator.standalone===true||window.matchMedia?.("(display-mode: standalone)").matches===true}
   const apiHeaders=async()=>{
     const {data}=await sb.auth.getSession();
     if(!data?.session?.access_token)throw Error("Entre novamente no AgendaJP para ativar os avisos.");
@@ -32,21 +42,30 @@
     if(!list)return;
     list.innerHTML=alerts.length?alerts.map(a=>{
       const yes=a.outcome==="confirmed";
-      return '<div class="agenpro-response-item '+(a.read_at?"read":"unread")+'"><span class="agenpro-response-icon '+(yes?"ok":"no")+'">'+(yes?"✓":"!")+'</span><div><strong>'+escapeText(a.customer_name||"Cliente")+(yes?" confirmou o horário":" recusou o horário")+'</strong><small>Agendamento: '+humanDate(a.appointment_starts_at)+'</small><small>Resposta: '+humanDate(a.created_at)+'</small></div></div>';
+      const rescheduled=a.outcome==="rescheduled";
+      const description=yes?" confirmou o horário":rescheduled?" teve o horário reagendado":" informou que não poderá comparecer";
+      return '<div class="agenpro-response-item '+(a.read_at?"read":"unread")+'"><span class="agenpro-response-icon '+(yes||rescheduled?"ok":"no")+'">'+(yes?"✓":rescheduled?"↻":"!")+'</span><div><strong>'+escapeText(a.customer_name||"Cliente")+description+'</strong><small>Horário: '+humanDate(a.appointment_starts_at)+'</small><small>Aviso: '+humanDate(a.created_at)+'</small></div></div>';
     }).join(""):'<div class="agenpro-response-empty">Ainda não há respostas de clientes para mostrar.</div>';
     const enable=modal.querySelector(".agenpro-response-enable");
     const status=modal.querySelector(".agenpro-response-permission");
     const supported=("serviceWorker" in navigator)&&("PushManager" in window)&&("Notification" in window)&&window.isSecureContext;
+    const permission=("Notification" in window)?Notification.permission:"unsupported";
+    const needsInstall=isIOSBrowser()&&!isInstalled();
+    modal.querySelectorAll("[data-push-event]").forEach(box=>{
+      box.checked=preferences[box.dataset.pushEvent]!==false;
+    });
     if(enable){
-      enable.hidden=!supported||subscribed||Notification.permission==="denied";
-      enable.textContent=Notification.permission==="granted"?"Conectar notificações neste celular":"Ativar notificações neste celular";
+      enable.hidden=(!supported&&!needsInstall)||(permission==="denied"&&!needsInstall);
+      enable.textContent=needsInstall?"Como instalar o AgendaJP":subscribed?"Notificações ativadas":"Ativar notificações neste celular";
+      enable.disabled=subscribed&&!needsInstall;
     }
     if(status){
-      status.textContent=!supported
-        ?"Este navegador não oferece notificações PWA. No iPhone, instale o AgendaJP na Tela de Início e abra o aplicativo instalado."
-        :Notification.permission==="denied"
-          ?"As notificações foram bloqueadas nas configurações do navegador/celular."
-          :subscribed?"Notificações do aplicativo ativadas neste dispositivo.":"Ative as notificações para receber respostas mesmo com o aplicativo fechado.";
+      status.textContent=needsInstall
+        ?"No iPhone, notificações com o aplicativo fechado exigem o AgendaJP instalado na Tela de Início. Abra pelo ícone após instalar."
+        :!supported?"Este navegador não permite notificações push."
+        :permission==="denied"?"Notificações bloqueadas: libere o AgendaJP nos Ajustes do celular."
+        :subscribed?"Notificações ativas neste dispositivo. Personalize os eventos abaixo."
+        :"Ative os avisos para receber respostas mesmo com o aplicativo fechado.";
     }
     const mark=modal.querySelector(".agenpro-response-read");
     if(mark)mark.disabled=!alerts.some(a=>!a.read_at);
@@ -73,6 +92,36 @@
     alerts=[];subscribed=false;loading=false;
     modal?.remove();modal=null;
   }
+  async function registerSubscription(subscription){
+    const json=subscription.toJSON();
+    const headers=await apiHeaders();
+    const resp=await fetch(FUNCTION_URL,{method:"POST",headers,
+      body:JSON.stringify({action:"subscribe",business_id:companyCtx.business.id,
+        subscription:{endpoint:subscription.endpoint,p256dh:json.keys?.p256dh,auth:json.keys?.auth},
+        events:preferences})
+    });
+    const out=await resp.json().catch(()=>({}));
+    if(!resp.ok)throw Error(out.error||"Falha ao salvar preferências de avisos");
+    subscribed=true;draw();
+  }
+  async function savePreference(eventType,value){
+    if(!current()||!Object.hasOwn(preferences,eventType))return;
+    const previous={...preferences};
+    preferences[eventType]=value;
+    try{localStorage.setItem(preferenceKey(),JSON.stringify(preferences))}catch(_){}
+    draw();
+    if(!subscribed)return;
+    try{
+      const reg=await navigator.serviceWorker.ready;
+      const sub=await reg.pushManager.getSubscription();
+      if(sub)await registerSubscription(sub);
+    }catch(e){
+      preferences=previous;
+      try{localStorage.setItem(preferenceKey(),JSON.stringify(preferences))}catch(_){}
+      draw();
+      if(typeof toast==="function")toast("Não foi possível salvar a preferência. Tente novamente.");
+    }
+  }
   async function syncPreviousSubscription(){
     if(!current()||!("serviceWorker" in navigator)||!("PushManager" in window)||
       !("Notification" in window)||Notification.permission!=="granted")return;
@@ -80,14 +129,7 @@
       const registration=await navigator.serviceWorker.ready;
       const sub=await registration.pushManager.getSubscription();
       if(!sub)return;
-      const json=sub.toJSON();
-      const headers=await apiHeaders();
-      const resp=await fetch(FUNCTION_URL,{
-        method:"POST",headers,
-        body:JSON.stringify({action:"subscribe",business_id:companyCtx.business.id,
-          subscription:{endpoint:sub.endpoint,p256dh:json.keys?.p256dh,auth:json.keys?.auth}})
-      });
-      subscribed=resp.ok;draw();
+      await registerSubscription(sub);
     }catch(e){console.warn("Notificação PWA:",e.message||e)}
   }
   function detect(){
@@ -96,6 +138,7 @@
     updateBadge();
     if(activeKey===identity)return;
     tearDown();activeKey=identity;
+    preferences=loadPreferences();
     void refresh();
     channel=sb.channel("agenpro-response-"+authUser.id+"-"+Date.now())
       .on("postgres_changes",
@@ -122,9 +165,13 @@
     modal.setAttribute("role","presentation");
     modal.innerHTML='<section class="agenpro-response-dialog" role="dialog" aria-modal="true" aria-labelledby="agenpro-response-title">'+
       '<div class="agenpro-response-head"><div><small>AVISOS AUTOMÁTICOS</small><h2 id="agenpro-response-title">Respostas dos clientes</h2></div><button class="agenpro-response-close" type="button" aria-label="Fechar">×</button></div>'+
-      '<p class="agenpro-response-help">Aqui você vê quem confirmou ou informou que não poderá comparecer. Os dados também ficam salvos na agenda.</p>'+
+      '<p class="agenpro-response-help">Veja confirmações, cancelamentos e reagendamentos. Os avisos ficam registrados aqui mesmo quando as notificações do celular estão desativadas.</p>'+
       '<div class="agenpro-response-subscribe"><span class="agenpro-response-permission"></span>'+
       '<button class="btn primary agenpro-response-enable" type="button">Ativar notificações neste celular</button></div>'+
+      '<fieldset class="agenpro-response-preferences"><legend>Quais notificações deseja receber neste aparelho?</legend>'+
+      '<label><input type="checkbox" data-push-event="confirmed"> Confirmação de agendamento</label>'+
+      '<label><input type="checkbox" data-push-event="declined"> Cancelamento / recusa</label>'+
+      '<label><input type="checkbox" data-push-event="rescheduled"> Reagendamento de horário</label></fieldset>'+
       '<div class="agenpro-response-items"></div>'+
       '<div class="agenpro-response-footer"><button type="button" class="btn secondary agenpro-response-read">Marcar como lidas</button>'+
       '<button type="button" class="btn primary agenpro-response-agenda">Abrir agenda</button></div>'+
@@ -133,6 +180,9 @@
     modal.addEventListener("click",e=>{if(e.target===modal)closeCenter()});
     modal.querySelector(".agenpro-response-close").onclick=closeCenter;
     modal.querySelector(".agenpro-response-enable").onclick=enable;
+    modal.querySelectorAll("[data-push-event]").forEach(box=>{
+      box.addEventListener("change",()=>void savePreference(box.dataset.pushEvent,box.checked));
+    });
     modal.querySelector(".agenpro-response-read").onclick=markRead;
     modal.querySelector(".agenpro-response-agenda").onclick=()=>{closeCenter();go("agenda")};
     draw();void refresh();
@@ -141,15 +191,24 @@
   async function enable(){
     const button=modal?.querySelector(".agenpro-response-enable");
     if(!current())return;
-    if(!("Notification" in window)||!("PushManager" in window)||!("serviceWorker" in navigator))return;
+    if(isIOSBrowser()&&!isInstalled()){
+      if(typeof installAgendaApp==="function")installAgendaApp();
+      else if(typeof toast==="function")toast("Abra no Safari e use Compartilhar > Adicionar à Tela de Início.");
+      return;
+    }
+    if(!("Notification" in window)||!("PushManager" in window)||!("serviceWorker" in navigator)){
+      if(typeof toast==="function")toast("Notificações não disponíveis neste navegador.");
+      return;
+    }
+    if(subscribed)return;
     if(button){button.disabled=true;button.textContent="Ativando..."}
     try{
       const permission=await Notification.requestPermission();
-      if(permission!=="granted")throw Error("Permissão não concedida. Verifique as configurações do celular.");
+      if(permission!=="granted")throw Error("Permissão não concedida. Verifique os Ajustes do celular.");
       const registration=await navigator.serviceWorker.ready;
       const pub=await fetch(FUNCTION_URL,{cache:"no-store"}).then(async r=>{
         if(!r.ok)throw Error("Servidor de notificações indisponível");
-        return r.json()
+        return r.json();
       });
       if(!pub.publicKey)throw Error("Chave de notificações indisponível");
       let subscription=await registration.pushManager.getSubscription();
@@ -158,15 +217,7 @@
           userVisibleOnly:true,applicationServerKey:b64urlToBytes(pub.publicKey)
         });
       }
-      const serialized=subscription.toJSON();
-      const headers=await apiHeaders();
-      const response=await fetch(FUNCTION_URL,{method:"POST",headers,body:JSON.stringify({
-        action:"subscribe",business_id:companyCtx.business.id,
-        subscription:{endpoint:subscription.endpoint,p256dh:serialized.keys?.p256dh,auth:serialized.keys?.auth}
-      })});
-      const outcome=await response.json().catch(()=>({}));
-      if(!response.ok)throw Error(outcome.error||"Não foi possível registrar o dispositivo");
-      subscribed=true;
+      await registerSubscription(subscription);
       if(typeof toast==="function")toast("Notificações ativadas neste celular!");
     }catch(e){
       if(typeof toast==="function")toast(e.message||"Falha ao ativar notificações");
