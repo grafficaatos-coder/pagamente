@@ -2883,7 +2883,7 @@
     // Atualizar manualmente o PWA sem limpar sessão ou dados locais.
     I.refresh='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.3 9A7.8 7.8 0 0 1 19 7l1 5M4 12l1 5a7.8 7.8 0 0 0 13.7-2"/></svg>';
     I.cancel='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></svg>';
-    const AGENDA_UI_VERSION='2026.10.25.6';
+    const AGENDA_UI_VERSION='2026.10.25.7';
     let agendaUpdateInProgress=false;
     async function refreshAgendaPro(){
       if(agendaUpdateInProgress)return;
@@ -5131,6 +5131,7 @@ async function cancelAgendaSubscription(toPix=false){
           </div>`
     }
     <div id="baileysConnectError" class="login-error wa-easy-error">${friendlyBaileysError(baileysSession.last_error)}</div>
+    ${Number(baileysSession.failed_messages||0)>0?`<div class="context-note" role="status"><b>Atenção: ${baileysSession.failed_messages} mensagem(ns) não enviada(s) nos últimos 7 dias.</b> Elas não serão reenviadas automaticamente, para evitar duplicidade. Verifique o histórico e entre em contato manualmente quando necessário.</div>`:''}
     <details class="wa-security-note"><summary>Sobre esta conexão</summary><p>O WhatsApp fica conectado em um processo persistente em um servidor persistente. A sessão é separada por empresa e continua ativa após reinícios normais do sistema.</p></details>
   </section>`:'';
 
@@ -6185,6 +6186,7 @@ async function cancelAgendaSubscription(toPix=false){
       baileysSession.dispatch_mode=data.dispatch_mode;
       baileysSession.dispatch_route=data.route;
       baileysSession.due_messages=data.due_messages;
+      baileysSession.failed_messages=data.failed_messages;
       if(data.route==='railway:'&&data.status==='disconnected'&&baileysSession.status==='connected'){
         baileysSession.status='connecting';
       }
