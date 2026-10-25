@@ -3478,7 +3478,38 @@ function home(){
     if(btn){btn.disabled=false;btn.textContent='WhatsApp · Enviar para todos'}
   }
 }
+    // Para contas de empresas, o envio deve usar a sessão do AgendaJP.
+    // Nunca encaminhar o assinante para outro aplicativo ou prometer que uma mensagem falha foi enviada.
+    async function sendCustomerWhatsappFromSystem(phone,message){
+      const normalized=normalizeWhatsPhone(phone);
+      const text=String(message||'').trim();
+      if(!normalized){toast('Cadastre um WhatsApp válido para o cliente.');return false}
+      if(!text){toast('Escreva a mensagem antes de enviar.');return false}
+      if(!companyCtx?.settings?.baileys_enabled||!companyCtx?.settings?.baileys_service_url){
+        toast('Envio interno indisponível. Configure o WhatsApp na aba WhatsApp.');return false;
+      }
+      try{
+        await loadBaileysStatus(false);
+        if(baileysSession.status!=='connected'){
+          toast('Conecte seu WhatsApp na aba WhatsApp antes de enviar mensagens.');return false;
+        }
+        const out=await callBaileys('send-message','POST',{phone:normalized,text});
+        if(out?.sent!==true)throw new Error(out?.error||'O servidor não confirmou o envio da mensagem.');
+        toast('Mensagem enviada pelo WhatsApp conectado ao AgendaJP.');
+        return true;
+      }catch(ex){
+        console.error('Falha no envio interno do WhatsApp',ex);
+        toast('Mensagem não enviada: '+String(ex?.message||'verifique a conexão do WhatsApp'));
+        return false;
+      }
+    }
     function openWhatsAppDirect(phone,message,preopenedWindow=null){
+      // O envio manual externo permanece apenas nas ações administrativas do dono.
+      if(appMode==='company'){
+        if(preopenedWindow&&!preopenedWindow.closed)preopenedWindow.close();
+        void sendCustomerWhatsappFromSystem(phone,message);
+        return true;
+      }
   const normalized=normalizeWhatsPhone(phone);
   if(!normalized)return false;
   const encoded=encodeURIComponent(String(message||''));
@@ -4546,17 +4577,16 @@ async function cancelAgendaSubscription(toPix=false){
   if(!item)return;
   const phone=normalizeWhatsPhone(item.customer_phone);
   if(!phone)return toast('Esta cliente está sem WhatsApp cadastrado');
-  const msg=queueMessage(item);
-  let w=null;
-  try{w=window.open('about:blank','_blank')}catch(e){}
+  // Só remover da fila após a confirmação do servidor, nunca ao abrir outro app.
+  const sent=await sendCustomerWhatsappFromSystem(phone,queueMessage(item));
+  if(!sent)return;
   const {error}=await sb.from('agenda_whatsapp_queue').update({
-    status:'opened',
-    opened_at:new Date().toISOString(),
+    status:'done',
+    done_at:new Date().toISOString(),
     updated_at:new Date().toISOString()
   }).eq('id',id).eq('business_id',companyCtx.business.id);
-  if(error)console.error(error);
-  item.status='opened';
-  openWhatsAppDirect(phone,msg,w);
+  if(error){console.error(error);return toast('Mensagem enviada, mas não foi possível atualizar a fila.')}
+  item.status='done';
   if(page==='wa')render();
 }
     async function markQueueByAppointment(appointmentId,type,status){
@@ -6622,12 +6652,7 @@ async function cancelAgendaSubscription(toPix=false){
   const phone=normalizeWhatsPhone(customer?.phone);
   const autoConnected=!!(whatsappState?.connection?.status==='connected'&&whatsappState?.connection?.auto_confirmation);
   const baileysConnected=!!(companyCtx?.settings?.baileys_enabled&&baileysSession?.status==='connected');
-  let whatsWindow=null;
-
-  if(phone&&!autoConnected&&!baileysConnected){
-    try{whatsWindow=window.open('about:blank','_blank')}catch(e){}
-  }
-
+  // O agendamento gera sua própria fila no banco. Nunca abrir WhatsApp externo.
   const starts_at=appointmentDate.toISOString();
   const {data:created,error}=await sb.from('agenda_appointments').insert({
     business_id:companyCtx.business.id,
@@ -6641,7 +6666,6 @@ async function cancelAgendaSubscription(toPix=false){
 
   if(error){
     console.error(error);
-    if(whatsWindow&&!whatsWindow.closed)whatsWindow.close();
     return toast('Não foi possível salvar o horário');
   }
 
@@ -6653,15 +6677,8 @@ async function cancelAgendaSubscription(toPix=false){
       if(automaticSent)await markQueueByAppointment(created.id,'confirmation','done');
     }catch(ex){
       console.error(ex);
-      toast('Horário salvo. O envio automático falhou; abrindo WhatsApp manual.');
-      const msg=appointmentWhatsMessage(customer,service,date,time,professional_name,status);
-      openWhatsAppDirect(phone,msg);
-      await markQueueByAppointment(created.id,'confirmation','opened');
+      toast('Horário salvo, mas a confirmação automática falhou. Verifique a conexão na aba WhatsApp.');
     }
-  }else if(phone&&!baileysConnected){
-    const msg=appointmentWhatsMessage(customer,service,date,time,professional_name,status);
-    openWhatsAppDirect(phone,msg,whatsWindow);
-    await markQueueByAppointment(created.id,'confirmation','opened');
   }
 
   await loadCompanyData();
@@ -6670,7 +6687,7 @@ async function cancelAgendaSubscription(toPix=false){
   if(!phone)toast('Horário salvo. Cliente sem WhatsApp cadastrado.');
   else if(automaticSent)toast('Horário salvo e mensagem de agendamento enviada automaticamente');
   else if(baileysConnected)toast('Horário salvo. Mensagem colocada na fila automática; confira o status em WhatsApp.');
-  else if(!autoConnected)toast('Horário salvo. WhatsApp aberto com a mensagem pronta para enviar.');
+  else if(!autoConnected)toast('Horário salvo. Conecte o WhatsApp na aba WhatsApp para enviar a confirmação pelo sistema.');
 }
     function confirmationLink(key){
   if(!key)return '';
@@ -6798,7 +6815,7 @@ async function cancelAgendaSubscription(toPix=false){
     render();
   }
 }
-    function sendAppointmentConfirmationLink(id){
+    async function sendAppointmentConfirmationLink(id){
   const a=companyData.appointments.find(x=>x.id===id);if(!a)return;
   const customer=companyData.customers.find(x=>x.id===a.customer_id);
   const service=companyData.services.find(x=>x.id===a.service_id);
@@ -6808,8 +6825,8 @@ async function cancelAgendaSubscription(toPix=false){
   const localDate=new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10);
   const time=d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   const msg=appointmentWhatsMessage(customer,service,localDate,time,a.professional_name||'',a.status,a.confirmation_code||a.confirmation_token,true);
-  window.open('https://wa.me/'+phone+'?text='+encodeURIComponent(msg),'_blank','noopener,noreferrer');
-  toast('Mensagem de confirmação preparada no WhatsApp');
+  const sent=await sendCustomerWhatsappFromSystem(phone,msg);
+  if(sent)await markQueueByAppointment(a.id,'confirmation','done');
 }
 
     function companyBlockedView(){
