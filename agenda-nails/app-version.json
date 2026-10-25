@@ -1,6 +1,6 @@
 {
-  "version": "2026.10.25.9",
+  "version": "2026.10.25.10",
   "released_at": "2026-10-25",
   "name": "AgendaJP",
-  "notes": "Corrige erro de envio direto via Docker local, consulta fila antes de reenviar confirmação e habilita envios manuais no Railway com controle de duplicidade."
+  "notes": "Correção de envio manual pelo Railway, diagnóstico sem mensagens de sucesso falsas, proteção contra duplicidade e opção de migração quando o WhatsApp legado está desconectado."
 }
