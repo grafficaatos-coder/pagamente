@@ -2972,7 +2972,11 @@
   if(companyAccessBlocked())return'Bloqueado';
   if(Number(companyCtx.plan?.monthly_price_cents||0)===0)return'Em dia';
   const s=companyCtx.subscription?.status;
-  if(s==='trialing')return'Teste grátis';
+  if(s==='trialing'){
+    const ends=companyCtx.subscription?.trial_ends_at;
+    if(ends&&new Date(ends).getTime()<Date.now())return'Teste expirado';
+    return'Teste grátis';
+  }
   if(s==='past_due')return'Pagamento pendente';
   if(s==='active'&&companyCtx.subscription?.current_period_end&&new Date(companyCtx.subscription.current_period_end)<new Date())return'Em tolerância';
   return s==='cancelled'?'Cancelado':'Ativo';
