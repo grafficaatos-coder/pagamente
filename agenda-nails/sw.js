@@ -1,4 +1,4 @@
-const CACHE_NAME='agendajp-shell-v69-auto-whatsapp-connected-20261025';
+const CACHE_NAME='agendajp-shell-v70-whatsapp-manual-route-20261025';
 const SHELL=['/','/manifest.webmanifest?v=20261025-native-v1','/apple-touch-icon.png','/apple-touch-icon-agendajp.png','/brand/agendajp-logo.webp','/icons/agendajp-192.png','/icons/agendajp-512.png','/mobile-fit.css?v=20261023-10','/whatsapp-welcome.css?v=20261023-12'];
 
 self.addEventListener('install',event=>{
