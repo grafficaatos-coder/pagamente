@@ -2883,7 +2883,7 @@
     // Atualizar manualmente o PWA sem limpar sessão ou dados locais.
     I.refresh='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.3 9A7.8 7.8 0 0 1 19 7l1 5M4 12l1 5a7.8 7.8 0 0 0 13.7-2"/></svg>';
     I.cancel='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></svg>';
-    const AGENDA_UI_VERSION='2026.10.25.3';
+    const AGENDA_UI_VERSION='2026.10.25.4';
     let agendaUpdateInProgress=false;
     async function refreshAgendaPro(){
       if(agendaUpdateInProgress)return;
@@ -3582,7 +3582,8 @@ function home(){
       <span class="status-badge ${connected?'status-active':'status-late'}">${connected?'Conectado':waiting?'Aguardando conexão':'Desconectado'}</span>
     </div>
     ${connected
-      ? `<div class="baileys-connected"><b>${baileysSession.phone?'+'+baileysSession.phone:'WhatsApp conectado'}</b><p>Confirmações, lembretes e mensagens automáticas podem ser enviadas pelo servidor.</p>${admin?`<button class="btn wa-disconnect" onclick="disconnectBaileys()">Desconectar</button>`:''}</div>`
+      ? `<div class="baileys-connected"><b>${baileysSession.phone?'+'+baileysSession.phone:'WhatsApp conectado'}</b><p>Confirmações, lembretes e mensagens automáticas podem ser enviadas pelo servidor.</p>${automaticPaused&&admin?`<button type="button" class="btn primary" onclick="activateFreshWhatsAppDispatch()">Ativar mensagens automáticas</button>`:''}
+           ${admin?`<button class="btn wa-disconnect" onclick="disconnectBaileys()">Desconectar</button>`:''}</div>`
       : `<p>Conecte o WhatsApp desta empresa para usar os envios automáticos sem deixar um computador ligado.</p>
          ${baileysSession.pairing_code?`<div class="baileys-steps"><b>Código para conectar no celular:</b><strong style="font-size:1.7rem;letter-spacing:.18em;display:block;margin:.55rem 0">${baileysSession.pairing_code}</strong><span>No WhatsApp: Aparelhos conectados → Conectar um aparelho → Conectar com número de telefone → digite este código.</span></div>`:''}
          ${baileysSession.qr_svg&&!baileysSession.pairing_code?`<div class="baileys-qr">${baileysSession.qr_svg}</div><div class="baileys-steps"><b>Com outro aparelho:</b><span>WhatsApp → Aparelhos conectados → Conectar um aparelho → escaneie o QR.</span></div>`:''}
@@ -5074,6 +5075,7 @@ async function cancelAgendaSubscription(toPix=false){
   const preferredPhoneRaw=baileysPreferredPhone();
   const preferredPhone=preferredPhoneRaw?formatBusinessPhone(preferredPhoneRaw):'';
   const baileysWaiting=baileysSession.status==='qr'||baileysSession.status==='connecting';
+  const automaticPaused=baileysSession.status==='connected'&&baileysSession.dispatch_mode==='paused';
   const baileysCard=baileysEnabled?`<section class="panel baileys-card wa-easy-connect ${baileysSession.status==='connected'?'connected':''}">
     <div class="head">
       <div><span class="eyebrow">Servidor WhatsApp</span><h3>${baileysSession.status==='connected'?'WhatsApp conectado':'Conectar pelo celular'}</h3></div>
@@ -5082,7 +5084,7 @@ async function cancelAgendaSubscription(toPix=false){
     ${baileysSession.status==='connected'
       ? `<div class="wa-easy-success">
           <div class="wa-easy-success-icon">✓</div>
-          <div><b>Pronto! Seu WhatsApp está conectado.</b><p>A sessão fica salva no servidor WhatsApp e as mensagens automáticas podem ser enviadas sem deixar computador ligado.</p><small>${baileysSession.phone?'Número conectado: +'+baileysSession.phone:''}</small></div>
+          <div><b>WhatsApp conectado.</b><p>${automaticPaused?'Os envios automáticos de novos horários ainda não foram autorizados para esta empresa.':'Conexão ativa. Acompanhe os agendamentos e o status de envio pela aba WhatsApp.'}</p><small>${baileysSession.phone?'Número conectado: +'+baileysSession.phone:''}</small></div>
           ${admin?`<button class="btn wa-disconnect" onclick="disconnectBaileys()">Desconectar</button>`:''}
         </div>`
       : baileysSession.pairing_code
@@ -6109,6 +6111,25 @@ async function cancelAgendaSubscription(toPix=false){
   }
   return out;
 }
+    async function activateFreshWhatsAppDispatch(){
+  if(!sb||!companyCtx||!canAdminCompany())return toast('Somente o responsável pela empresa pode autorizar os envios.');
+  if(!confirm('Autorizar mensagens automáticas para NOVOS agendamentos e lembretes desta empresa? Mensagens antigas e atrasadas NÃO serão reenviadas.'))return;
+  try{
+    await loadBaileysStatus(false);
+    if(baileysSession.status!=='connected')return toast('Conecte seu WhatsApp antes de ativar o envio automático.');
+    const {data,error}=await sb.rpc('agenda_whatsapp_enable_fresh_dispatch',{p_business_id:companyCtx.business.id});
+    if(error)throw error;
+    if(!data?.ok)throw new Error('O servidor não confirmou a ativação.');
+    await loadBaileysStatus(false);
+    render();
+    toast(baileysSession.dispatch_mode==='paused'
+      ?'Autorização registrada. Verifique o status em alguns instantes.'
+      :'Envio de novos agendamentos ativado. Mensagens antigas não serão reenviadas.');
+  }catch(ex){
+    console.error('Ativação de mensagens automáticas',ex);
+    toast(ex.message||'Não foi possível ativar os envios.');
+  }
+}
     async function loadBaileysStatus(redraw=true){
   if(!companyCtx?.settings?.baileys_enabled||!companyCtx?.settings?.baileys_service_url)return;
   try{
@@ -6120,7 +6141,8 @@ async function cancelAgendaSubscription(toPix=false){
       // Nunca reapresentar um codigo que o servidor ja invalidou.
       pairing_code:out.pairing_code||null,
       last_error:out.last_error||null,
-      catalog_broadcast:out.catalog_broadcast||null
+      catalog_broadcast:out.catalog_broadcast||null,
+      dispatch_mode:out.dispatch_mode||null
     };
     if(baileysSession.status==='connected')baileysSession.pairing_code=null;
   }catch(ex){
@@ -6712,6 +6734,7 @@ async function cancelAgendaSubscription(toPix=false){
   render();
   if(!phone)toast('Horário salvo. Cliente sem WhatsApp cadastrado.');
   else if(automaticSent)toast('Horário salvo e mensagem de agendamento enviada automaticamente');
+  else if(baileysConnected&&baileysSession.dispatch_mode==='paused')toast('Horário salvo, mas o envio automático ainda precisa ser ativado na aba WhatsApp.');
   else if(baileysConnected)toast('Horário salvo. Mensagem colocada na fila automática; confira o status em WhatsApp.');
   else if(!autoConnected)toast('Horário salvo. Conecte o WhatsApp na aba WhatsApp para enviar a confirmação pelo sistema.');
 }
