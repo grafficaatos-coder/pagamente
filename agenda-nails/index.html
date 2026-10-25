@@ -2883,7 +2883,7 @@
     // Atualizar manualmente o PWA sem limpar sessão ou dados locais.
     I.refresh='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.3 9A7.8 7.8 0 0 1 19 7l1 5M4 12l1 5a7.8 7.8 0 0 0 13.7-2"/></svg>';
     I.cancel='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></svg>';
-    const AGENDA_UI_VERSION='2026.10.25.9';
+    const AGENDA_UI_VERSION='2026.10.25.10';
     let agendaUpdateInProgress=false;
     async function refreshAgendaPro(){
       if(agendaUpdateInProgress)return;
@@ -3516,6 +3516,10 @@ function home(){
       }
       try{
         await loadBaileysStatus(false);
+        if(baileysSession.dispatch_route==='local-poll:'&&baileysSession.dispatch_mode==='legacy_paused'){
+          toast('Servidor antigo sem envio automático. Abra WhatsApp e toque em Corrigir envio automático.');
+          return false;
+        }
         if(baileysSession.status!=='connected'){
           toast('Conecte seu WhatsApp na aba WhatsApp antes de enviar mensagens.');return false;
         }
@@ -5104,7 +5108,6 @@ async function cancelAgendaSubscription(toPix=false){
   <small>${baileysSession.phone?'Número conectado: +'+baileysSession.phone:''}</small>
   ${Number(baileysSession.due_messages||0)>0? `<small> · ${baileysSession.due_messages} item(ns) pendente(s) na fila (não significa enviado)</small>`:''}
   </div>
-  ${migrateLegacy?`<button type="button" class="btn primary" onclick="migrateCompanyWhatsAppToRailway()">Corrigir envio automático</button>`:''}
   ${!migrateLegacy&&automaticPaused&&admin?`<button type="button" class="btn primary" onclick="activateFreshWhatsAppDispatch()">Ativar mensagens automáticas</button>`:''}
   ${admin?`<button class="btn wa-disconnect" onclick="disconnectBaileys()">Desconectar</button>`:''}
         </div>`
@@ -5138,6 +5141,7 @@ async function cancelAgendaSubscription(toPix=false){
             ${baileysSession.qr_svg?`<div class="baileys-qr wa-easy-qr"><div class="wa-qr-title">QR Code alternativo</div>${baileysSession.qr_svg}<div class="wa-qr-wait">Aguardando conexão...</div></div>`:''}
           </div>`
     }
+    ${migrateLegacy?`<div class="context-note" style="margin:12px 0"><b>A conexão usa o servidor antigo, que não processa os envios desta empresa.</b> Para ativar o envio automático no Railway será necessário conectar o número novamente. Não serão reenviadas mensagens antigas.<div style="margin-top:10px"><button type="button" class="btn primary" onclick="migrateCompanyWhatsAppToRailway()">Corrigir envio automático</button></div></div>`:''}
     <div id="baileysConnectError" class="login-error wa-easy-error">${friendlyBaileysError(baileysSession.last_error)}</div>
     ${Number(baileysSession.failed_messages||0)>0?`<div class="context-note" role="status"><b>Atenção: ${baileysSession.failed_messages} mensagem(ns) não enviada(s) nos últimos 7 dias.</b> Elas não serão reenviadas automaticamente, para evitar duplicidade. Verifique o histórico e entre em contato manualmente quando necessário.</div>`:''}
     <details class="wa-security-note"><summary>Sobre esta conexão</summary><p>O WhatsApp fica conectado em um processo persistente em um servidor persistente. A sessão é separada por empresa e continua ativa após reinícios normais do sistema.</p></details>
