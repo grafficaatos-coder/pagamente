@@ -1,6 +1,6 @@
 {
-  "version": "2026.10.24.4",
-  "released_at": "2026-10-24",
+  "version": "2026.10.25.1",
+  "released_at": "2026-10-25",
   "name": "AgendaJP",
-  "notes": "Contador de visitas ao site de apresentação disponível somente para o dono da plataforma: total, hoje, últimos 7 dias e mês; sem dados pessoais de visitantes."
+  "notes": "Envio de mensagens para assinantes pelo WhatsApp conectado ao AgendaJP; elimina abertura automática do WhatsApp externo ao criar agendamento e preserva fila quando a conexão não está ativa."
 }
