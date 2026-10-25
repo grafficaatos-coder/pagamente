@@ -1,6 +1,6 @@
 {
-  "version": "2026.10.25.2",
+  "version": "2026.10.25.3",
   "released_at": "2026-10-25",
   "name": "AgendaJP",
-  "notes": "Notificações de confirmação, cancelamento e reagendamento com ativação por dispositivo; instalação orientada no iPhone e abertura em modo aplicativo."
+  "notes": "Ativação de notificações com solicitação do iOS e orientação automática quando a permissão estiver bloqueada; preserva confirmações, cancelamentos e reagendamentos."
 }
