@@ -1,6 +1,6 @@
 {
-  "version": "2026.10.25.7",
+  "version": "2026.10.25.8",
   "released_at": "2026-10-25",
   "name": "AgendaJP",
-  "notes": "WhatsApp: acompanhamento por empresa, nova conexão no Railway mediante autorização e histórico de falhas sem reenvio de mensagens vencidas."
+  "notes": "Ativação automática do envio de confirmações e lembretes na primeira conexão WhatsApp no Railway; empresas desconectadas migram para canal atualizado sem reenvio do histórico."
 }
