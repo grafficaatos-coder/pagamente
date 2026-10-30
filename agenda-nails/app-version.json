@@ -1,6 +1,6 @@
 {
-  "version": "2026.10.25.10",
-  "released_at": "2026-10-25",
+  "version": "2026.10.30.1",
+  "released_at": "2026-10-30",
   "name": "AgendaJP",
-  "notes": "Correção de envio manual pelo Railway, diagnóstico sem mensagens de sucesso falsas, proteção contra duplicidade e opção de migração quando o WhatsApp legado está desconectado."
+  "notes": "Agendamentos com seleção de vários serviços no mesmo horário, duração e preço total, edição, agenda, financeiro e mensagens de WhatsApp."
 }
