@@ -2653,6 +2653,19 @@
       .company-app .premium-side-refresh.agenda-update-button span{display:inline!important}
     }
 
+
+    .booking-service-picker{min-width:0;width:100%;background:#fff;border:1px solid #ddd7eb;border-radius:12px}
+    .booking-service-picker[open]{border-color:#7950d4;box-shadow:0 0 0 2px rgba(121,80,212,.1)}
+    .booking-service-picker>summary{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:46px;padding:11px 13px;cursor:pointer;list-style:none;color:#27223a;font-size:14px}
+    .booking-service-picker>summary::-webkit-details-marker{display:none}
+    .booking-service-options{max-height:240px;overflow-y:auto;overscroll-behavior:contain;display:grid;gap:2px;padding:7px;border-top:1px solid #ebe5f3}
+    .booking-service-option{display:flex;align-items:center;gap:10px;padding:10px 8px;border-radius:9px;cursor:pointer}
+    .booking-service-option:hover,.booking-service-option:has(input:checked){background:#f1ebff}
+    .booking-service-option input{width:19px;height:19px;accent-color:#754bd1;flex:none}
+    .booking-service-option span{min-width:0;display:grid;gap:3px}
+    .booking-service-option b{font-size:13px;overflow-wrap:anywhere}
+    .booking-service-option small{font-size:11px;color:#77718b}
+    .booking-services-summary{display:block;margin-top:7px;color:#6d677f;font-size:12px;overflow-wrap:anywhere;line-height:1.4}
   </style>
   <link rel="stylesheet" href="/mobile-redesign.css?v=20261023-5">
   <link rel="stylesheet" href="/messages-layout.css?v=20261023-6">
@@ -5812,7 +5825,7 @@ async function cancelAgendaSubscription(toPix=false){
     size:'wide',
     content:`${canAdminCompany()?`<div class="appointment-delete-toolbar"><span>Precisa remover este horário? A exclusão também cancela os envios automáticos pendentes.</span><button type="button" class="appointment-delete-button" onclick="deleteAppointment('${a.id}')">Excluir horário</button></div>`:''}<div class="app-modal-grid">
       <div class="app-modal-field"><label>${appModalEscape(p.person)} *</label><select id="modalAppointmentCustomer">${companyData.customers.map(x=>`<option value="${x.id}" ${x.id===a.customer_id?'selected':''}>${appModalEscape(x.name)}</option>`).join('')}</select></div>
-      <div class="app-modal-field"><label>${appModalEscape(p.service)} *</label><select id="modalAppointmentService">${companyData.services.filter(x=>x.active||x.id===a.service_id).map(x=>`<option value="${x.id}" ${x.id===a.service_id?'selected':''}>${appModalEscape(x.name)}</option>`).join('')}</select></div>
+      <div class="app-modal-field"><label>${appModalEscape(p.service)} (selecione vários) *</label>${bookingServicesPicker("editBooking",appointmentServiceIds(a))}</div>
       <div class="app-modal-field"><label>Data *</label><input id="modalAppointmentDate" type="date" value="${localDate}"></div>
       <div class="app-modal-field"><label>Horário *</label><input id="modalAppointmentTime" type="time" value="${appModalEscape(localTime)}"></div>
       <div class="app-modal-field"><label>${appModalEscape(p.professional)}</label><input id="modalAppointmentProfessional" value="${appModalEscape(a.professional_name||'')}" placeholder="Nome do profissional"></div>
@@ -5823,7 +5836,8 @@ async function cancelAgendaSubscription(toPix=false){
     </div>`,
     onSubmit:async()=>{
       const customer_id=document.getElementById('modalAppointmentCustomer')?.value;
-      const service_id=document.getElementById('modalAppointmentService')?.value;
+      const service_ids=selectedBookingServices('editBooking');
+       const service_id=service_ids[0];
       const date=document.getElementById('modalAppointmentDate')?.value;
       const time=document.getElementById('modalAppointmentTime')?.value;
       const professional_name=(document.getElementById('modalAppointmentProfessional')?.value||'').trim();
@@ -5838,7 +5852,7 @@ async function cancelAgendaSubscription(toPix=false){
       if(isReschedule&&starts.getTime()<=Date.now()){toast('Escolha um horário futuro para reagendar');return}
       const changedTime=starts.getTime()!==d.getTime();
       if(isReschedule&&!changedTime){toast('Informe uma nova data ou horário');return}
-      const {data:updated,error}=await sb.from('agenda_appointments').update({customer_id,service_id,starts_at:starts.toISOString(),professional_name:professional_name||null,status,notes:notes||null,updated_at:new Date().toISOString()}).eq('id',id).eq('business_id',companyCtx.business.id).select('id');
+      const {data:updated,error}=await sb.from('agenda_appointments').update({customer_id,service_id,service_ids,starts_at:starts.toISOString(),professional_name:professional_name||null,status,notes:notes||null,updated_at:new Date().toISOString()}).eq('id',id).eq('business_id',companyCtx.business.id).select('id');
       if(error||!updated?.length){console.error(error);toast('Não foi possível editar');return}
       closeAppModal();await loadCompanyData();render();
       if(isReschedule){await sendAppointmentNotice({...a,customer_id,service_id,starts_at:starts.toISOString(),updated_at:new Date().toISOString()},'rescheduled',a.starts_at)}
@@ -6720,7 +6734,7 @@ async function cancelAgendaSubscription(toPix=false){
     function booking(){
   const p=P();
   const showBookingPrice=companyCtx?.preferences?.show_price_on_booking!==false;
-  const serviceOptions=companyData.services.filter(x=>x.active).map(x=>`<option value="${x.id}">${appModalEscape(x.name)}${showBookingPrice?' · '+moneyBR(Number(x.price_cents||0)/100):''}</option>`).join('');
+
   const pricePreference=canAdminCompany()?`<div class="booking-price-setting">
     <div class="booking-price-copy">
       <b>Mostrar valor dos serviços nesta tela</b>
@@ -6728,7 +6742,7 @@ async function cancelAgendaSubscription(toPix=false){
     </div>
     <button type="button" class="booking-price-toggle ${showBookingPrice?'on':''}" onclick="toggleBookingPriceVisibility()" aria-pressed="${showBookingPrice?'true':'false'}"><span></span></button>
   </div>`:'';
-  return `<div class="booking"><div class="bookwrap"><section class="bookintro"><img class="booking-logo" src="/icons/agendajp-192.png" width="84" height="84" alt="Logo AgendaJP"><h1>Novo horário</h1><p>Agendamento de ${displayBusinessName(companyCtx.business.name)}.</p><button type="button" class="btn secondary booking-back" onclick="go('agenda')" aria-label="Voltar para a agenda">← Voltar</button></section><section class="book"><div class="book-title"><div><span class="eyebrow">${p.segment}</span><h2>Cadastrar ${p.appointment.toLowerCase()}</h2><p>Os dados serão salvos somente nesta empresa.</p></div><span class="tag">Novo</span></div>${pricePreference}<div class="formgrid"><div class="field"><div class="field-title-row"><b>${p.person}</b><button type="button" class="inline-add-customer" onclick="addCustomerFromBooking()">+ Cadastrar ${p.person.toLowerCase()}</button></div><select id="fclient"><option value="">Selecione</option>${companyData.customers.map(x=>`<option value="${x.id}">${appModalEscape(x.name)}</option>`).join('')}</select></div><div class="field"><b>${p.service}</b><select id="fservice"><option value="">Selecione</option>${serviceOptions}</select></div><div class="field"><b>${p.professional}</b><input id="fpro" placeholder="Nome do profissional"></div><div class="field"><b>Data</b><input id="fdate" type="date"></div><div class="field"><b>Horário</b><input id="ftime" type="time"></div><div class="field"><b>Status</b><div class="booking-status-fixed"><div><span class="booking-status-dot"></span><strong>Pendente</strong></div><small>Aguardando confirmação do cliente</small></div></div></div><div class="field"><b>Observação administrativa</b><textarea id="fnote" placeholder="${p.notePlaceholder}"></textarea></div><div class="booking-whats-note"><b>WhatsApp automático:</b> ao salvar, o cliente recebe primeiro os dados do agendamento. <b>24 horas antes</b>, recebe um novo lembrete com o link para confirmar o horário.</div><button class="btn primary" style="width:100%;margin-top:12px;min-height:48px" onclick="saveAppointment()">Salvar horário</button></section></div></div>`;
+  return `<div class="booking"><div class="bookwrap"><section class="bookintro"><img class="booking-logo" src="/icons/agendajp-192.png" width="84" height="84" alt="Logo AgendaJP"><h1>Novo horário</h1><p>Agendamento de ${displayBusinessName(companyCtx.business.name)}.</p><button type="button" class="btn secondary booking-back" onclick="go('agenda')" aria-label="Voltar para a agenda">← Voltar</button></section><section class="book"><div class="book-title"><div><span class="eyebrow">${p.segment}</span><h2>Cadastrar ${p.appointment.toLowerCase()}</h2><p>Os dados serão salvos somente nesta empresa.</p></div><span class="tag">Novo</span></div>${pricePreference}<div class="formgrid"><div class="field"><div class="field-title-row"><b>${p.person}</b><button type="button" class="inline-add-customer" onclick="addCustomerFromBooking()">+ Cadastrar ${p.person.toLowerCase()}</button></div><select id="fclient"><option value="">Selecione</option>${companyData.customers.map(x=>`<option value="${x.id}">${appModalEscape(x.name)}</option>`).join('')}</select></div><div class="field"><b>${p.service} (selecione vários)</b>${bookingServicesPicker("booking")}</div><div class="field"><b>${p.professional}</b><input id="fpro" placeholder="Nome do profissional"></div><div class="field"><b>Data</b><input id="fdate" type="date"></div><div class="field"><b>Horário</b><input id="ftime" type="time"></div><div class="field"><b>Status</b><div class="booking-status-fixed"><div><span class="booking-status-dot"></span><strong>Pendente</strong></div><small>Aguardando confirmação do cliente</small></div></div></div><div class="field"><b>Observação administrativa</b><textarea id="fnote" placeholder="${p.notePlaceholder}"></textarea></div><div class="booking-whats-note"><b>WhatsApp automático:</b> ao salvar, o cliente recebe primeiro os dados do agendamento. <b>24 horas antes</b>, recebe um novo lembrete com o link para confirmar o horário.</div><button class="btn primary" style="width:100%;margin-top:12px;min-height:48px" onclick="saveAppointment()">Salvar horário</button></section></div></div>`;
 }
     function fillPhone(){const n=document.getElementById('fclient').value,c=P().peopleData.find(x=>x[0]===n);document.getElementById('fphone').value=c?c[1]:''}
     async function addCustomerFromBooking(){
@@ -6771,7 +6785,8 @@ async function cancelAgendaSubscription(toPix=false){
     async function saveAppointment(){
   if(!hasFeature('agenda'))return toast('Agenda não incluída no plano');
   const customer_id=document.getElementById('fclient')?.value;
-  const service_id=document.getElementById('fservice')?.value;
+  const service_ids=selectedBookingServices('booking');
+   const service_id=service_ids[0];
   const professional_name=(document.getElementById('fpro')?.value||'').trim();
   const date=document.getElementById('fdate')?.value;
   const time=document.getElementById('ftime')?.value;
@@ -6801,6 +6816,7 @@ async function cancelAgendaSubscription(toPix=false){
     business_id:companyCtx.business.id,
     customer_id,
     service_id,
+    service_ids,
     professional_name:professional_name||null,
     starts_at,
     status,
