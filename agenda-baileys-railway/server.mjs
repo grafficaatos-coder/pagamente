@@ -239,7 +239,7 @@ async function claimAndValidate(businessId,leaseId){
     const appointment=await fetchOne(
       "/rest/v1/agenda_appointments?id=eq."+encodeURIComponent(job.appointment_id)+
       "&business_id=eq."+encodeURIComponent(businessId)+
-      "&select=id,business_id,customer_id,service_id,professional_name,starts_at,status,confirmation_code,confirmation_token,confirmed_by_customer_at,customer_cancelled_at&limit=1"
+      "&select=id,business_id,customer_id,service_id,service_ids,service_names,professional_name,starts_at,status,confirmation_code,confirmation_token,confirmed_by_customer_at,customer_cancelled_at&limit=1"
     );
     if(!appointment){await cancelClaimed(businessId,job,"Agendamento não existe mais.");continue}
     if((appointment.status==="cancelled"&&job.message_type!=="cancellation")||appointment.status==="no_show"){
@@ -300,7 +300,7 @@ async function claimAndValidate(businessId,leaseId){
       reservation_token:job.reservation_token,
       delivery_semantics:job.delivery_semantics||"AT_MOST_ONCE",
       phone:currentPhone,
-      text:["cancellation","rescheduled"].includes(job.message_type)?String(job.notification_text||"").trim():messageText(job.message_type,business,customer,service,appointment,thankYouTemplate,confirmationTemplate,reminderTemplate)
+      text:["cancellation","rescheduled"].includes(job.message_type)?String(job.notification_text||"").trim():messageText(job.message_type,business,customer,{...service,name:appointment.service_names||service.name},appointment,thankYouTemplate,confirmationTemplate,reminderTemplate)
     };
   }
   return null;
