@@ -6677,6 +6677,46 @@ async function cancelAgendaSubscription(toPix=false){
   render();
   toast(next?'Valores visíveis nesta tela':'Valores ocultos nesta tela');
 }
+
+    function appointmentServiceIds(a){
+      return Array.isArray(a?.service_ids)&&a.service_ids.length?a.service_ids:(a?.service_id?[a.service_id]:[]);
+    }
+    function appointmentServices(a){
+      return appointmentServiceIds(a).map(id=>companyData.services.find(s=>s.id===id)).filter(Boolean);
+    }
+    function appointmentServicesName(a){
+      return appointmentServices(a).map(s=>s.name).join(', ')||a?.service_names||'Serviço';
+    }
+    function appointmentServiceTotal(a){
+      return appointmentServices(a).reduce((sum,s)=>sum+Number(s.price_cents||0),0);
+    }
+    function appointmentServiceDuration(a){
+      return appointmentServices(a).reduce((sum,s)=>sum+Number(s.duration_minutes||0),0);
+    }
+    function selectedBookingServices(prefix){
+      return Array.from(document.querySelectorAll('input[data-service-select="'+prefix+'"]:checked')).map(el=>el.value);
+    }
+    function bookingServicesPicker(prefix, selectedIds=[]){
+      const current=new Set(selectedIds);
+      const showPrice=companyCtx?.preferences?.show_price_on_booking!==false;
+      const available=companyData.services.filter(x=>x.active||current.has(x.id));
+      const marked=available.filter(s=>current.has(s.id));
+      const entries=available.map(s=>'<label class="booking-service-option"><input type="checkbox" data-service-select="'+prefix+'" value="'+appModalEscape(s.id)+'" '+(current.has(s.id)?'checked':'')+' onchange="updateBookingServices(this)"><span><b>'+appModalEscape(s.name)+'</b><small>'+Number(s.duration_minutes||0)+' min'+(showPrice?' · '+moneyBR(Number(s.price_cents||0)/100):'')+'</small></span></label>').join('');
+      const desc=marked.length?marked.map(x=>x.name).join(' + '):'Nenhum serviço selecionado';
+      return '<details class="booking-service-picker"><summary><span data-service-caption="'+prefix+'">'+(marked.length?marked.length+' serviços selecionados':'Selecione um ou mais serviços')+'</span><span>⌄</span></summary><div class="booking-service-options">'+(entries||'<p>Cadastre os serviços antes de agendar.</p>')+'</div></details><small class="booking-services-summary" data-service-total="'+prefix+'">'+appModalEscape(desc)+'</small>';
+    }
+    function updateBookingServices(input){
+      const prefix=input?.dataset?.serviceSelect;
+      if(!prefix)return;
+      const ids=selectedBookingServices(prefix),services=ids.map(id=>companyData.services.find(s=>s.id===id)).filter(Boolean);
+      const label=document.querySelector('[data-service-caption="'+prefix+'"]');
+      const total=document.querySelector('[data-service-total="'+prefix+'"]');
+      if(label)label.textContent=services.length?services.length+' serviço'+(services.length>1?'s':'')+' selecionado'+(services.length>1?'s':''):'Selecione um ou mais serviços';
+      if(total)total.textContent=services.length
+        ? services.map(s=>s.name).join(' + ')+' · '+services.reduce((n,s)=>n+Number(s.duration_minutes||0),0)+' min'+(companyCtx?.preferences?.show_price_on_booking!==false?' · '+moneyBR(services.reduce((n,s)=>n+Number(s.price_cents||0),0)/100):'')
+        :'Nenhum serviço selecionado';
+    }
+
     function booking(){
   const p=P();
   const showBookingPrice=companyCtx?.preferences?.show_price_on_booking!==false;
