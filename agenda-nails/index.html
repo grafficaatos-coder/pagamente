@@ -3184,8 +3184,8 @@ function home(){
   const valid=appts.filter(x=>!['cancelled','no_show'].includes(x.status));
   const todayAppts=valid.filter(x=>agendaDateKey(x.starts_at)===today).sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at));
   const thisMonth=valid.filter(x=>agendaDateKey(x.starts_at).slice(0,7)===monthKey);
-  const billed=thisMonth.filter(x=>x.status==='confirmed').reduce((n,x)=>n+Number(serviceMap.get(x.service_id)?.price_cents||0),0);
-  const received=thisMonth.filter(x=>x.status==='completed').reduce((n,x)=>n+Number(serviceMap.get(x.service_id)?.price_cents||0),0)
+  const billed=thisMonth.filter(x=>x.status==='confirmed').reduce((n,x)=>n+appointmentServiceTotal(x),0);
+  const received=thisMonth.filter(x=>x.status==='completed').reduce((n,x)=>n+appointmentServiceTotal(x),0)
      +entries.filter(x=>x.type==='income'&&String(x.occurred_on||'').slice(0,7)===monthKey).reduce((n,x)=>n+Number(x.amount_cents||0),0);
   const finance=hasFeature('finance');
   const todayTitle=now.toLocaleDateString('pt-BR',{weekday:'long',day:'2-digit',month:'long',year:'numeric'});
@@ -3199,10 +3199,10 @@ function home(){
     dashboardKpi('cancel','Cancelados',cancelledToday,'Horários cancelados','agenda','red')
   ].join('');
   const rows=todayAppts.slice(0,7).map(a=>{
-    const d=new Date(a.starts_at),cu=customerMap.get(a.customer_id),service=serviceMap.get(a.service_id),name=String(cu?.name||'Cliente');
+    const d=new Date(a.starts_at),cu=customerMap.get(a.customer_id),name=String(cu?.name||'Cliente');
     return `<div class="dashboard-day-row"><div class="time">${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div>
       <div class="bar ${a.status}"></div><div class="dashboard-initials">${appModalEscape(dashboardInitials(name))}</div>
-      <div class="person"><strong>${appModalEscape(name)}</strong><small>${appModalEscape(service?.name||'Serviço')}</small></div>
+      <div class="person"><strong>${appModalEscape(name)}</strong><small>${appModalEscape(appointmentServicesName(a))}</small></div>
       <span class="dashboard-state ${a.status}">${appModalEscape(agendaStatusText(a.status))}</span></div>`;
   }).join('');
   const pivot=new Date(now.getFullYear(),now.getMonth()+dashboardMonthOffset,1),last=new Date(pivot.getFullYear(),pivot.getMonth()+1,0).getDate(),start=pivot.getDay();
@@ -3287,7 +3287,7 @@ function home(){
     return {key:agendaDateKey(date).slice(0,7),label:date.toLocaleDateString('pt-BR',{month:'short'})};
   });
   const values=months.map(m=>valid.filter(a=>a.status==='completed'&&agendaDateKey(a.starts_at).slice(0,7)===m.key)
-    .reduce((n,a)=>n+Number(serviceMap.get(a.service_id)?.price_cents||0),0)+
+    .reduce((n,a)=>n+appointmentServiceTotal(a),0)+
     entries.filter(e=>e.type==='income'&&String(e.occurred_on||'').slice(0,7)===m.key)
     .reduce((n,e)=>n+Number(e.amount_cents||0),0));
   const max=Math.max(1,...values);
@@ -3398,10 +3398,10 @@ function home(){
   </div>`;
 }
     function agendaRow(a,showDate=false){
-  const d=new Date(a.starts_at),cu=companyData.customers.find(x=>x.id===a.customer_id),se=companyData.services.find(x=>x.id===a.service_id);
+  const d=new Date(a.starts_at),cu=companyData.customers.find(x=>x.id===a.customer_id),serviceNames=appointmentServicesName(a);
   const statusText=agendaStatusText(a.status);
   const tagClass=a.status==='pending'?'p':a.status==='cancelled'?'canceled':'';
-  return `<div class="appt agenda-real-row" data-search="${(cu?.name||'').toLowerCase()} ${(se?.name||'').toLowerCase()} ${(a.professional_name||'').toLowerCase()}"><div class="appt-time">${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div><span class="status-line ${a.status==='pending'?'p':''}"></span><div><strong>${cu?.name||'Cliente'}</strong><small>${showDate?d.toLocaleDateString('pt-BR')+' · ':''}${se?.name||P().service} · ${a.professional_name||P().professional}${a.confirmed_by_customer_at?' · ✓ Cliente confirmou':''}</small>${agendaActions(a)}</div><span class="tag ${tagClass}">${statusText}</span></div>`;
+  return `<div class="appt agenda-real-row" data-search="${(cu?.name||'').toLowerCase()} ${serviceNames.toLowerCase()} ${(a.professional_name||'').toLowerCase()}"><div class="appt-time">${d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}</div><span class="status-line ${a.status==='pending'?'p':''}"></span><div><strong>${cu?.name||'Cliente'}</strong><small>${showDate?d.toLocaleDateString('pt-BR')+' · ':''}${serviceNames} · ${a.professional_name||P().professional}${a.confirmed_by_customer_at?' · ✓ Cliente confirmou':''}</small>${agendaActions(a)}</div><span class="tag ${tagClass}">${statusText}</span></div>`;
 }
     function agenda(){
   const p=P();
@@ -3431,8 +3431,8 @@ function home(){
       const list=all.filter(a=>agendaDateKey(a.starts_at)===key);
       visibleCount+=list.length;
       const minis=list.map(a=>{
-        const ad=new Date(a.starts_at),cu=customerMap.get(a.customer_id),se=serviceMap.get(a.service_id);
-        return `<div class="mini" data-search="${(cu?.name||'').toLowerCase()} ${(se?.name||'').toLowerCase()}"><b><span class="dot"></span>${ad.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})} · ${cu?.name||'Cliente'}</b><small>${se?.name||p.service} · ${agendaStatusText(a.status)}</small></div>`;
+        const ad=new Date(a.starts_at),cu=customerMap.get(a.customer_id),serviceNames=appointmentServicesName(a);
+        return `<div class="mini" data-search="${(cu?.name||'').toLowerCase()} ${serviceNames.toLowerCase()}"><b><span class="dot"></span>${ad.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})} · ${cu?.name||'Cliente'}</b><small>${serviceNames} · ${agendaStatusText(a.status)}</small></div>`;
       }).join('');
       return `<div class="daycol clickable" onclick="if(event.target.closest('button,select'))return;openAgendaDay('${key}')"><div class="dayhead ${key===todayKey?'today':''}"><b>${d.toLocaleDateString('pt-BR',{weekday:'short'})}</b><small>${d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})} · ${list.length} horário(s)</small></div>${minis||'<div class="mini"><small>Livre</small></div>'}</div>`;
     }).join('');
@@ -4202,8 +4202,8 @@ async function cancelAgendaSubscription(toPix=false){
   const customerMap=new Map(companyData.customers.map(x=>[x.id,x]));
   const confirmed=companyData.appointments.filter(a=>a.status==='confirmed'&&financeInPeriod(a.starts_at));
   const completed=companyData.appointments.filter(a=>a.status==='completed'&&financeInPeriod(a.starts_at));
-  const receivable=confirmed.reduce((sum,a)=>sum+Number(serviceMap.get(a.service_id)?.price_cents||0),0)/100;
-  const autoReceived=completed.reduce((sum,a)=>sum+Number(serviceMap.get(a.service_id)?.price_cents||0),0)/100;
+  const receivable=confirmed.reduce((sum,a)=>sum+appointmentServiceTotal(a),0)/100;
+  const autoReceived=completed.reduce((sum,a)=>sum+appointmentServiceTotal(a),0)/100;
   const manual=(companyData.financialEntries||[]).filter(e=>financeInPeriod(e.occurred_on));
   const manualIncome=manual.filter(e=>e.type==='income').reduce((s,e)=>s+Number(e.amount_cents||0),0)/100;
   const expenses=manual.filter(e=>e.type==='expense').reduce((s,e)=>s+Number(e.amount_cents||0),0)/100;
@@ -4229,12 +4229,12 @@ async function cancelAgendaSubscription(toPix=false){
     .sort((a,b)=>new Date(a.starts_at)-new Date(b.starts_at))
     .map(a=>{
       const d=new Date(a.starts_at);
-      const service=serviceMap.get(a.service_id);
+      const serviceNames=appointmentServicesName(a);
       const customer=customerMap.get(a.customer_id);
-      const value=Number(service?.price_cents||0)/100;
+      const value=appointmentServiceTotal(a)/100;
       const dateTop=d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
       const when=d.toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
-      return `<div class="receivable-row"><div class="receivable-date">${dateTop.replace('/','<br>')}</div><div class="receivable-main"><b>${customer?.name||'Cliente'}</b><small>${service?.name||'Serviço'} · ${when}${a.professional_name?' · '+a.professional_name:''}</small></div><div class="receivable-value">${moneyBR(value)}</div><div class="receivable-actions">${canOperateCompany()?`<button class="btn secondary" onclick="updateAppointmentStatus('${a.id}','completed')">Marcar recebido</button>`:''}</div></div>`;
+      return `<div class="receivable-row"><div class="receivable-date">${dateTop.replace('/','<br>')}</div><div class="receivable-main"><b>${customer?.name||'Cliente'}</b><small>${serviceNames} · ${when}${a.professional_name?' · '+a.professional_name:''}</small></div><div class="receivable-value">${moneyBR(value)}</div><div class="receivable-actions">${canOperateCompany()?`<button class="btn secondary" onclick="updateAppointmentStatus('${a.id}','completed')">Marcar recebido</button>`:''}</div></div>`;
     }).join('');
 
   const incomeCategories=['Venda','Produto','Comissão','Adiantamento','Outros'];
@@ -5400,13 +5400,13 @@ async function cancelAgendaSubscription(toPix=false){
     return [
       d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
       customerMap.get(a.customer_id)?.name||'Cliente',
-      serviceMap.get(a.service_id)?.name||'Serviço',
+      appointmentServicesName(a),
       a.professional_name||'Profissional',
       a.status==='pending'?'p':'c'
     ];
   });
   const receivableAppointments=companyData.appointments.filter(a=>a.status==='confirmed');
-  const receivableRevenue=receivableAppointments.reduce((sum,a)=>sum+Number(serviceMap.get(a.service_id)?.price_cents||0),0)/100;
+  const receivableRevenue=receivableAppointments.reduce((sum,a)=>sum+appointmentServiceTotal(a),0)/100;
   p.metrics=[
     ['calendar','Horários',String(companyData.appointments.length),'agendamentos cadastrados',false,'agenda'],
     ['users',p.people,String(companyData.customers.length),'cadastros da empresa',false,'clients'],
@@ -5747,7 +5747,7 @@ async function cancelAgendaSubscription(toPix=false){
 }
     function appointmentNoticeMessage(a,type,previousDate){
   const customer=companyData.customers.find(x=>x.id===a.customer_id);
-  const service=companyData.services.find(x=>x.id===a.service_id);
+  const service={name:appointmentServicesName(a)};
   const name=String(customer?.name||'Cliente').trim().split(/\s+/)[0];
   const business=whatsappBookingName(companyCtx?.business?.name||'');
   const fmt=value=>new Date(value).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
@@ -6806,7 +6806,7 @@ async function cancelAgendaSubscription(toPix=false){
   }
 
   const customer=companyData.customers.find(x=>x.id===customer_id);
-  const service=companyData.services.find(x=>x.id===service_id);
+  const service={name:service_ids.map(id=>companyData.services.find(x=>x.id===id)?.name).filter(Boolean).join(', ')};
   const phone=normalizeWhatsPhone(customer?.phone);
   const autoConnected=!!(whatsappState?.connection?.status==='connected'&&whatsappState?.connection?.auto_confirmation);
   const baileysConnected=!!(companyCtx?.settings?.baileys_enabled&&baileysSession?.status==='connected');
@@ -6997,7 +6997,7 @@ async function cancelAgendaSubscription(toPix=false){
   const a=companyData.appointments.find(x=>x.id===id);
   if(!a)return toast('Agendamento não encontrado. Atualize a agenda.');
   const customer=companyData.customers.find(x=>x.id===a.customer_id);
-  const service=companyData.services.find(x=>x.id===a.service_id);
+  const service={name:appointmentServicesName(a)};
   const phone=normalizeWhatsPhone(customer?.phone);
   if(!phone)return toast('Cadastre o WhatsApp do cliente primeiro.');
   // Não confundir registro na fila com entrega, nem duplicar confirmação já enviada.
