@@ -2896,7 +2896,7 @@
     // Atualizar manualmente o PWA sem limpar sessão ou dados locais.
     I.refresh='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.3 9A7.8 7.8 0 0 1 19 7l1 5M4 12l1 5a7.8 7.8 0 0 0 13.7-2"/></svg>';
     I.cancel='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></svg>';
-    const AGENDA_UI_VERSION='2026.10.25.10';
+    const AGENDA_UI_VERSION='2026.10.30.1';
     let agendaUpdateInProgress=false;
     async function refreshAgendaPro(){
       if(agendaUpdateInProgress)return;
@@ -6716,8 +6716,8 @@ async function cancelAgendaSubscription(toPix=false){
       const available=companyData.services.filter(x=>x.active||current.has(x.id));
       const marked=available.filter(s=>current.has(s.id));
       const entries=available.map(s=>'<label class="booking-service-option"><input type="checkbox" data-service-select="'+prefix+'" value="'+appModalEscape(s.id)+'" '+(current.has(s.id)?'checked':'')+' onchange="updateBookingServices(this)"><span><b>'+appModalEscape(s.name)+'</b><small>'+Number(s.duration_minutes||0)+' min'+(showPrice?' · '+moneyBR(Number(s.price_cents||0)/100):'')+'</small></span></label>').join('');
-      const desc=marked.length?marked.map(x=>x.name).join(' + '):'Nenhum serviço selecionado';
-      return '<details class="booking-service-picker"><summary><span data-service-caption="'+prefix+'">'+(marked.length?marked.length+' serviços selecionados':'Selecione um ou mais serviços')+'</span><span>⌄</span></summary><div class="booking-service-options">'+(entries||'<p>Cadastre os serviços antes de agendar.</p>')+'</div></details><small class="booking-services-summary" data-service-total="'+prefix+'">'+appModalEscape(desc)+'</small>';
+      const desc=marked.length?marked.map(x=>x.name).join(' + ')+' · '+marked.reduce((n,s)=>n+Number(s.duration_minutes||0),0)+' min'+(showPrice?' · '+moneyBR(marked.reduce((n,s)=>n+Number(s.price_cents||0),0)/100):''):'Nenhum serviço selecionado';
+      return '<details class="booking-service-picker"><summary><span data-service-caption="'+prefix+'">'+(marked.length?marked.length+' serviço'+(marked.length>1?'s':'')+' selecionado'+(marked.length>1?'s':''):'Selecione um ou mais serviços')+'</span><span>⌄</span></summary><div class="booking-service-options">'+(entries||'<p>Cadastre os serviços antes de agendar.</p>')+'</div></details><small class="booking-services-summary" data-service-total="'+prefix+'">'+appModalEscape(desc)+'</small>';
     }
     function updateBookingServices(input){
       const prefix=input?.dataset?.serviceSelect;
