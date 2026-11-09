@@ -1,6 +1,6 @@
 {
-  "version": "2026.10.30.1",
-  "released_at": "2026-10-30",
+  "version": "2026.11.09.1",
+  "released_at": "2026-11-09",
   "name": "AgendaJP",
-  "notes": "Agendamentos com seleção de vários serviços no mesmo horário, duração e preço total, edição, agenda, financeiro e mensagens de WhatsApp."
+  "notes": "WhatsApp: status real de servidor indisponível, botão de desconexão por empresa mesmo sem hospedagem ativa e registro seguro para invalidar conexão antiga."
 }
