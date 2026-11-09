@@ -2896,7 +2896,7 @@
     // Atualizar manualmente o PWA sem limpar sessão ou dados locais.
     I.refresh='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.3 9A7.8 7.8 0 0 1 19 7l1 5M4 12l1 5a7.8 7.8 0 0 0 13.7-2"/></svg>';
     I.cancel='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></svg>';
-    const AGENDA_UI_VERSION='2026.10.30.1';
+    const AGENDA_UI_VERSION='2026.11.09.1';
     let agendaUpdateInProgress=false;
     async function refreshAgendaPro(){
       if(agendaUpdateInProgress)return;
@@ -5101,6 +5101,8 @@ async function cancelAgendaSubscription(toPix=false){
   const preferredPhoneRaw=baileysPreferredPhone();
   const preferredPhone=preferredPhoneRaw?formatBusinessPhone(preferredPhoneRaw):'';
   const baileysWaiting=baileysSession.status==='qr'||baileysSession.status==='connecting';
+  const baileysOffline=baileysSession.status==='offline'||baileysSession.dispatch_mode==='server_offline';
+  const baileysCanDisconnect=!!baileysSession.can_disconnect||baileysSession.status==='connected';
   const routeLegacy=baileysSession.dispatch_route==='local-poll:';
   const automaticPaused=baileysSession.status==='connected'&&
     ['legacy_paused','paused','awaiting_activation'].includes(baileysSession.dispatch_mode);
@@ -5108,10 +5110,17 @@ async function cancelAgendaSubscription(toPix=false){
   const migrateLegacy=routeLegacy&&baileysSession.dispatch_mode==='legacy_paused'&&admin;
   const baileysCard=baileysEnabled?`<section class="panel baileys-card wa-easy-connect ${baileysSession.status==='connected'?'connected':''}">
     <div class="head">
-      <div><span class="eyebrow">Servidor WhatsApp</span><h3>${baileysSession.status==='connected'?'WhatsApp conectado':'Conectar pelo celular'}</h3></div>
-      <span class="status-badge ${baileysSession.status==='connected'?'status-active':baileysWaiting?'status-late':'status-neutral'}">${baileysSession.status==='connected'?'Conectado':baileysWaiting?'Aguardando':'Desconectado'}</span>
+      <div><span class="eyebrow">Servidor WhatsApp</span><h3>${baileysOffline?'Servidor indisponível':baileysSession.status==='connected'?'WhatsApp conectado':'Conectar pelo celular'}</h3></div>
+      <span class="status-badge ${baileysSession.status==='connected'&&!baileysOffline?'status-active':baileysWaiting||baileysOffline?'status-late':'status-neutral'}">${baileysOffline?'Sem conexão ativa':baileysSession.status==='connected'?'Conectado':baileysWaiting?'Aguardando':'Desconectado'}</span>
     </div>
-    ${baileysSession.status==='connected'
+    ${baileysOffline
+      ? `<div class="context-note" role="alert" style="margin:12px 0">
+          <b>WhatsApp sem comunicação com o servidor.</b>
+          <p>O sistema salvou os horários, mas não está enviando mensagens automáticas. O responsável pela plataforma precisa reativar a hospedagem do WhatsApp no Railway.</p>
+          <p>As mensagens na fila não significam envio confirmado. Nenhuma mensagem antiga será reenviada automaticamente.</p>
+          ${admin&&baileysCanDisconnect?'<button type="button" class="btn wa-disconnect" onclick="disconnectBaileys()">Desconectar desta empresa</button>':''}
+          </div>`
+      : baileysSession.status==='connected'
       ? `<div class="wa-easy-success">
           <div class="wa-easy-success-icon">✓</div>
           <div><b>WhatsApp conectado.</b><p>${migrateLegacy
@@ -6213,8 +6222,19 @@ async function cancelAgendaSubscription(toPix=false){
       baileysSession.dispatch_route=data.route;
       baileysSession.due_messages=data.due_messages;
       baileysSession.failed_messages=data.failed_messages;
-      if(data.route==='railway:'&&data.status==='disconnected'&&baileysSession.status==='connected'){
-        baileysSession.status='connecting';
+      baileysSession.can_disconnect=data.can_disconnect===true;
+      baileysSession.desired_online=data.desired_online===true;
+      // O banco só considera "conectado" um processo com lease e heartbeat recentes.
+      if(data.connected_fresh===false&&data.desired_online===true
+        &&!['qr','connecting'].includes(baileysSession.status)){
+        baileysSession.status='offline';
+        baileysSession.last_error=null;
+      }
+      if(data.desired_online===false&&baileysSession.status==='connected'){
+        baileysSession.status='disconnected';
+      }
+      if(data.dispatch_mode==='server_offline'&&baileysSession.status==='disconnected'){
+        baileysSession.status='offline';
       }
     }
   }catch(ex){console.warn('Status de automação indisponível',ex)}
@@ -6227,12 +6247,15 @@ async function cancelAgendaSubscription(toPix=false){
       clearInterval(baileysPollTimer);baileysPollTimer=null;return;
     }
     await loadBaileysStatus(true);
-    if(baileysSession.status==='connected'){
+    if(baileysSession.status==='connected'||baileysSession.status==='offline'){
       clearInterval(baileysPollTimer);baileysPollTimer=null;
     }
   },2500);
 }
     async function connectBaileys(){
+  if(baileysSession.status==='offline'&&baileysSession.dispatch_route==='railway:'){
+    return toast('O servidor WhatsApp está indisponível no Railway. Reative a hospedagem para conectar.');
+  }
   const btn=document.getElementById('baileysConnectBtn');
   const err=document.getElementById('baileysConnectError');
   if(btn){btn.disabled=true;btn.textContent='Gerando QR Code...'}
@@ -6255,6 +6278,9 @@ async function cancelAgendaSubscription(toPix=false){
   }
 }
     async function connectBaileysByPhone(forcedPhone='',forceNew=false){
+  if(baileysSession.status==='offline'&&baileysSession.dispatch_route==='railway:'){
+    return toast('Não é possível gerar código: a hospedagem do WhatsApp no Railway está inativa.');
+  }
   const input=document.getElementById('baileysPhone');
   const btn=document.getElementById('baileysPhoneBtn');
   const err=document.getElementById('baileysConnectError');
@@ -6305,12 +6331,40 @@ async function cancelAgendaSubscription(toPix=false){
   return connectBaileysByPhone(baileysSession?.phone||baileysPreferredPhone(),true);
 }
     async function disconnectBaileys(){
-  if(!confirm('Desconectar este WhatsApp do modo automático experimental?'))return;
+  if(!canAdminCompany()||!companyCtx?.business?.id)return toast('Somente o administrador da empresa pode desconectar.');
+  if(!confirm('Desconectar o WhatsApp desta empresa? O envio automático será interrompido. Se o servidor estiver fora do ar, também será necessário remover o aparelho em WhatsApp > Aparelhos conectados.'))return;
+  const button=document.querySelector('.wa-disconnect');
+  if(button)button.disabled=true;
+  const companyId=companyCtx.business.id,route=baileysSession.dispatch_route;
+  let remoteDisconnected=false,offlineSaved=false;
   try{
-    await callBaileys('disconnect','POST');
-    baileysSession={status:'disconnected',phone:null,qr_svg:null,pairing_code:null,last_error:null};
-    render();toast('WhatsApp desconectado');
-  }catch(ex){console.error(ex);toast(ex.message||'Não foi possível desconectar')}
+    try{
+      await callBaileys('disconnect','POST');
+      remoteDisconnected=true;
+    }catch(ex){
+      // A hospedagem pode estar indisponível: registrar a revogação por empresa
+      // em uma função SQL autenticada, sem depender do socket.
+      if(route!=='railway:')throw ex;
+      const {data,error}=await sb.rpc('agenda_whatsapp_disconnect_offline',{p_business_id:companyId});
+      if(error)throw error;
+      if(!data?.ok||!data.saved)throw new Error('Não foi possível registrar a desconexão no banco.');
+      offlineSaved=true;
+    }
+    baileysSession={
+      status:'disconnected',phone:null,qr_svg:null,pairing_code:null,
+      last_error:null,dispatch_route:route,dispatch_mode:'awaiting_connection',
+      can_disconnect:false,desired_online:false
+    };
+    render();
+    toast(remoteDisconnected
+      ?'WhatsApp desconectado desta empresa.'
+      :'Envios desativados no AgendaJP. Remova também o aparelho em WhatsApp > Aparelhos conectados.');
+  }catch(ex){
+    console.error('Desconexão WhatsApp:',ex);
+    toast(ex.message||'Não foi possível desconectar. Tente novamente.');
+  }finally{
+    if(button&&button.isConnected)button.disabled=false;
+  }
 }
     function adminSettings(){
   const s=ADMIN.settings;
