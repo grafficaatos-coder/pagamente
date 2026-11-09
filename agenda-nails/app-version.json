@@ -1,6 +1,6 @@
 {
-  "version": "2026.11.09.1",
+  "version": "2026.11.09.2",
   "released_at": "2026-11-09",
   "name": "AgendaJP",
-  "notes": "WhatsApp: status real de servidor indisponível, botão de desconexão por empresa mesmo sem hospedagem ativa e registro seguro para invalidar conexão antiga."
+  "notes": "WhatsApp Railway reativado; migração disponível também para sessões Docker antigas sem conexão."
 }
