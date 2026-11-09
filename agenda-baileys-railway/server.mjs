@@ -13,6 +13,7 @@ import makeWASocket, {
 
 import { persistentAuthState } from "./auth-state.mjs";
 
+// Restore release 2026-11-09: honor per-tenant offline disconnect and persistent auth.
 const SUPABASE_URL=String(process.env.SUPABASE_URL||"").replace(/\/$/,"");
 const SERVICE_KEY=process.env.SUPABASE_SERVICE_ROLE_KEY||"";
 const PUBLISHABLE_KEY=process.env.SUPABASE_PUBLISHABLE_KEY||"";
