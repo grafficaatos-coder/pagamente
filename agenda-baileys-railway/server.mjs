@@ -379,6 +379,18 @@ export class WhatsSession{
     try{
       await this.savePending;
       await this.flushAuth?.();
+      // A empresa pode solicitar desconexão enquanto a hospedagem está parada.
+      // Na próxima conexão, não recuperar o vínculo antigo do disco.
+      const flags=await fetchOne("/rest/v1/agenda_baileys_sessions?business_id=eq."+
+        encodeURIComponent(this.businessId)+"&select=auth_reset_required&limit=1");
+      if(flags?.auth_reset_required===true){
+        await rm(this.authDir,{recursive:true,force:true});
+        await mkdir(this.authDir,{recursive:true});
+        this.flushAuth=null;
+        await upsertSession(this.businessId,{
+          auth_reset_required:false,status:"connecting",phone:null,pairing_code:null,last_error:null
+        });
+      }
       const auth=await persistentAuthState(this.authDir);
       this.flushAuth=auth.flush;
       const sock=makeWASocket({
@@ -670,7 +682,7 @@ export class WhatsSession{
     await rpc("agenda_baileys_release_lease",{p_business_id:this.businessId,p_lease_id:this.leaseId}).catch(()=>{});
     await upsertSession(this.businessId,{
       status:"disconnected",desired_online:false,phone:null,qr:null,pairing_code:null,
-      runtime_lease_id:null,runtime_lease_expires_at:null,last_error:null
+      runtime_lease_id:null,runtime_lease_expires_at:null,auth_reset_required:false,last_error:null
     });
   }
 }
