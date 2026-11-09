@@ -2896,7 +2896,7 @@
     // Atualizar manualmente o PWA sem limpar sessão ou dados locais.
     I.refresh='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.3 9A7.8 7.8 0 0 1 19 7l1 5M4 12l1 5a7.8 7.8 0 0 0 13.7-2"/></svg>';
     I.cancel='<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="m9 9 6 6m0-6-6 6"/></svg>';
-    const AGENDA_UI_VERSION='2026.11.09.1';
+    const AGENDA_UI_VERSION='2026.11.09.2';
     let agendaUpdateInProgress=false;
     async function refreshAgendaPro(){
       if(agendaUpdateInProgress)return;
@@ -5107,7 +5107,7 @@ async function cancelAgendaSubscription(toPix=false){
   const automaticPaused=baileysSession.status==='connected'&&
     ['legacy_paused','paused','awaiting_activation'].includes(baileysSession.dispatch_mode);
   const automaticActive=['active','pilot_local'].includes(baileysSession.dispatch_mode);
-  const migrateLegacy=routeLegacy&&baileysSession.dispatch_mode==='legacy_paused'&&admin;
+  const migrateLegacy=routeLegacy&&['legacy_paused','server_offline'].includes(baileysSession.dispatch_mode)&&admin;
   const baileysCard=baileysEnabled?`<section class="panel baileys-card wa-easy-connect ${baileysSession.status==='connected'?'connected':''}">
     <div class="head">
       <div><span class="eyebrow">Servidor WhatsApp</span><h3>${baileysOffline?'Servidor indisponível':baileysSession.status==='connected'?'WhatsApp conectado':'Conectar pelo celular'}</h3></div>
