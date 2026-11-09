@@ -6147,7 +6147,8 @@ async function cancelAgendaSubscription(toPix=false){
         'apikey':SUPABASE_KEY,
         'Content-Type':'application/json'
       },
-      body:JSON.stringify({action,method,payload})
+      body:JSON.stringify({action,method,payload}),
+      ...(action==='status'||action==='disconnect'?{signal:AbortSignal.timeout(10000)}:{})
     });
   }catch(ex){
     console.error(ex);
@@ -6336,19 +6337,22 @@ async function cancelAgendaSubscription(toPix=false){
   const button=document.querySelector('.wa-disconnect');
   if(button)button.disabled=true;
   const companyId=companyCtx.business.id,route=baileysSession.dispatch_route;
-  let remoteDisconnected=false,offlineSaved=false;
+  let remoteDisconnected=false;
   try{
-    try{
-      await callBaileys('disconnect','POST');
-      remoteDisconnected=true;
-    }catch(ex){
-      // A hospedagem pode estar indisponível: registrar a revogação por empresa
-      // em uma função SQL autenticada, sem depender do socket.
-      if(route!=='railway:')throw ex;
+    let shouldUseOffline=route==='railway:'&&baileysSession.status==='offline';
+    if(!shouldUseOffline){
+      try{
+        await callBaileys('disconnect','POST');
+        remoteDisconnected=true;
+      }catch(ex){
+        if(route!=='railway:')throw ex;
+        shouldUseOffline=true;
+      }
+    }
+    if(shouldUseOffline){
       const {data,error}=await sb.rpc('agenda_whatsapp_disconnect_offline',{p_business_id:companyId});
       if(error)throw error;
       if(!data?.ok||!data.saved)throw new Error('Não foi possível registrar a desconexão no banco.');
-      offlineSaved=true;
     }
     baileysSession={
       status:'disconnected',phone:null,qr_svg:null,pairing_code:null,
